@@ -3,7 +3,7 @@
    ============================================================ */
 "use strict";
 
-const VERSION = "2026-08-21.21";
+const VERSION = "2026-08-21.22";
 
 /* ---------- Avgiftsmodell ---------- */
 const FEES = {
@@ -185,6 +185,12 @@ const EVENTS = [
   { id:"e5", kind:"Landskamp",name:"Sverige – Norge",             venue:"Friends Arena", area:"solna", date:"2026-10-03", time:"18:00", crowd:50000, ll:[59.3727,18.0009] },
   { id:"e6", kind:"Lopp",     name:"Göteborgsvarvet, start",      venue:"Slottsskogen",  area:"gbg",   date:"2026-10-10", time:"09:00", crowd:60000, ll:[57.6839,11.9420] }
 ];
+/* Kör-in-parkering: hur länge vi håller platsen medan du är på väg,
+   och hur priset räknas när man bara ställer sig. */
+const HALL_MINUTER = 20;      /* platsen hålls så här länge efter "jag åker hit" */
+const MIN_DEBITERING = 60;    /* första timmen alltid, sedan halvtimmar */
+const STEG_MINUTER = 30;
+
 /* Hur långt från en arena det är värt att höja priset. */
 const EVENT_RADIE_KM = 6;
 

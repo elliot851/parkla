@@ -52,7 +52,7 @@ let S = {
   route: (location.hash.replace("#", "").split("?")[0]) || "start",
   area: SET.city, mode: "manad", view: "karta",
   q: "", near: null, nearLabel: "", part: null, partZoom: null, maxPrice: 0,
-  fCharge: false, fGarage: false, fSecure: false, fBig: false,
+  fNu: false, fCharge: false, fGarage: false, fSecure: false, fBig: false,
   sort: "pris", selSpot: null,
   season: "kort", blockFor: null, calMode: "stang",
   calc: { city: "Stockholm innerstad", type: "Uppfart", walk: 5, charger: false, gated: false, dyn: true },
@@ -402,6 +402,39 @@ function allSpots() {
   return mina.concat(SPOTS);
 }
 
+/* Är platsen ledig just nu, så att någon kan svänga in?
+   Kräver: timpris finns, dagen är inte stängd, veckoschemat tillåter, och
+   ingen annan står där. */
+function nowFree(sp) {
+  if (!sp) return false;
+  if (SESSION && SESSION.spotId === sp.id) return false;
+  const nu = new Date();
+  if (!(priceOnDate(sp, isoOf(nu.getFullYear(), nu.getMonth(), nu.getDate()), "timme") || sp.h)) return false;
+  if (dayIsBooked(sp, nu.getFullYear(), nu.getMonth(), nu.getDate())) return false;
+  if (sp.mine) {
+    const l = LISTINGS.find(x => x.id === sp.id);
+    if (!l || l.paused || l.nu === false) return false;
+    if (l.sched) { const wd = (nu.getDay() + 6) % 7; if (!l.sched[wd].on) return false; }
+  }
+  const h = nu.getHours();
+  return h >= OPEN_HOURS.from && h < OPEN_HOURS.to;
+}
+function timPris(sp) {
+  const nu = new Date();
+  return priceOnDate(sp, isoOf(nu.getFullYear(), nu.getMonth(), nu.getDate()), "timme") || sp.h || 0;
+}
+/* Minuter → kronor. Första timmen alltid, därefter påbörjad halvtimme. */
+function sessionKostnad(sp, minuter) {
+  const tim = timPris(sp);
+  const deb = Math.max(MIN_DEBITERING, Math.ceil(minuter / STEG_MINUTER) * STEG_MINUTER);
+  return Math.round(tim * deb / 60);
+}
+function minuterSedan(ts) { return Math.max(0, Math.floor((Date.now() - ts) / 60000)); }
+function tidText(min) {
+  const h = Math.floor(min / 60), m = min % 60;
+  return h ? `${h} tim ${m} min` : `${m} min`;
+}
+
 /* Evenemang som ligger nära en plats och som inte redan varit. */
 function eventsNear(sp) {
   if (!sp || !sp.ll) return [];
@@ -474,6 +507,7 @@ function baseList() {
   if (S.fGarage) list = list.filter(s => s.kind === "garage" || s.kind === "carport");
   if (S.fSecure) list = list.filter(s => s.feat.some(f => /Kamera|Låst|Grind|Portkod/.test(f)));
   if (S.fBig)    list = list.filter(s => /SUV|husbil|buss|husvagn|släp/i.test(s.size));
+  if (S.fNu)     list = list.filter(nowFree);
   if (S.maxPrice) list = list.filter(s => priceFor(s, S.mode) <= S.maxPrice);
   const ref = S.near || (AREAS.find(a => a.id === S.area) || AREAS[0]).c;
   list.forEach(s => s._km = distKm(ref, s.ll));
@@ -493,7 +527,7 @@ function makeStateOf(list) {
   return s => ({ label: num(priceFor(s, S.mode)) + " " + sym(), free: spotFree(s), best: s.id === best });
 }
 
-function activeFilterCount() { return [S.fCharge, S.fGarage, S.fSecure, S.fBig, !!S.maxPrice].filter(Boolean).length; }
+function activeFilterCount() { return [S.fNu, S.fCharge, S.fGarage, S.fSecure, S.fBig, !!S.maxPrice].filter(Boolean).length; }
 
 function viewSok() {
   const area = AREAS.find(a => a.id === S.area) || AREAS[0];
@@ -529,6 +563,7 @@ function viewSok() {
   </div>
 
   <div class="chips" style="margin-top:11px">
+    <button class="chip ${S.fNu ? "on" : ""}" onclick="tog('fNu',this)">${I("car", 15)} Ledig nu</button>
     <button class="chip ${S.fCharge ? "on" : ""}" onclick="tog('fCharge',this)">${I("bolt", 15)} Laddbox</button>
     <button class="chip ${S.fGarage ? "on" : ""}" onclick="tog('fGarage',this)">${I("garage", 15)} Tak eller garage</button>
     <button class="chip ${S.fSecure ? "on" : ""}" onclick="tog('fSecure',this)">${I("lock", 15)} Låst</button>
@@ -616,7 +651,8 @@ function spotRow(s) {
       <span class="ad">${esc(s.ad)}</span>
       <span class="tags">
         <span class="tag">${esc(s.type)}</span>
-        ${needsApproval(s, S.mode) ? `<span class="tag">${I("clock", 11)} Värden svarar</span>`
+        ${nowFree(s) ? `<span class="tag green nu">${I("car", 11)} Ledig nu</span>`
+          : needsApproval(s, S.mode) ? `<span class="tag">${I("clock", 11)} Värden svarar</span>`
           : `<span class="tag green">${I("bolt", 11)} Boka direkt</span>`}
         ${s.charge ? `<span class="tag">${I("bolt", 11)} Laddbox</span>` : ""}
         ${s._km != null ? `<span class="tag">${s._km < 1 ? Math.round(s._km * 1000) + " m" : s._km.toFixed(1).replace(".", ",") + " km"}</span>` : ""}
@@ -655,7 +691,7 @@ function setMode(m) {
 }
 function tog(k, btn) { S[k] = !S[k]; btn.classList.toggle("on"); refreshResults(); }
 function clearFilters() {
-  S.fCharge = S.fGarage = S.fSecure = S.fBig = false; S.maxPrice = 0; S.q = "";
+  S.fNu = S.fCharge = S.fGarage = S.fSecure = S.fBig = false; S.maxPrice = 0; S.q = "";
   render();
 }
 function refreshResults() {
@@ -930,6 +966,11 @@ function openSpot(id) {
       <div class="spotlist">${sim.map(spotRow).join("")}</div>` : ""}
 
     <div class="sticky-cta">
+      ${nowFree(s) && !isLive() ? `
+        <button class="btn btn-g btn-block btn-lg" onclick="startNow(${s.id})">
+          ${I("car", 19)} Parkera här nu · ${kr(timPris(s))}/tim</button>
+        <p class="muted small center" style="margin-top:8px">Ingen bokning, ingen väntan. Vi håller platsen i ${HALL_MINUTER} minuter medan du kör dit.</p>
+        <div class="rule" style="margin:16px 0"></div>` : ""}
       ${isLive() && !s.mine
         ? `<button class="btn btn-p btn-block btn-lg" onclick="openLeadDriver()">
              ${I("bell", 17)} Säg till när det finns platser här</button>
@@ -1782,6 +1823,7 @@ function viewMina() {
       <div class="row wrap" style="margin-top:16px">
         <button class="btn btn-sm" onclick="togglePause(${l.id})">${I(l.paused ? "play" : "minus", 15)} ${l.paused ? "Aktivera" : "Pausa"}</button>
         <button class="btn btn-sm" onclick="openWizard(${l.id})">${I("sliders", 15)} Ändra</button>
+        <button class="btn btn-sm ${l.nu === false ? "" : "btn-g"}" onclick="toggleNu(${l.id})">${I("car", 15)} ${l.nu === false ? "Stängd nu" : "Ledig nu"}</button>
         <button class="btn btn-sm" onclick="openBlockCal(${l.id})">${I("calendar", 15)} Dagar och priser</button>
         <button class="btn btn-sm" onclick="openSchedule(${l.id})">${I("clock", 15)} Veckotider</button>
         <button class="btn btn-sm btn-d" onclick="kickCar()">${I("door", 15)} Flytta bilen</button>
@@ -1823,6 +1865,12 @@ function viewMina() {
       return a ? `<span class="tag green">${esc(a.name)}<button onclick="WATCH=WATCH.filter(w=>w!=='${id}');persist();render()" style="margin-left:5px;display:flex">${I("close", 11)}</button></span>` : ""; }).join("")}</div>` : ""}
 </div></section>
 ${footerHTML()}`;
+}
+function toggleNu(id) {
+  const l = LISTINGS.find(x => x.id === id); if (!l) return;
+  l.nu = l.nu === false ? true : false;
+  persist(); render();
+  toast(l.nu === false ? "Ingen kan svänga in just nu" : "Nu kan folk svänga in", l.nu === false ? "lock" : "car");
 }
 function togglePause(id) { const l = LISTINGS.find(x => x.id === id); if (l) { l.paused = !l.paused; persist(); toast(l.paused ? "Pausad" : "Aktiv igen", "check"); render(); } }
 function cancelBooking(id) { BOOKINGS = BOOKINGS.filter(b => b.id !== id); persist(); toast("Avbokad – du får tillbaka alla pengar", "check"); render(); }
@@ -2514,6 +2562,8 @@ ${footerHTML()}`;
    TIDIG TILLGÅNG — det som faktiskt kan släppas innan betalning finns
    ============================================================ */
 let LEADS = LS.get("leads", []);
+let SESSION = LS.get("session", null);   /* { spotId, state:"pahagg"|"star", start, hold } */
+function saveSession() { LS.set("session", SESSION); }
 
 function liveBanner() {
   if (!isLive()) return "";
@@ -2602,6 +2652,103 @@ function copyLeads() {
   else openSheet(sheetHead("Anmälningar") + `<div class="sheet-b"><textarea class="inp mono dump" rows="16" readonly>${esc(txt)}</textarea></div>`);
 }
 
+
+/* ============================================================
+   PARKERA NU — svänga in utan att boka
+   ============================================================ */
+function startNow(id) {
+  const sp = allSpots().find(x => x.id === id); if (!sp) return;
+  if (SESSION) { toast("Du står redan på en plats", "info"); return; }
+  SESSION = { spotId: id, state: "pahagg", hold: Date.now() + HALL_MINUTER * 60000, start: null };
+  saveSession(); closeSheet(); render();
+  openSheet(`<div class="sheet-b center" style="padding-top:34px">
+    <div class="tick" style="background:var(--green)">${I("car", 30)}</div>
+    <h3 style="font-family:var(--display);font-size:1.5rem">Platsen är din</h3>
+    <p class="dim" style="margin-top:8px">${esc(sp.nm)}</p>
+    <div class="code" style="margin-top:20px">${String(1000 + (sp.id % 9000))}</div>
+    <p class="muted small" style="margin-top:8px">Kod till grind eller port</p>
+    <div class="callout" style="margin-top:18px;text-align:left">${I("info", 16)} ${esc(sp.instr)}</div>
+    <div class="callout brass" style="margin-top:12px;text-align:left">
+      ${I("clock", 16)} Vi håller platsen i ${HALL_MINUTER} minuter. Kör dit och tryck <b>Jag står här</b> när du parkerat.</div>
+    <button class="btn btn-p btn-block btn-lg" style="margin-top:20px" onclick="arrivedNow()">Jag står här</button>
+    <button class="btn btn-block" style="margin-top:10px" onclick="cancelNow()">Ändrade mig</button>
+  </div>`);
+}
+function arrivedNow() {
+  if (!SESSION) return;
+  SESSION.state = "star"; SESSION.start = Date.now(); saveSession();
+  closeSheet(); render(); toast("Klockan går. Tryck Jag åker nu när du lämnar.", "clock");
+}
+function cancelNow() {
+  SESSION = null; saveSession(); closeSheet(); render(); toast("Avbrutet – platsen är fri igen", "check");
+}
+function endNow() {
+  if (!SESSION || SESSION.state !== "star") return;
+  const sp = allSpots().find(x => x.id === SESSION.spotId);
+  const min = minuterSedan(SESSION.start);
+  const pris = sessionKostnad(sp, min);
+  const f = feeSplit(pris, "timme");
+  BOOKINGS.unshift({ id: Date.now(), spotId: sp.id, spot: sp.nm, addr: sp.ad, area: sp.area,
+    reg: LS.get("lastreg", "—"), mode: "timme", qty: Math.max(1, Math.ceil(min / 60)),
+    total: f.driverTotal, host: sp.host, date: new Date().toISOString().slice(0, 10),
+    code: String(1000 + (sp.id % 9000)), pay: "swish", instr: sp.instr, status: "klar" });
+  SESSION = null; saveSession(); persist();
+  openSheet(`<div class="sheet-b center" style="padding-top:34px">
+    <div class="tick">${I("check", 30)}</div>
+    <h3 style="font-family:var(--display);font-size:1.5rem">Tack för den här gången</h3>
+    <p class="dim" style="margin-top:8px">${esc(sp.nm)}</p>
+    <div style="margin-top:22px;text-align:left">
+      <div class="kv"><span>Du stod</span><b>${tidText(min)}</b></div>
+      <div class="kv"><span>${kr(timPris(sp))} per timme, minst en timme</span><b>${kr(pris)}</b></div>
+      <div class="kv"><span>Serviceavgift</span><b>${kr(f.service)}</b></div>
+      <div class="kv"><span>Trygghetsgaranti</span><b>${kr(f.trygg)}</b></div>
+      <div class="tot"><span>Dras via Swish</span><span>${kr(f.driverTotal)}</span></div>
+    </div>
+    <button class="btn btn-p btn-block btn-lg" style="margin-top:22px" onclick="closeSheet();go('mina')">Klart</button>
+  </div>`);
+  render();
+}
+
+/* Raden som ligger kvar längst ned så länge man står på en plats. */
+let sessionTimer = null;
+function sessionBarHTML() {
+  if (!SESSION) return "";
+  const sp = allSpots().find(x => x.id === SESSION.spotId);
+  if (!sp) { SESSION = null; saveSession(); return ""; }
+  if (SESSION.state === "pahagg") {
+    const kvar = Math.max(0, Math.ceil((SESSION.hold - Date.now()) / 60000));
+    if (kvar <= 0) { SESSION = null; saveSession(); return ""; }
+    return `<div class="sessbar hold">
+      <span class="ic">${I("clock", 19)}</span>
+      <div class="t"><b>Platsen hålls åt dig</b><span>${esc(sp.nm)} · ${kvar} min kvar</span></div>
+      <button class="btn btn-sm btn-p" onclick="arrivedNow()">Jag står här</button>
+    </div>`;
+  }
+  const min = minuterSedan(SESSION.start);
+  return `<div class="sessbar">
+    <span class="ic">${I("car", 19)}</span>
+    <div class="t"><b>Du står på ${esc(sp.nm)}</b><span id="sesstid">${tidText(min)} · ${kr(sessionKostnad(sp, min))}</span></div>
+    <button class="btn btn-sm btn-c" onclick="endNow()">Jag åker nu</button>
+  </div>`;
+}
+function tickSession() {
+  clearInterval(sessionTimer);
+  if (!SESSION) return;
+  sessionTimer = setInterval(() => {
+    const bar = document.getElementById("sessbox");
+    if (!bar) return clearInterval(sessionTimer);
+    const sp = allSpots().find(x => x.id === SESSION.spotId);
+    if (!sp || !SESSION) return clearInterval(sessionTimer);
+    if (SESSION.state === "star") {
+      const el = document.getElementById("sesstid");
+      const min = minuterSedan(SESSION.start);
+      if (el) el.textContent = tidText(min) + " · " + kr(sessionKostnad(sp, min));
+    } else {
+      bar.innerHTML = sessionBarHTML();
+    }
+  }, 20000);
+}
+
 /* ============================================================
    RUNDTUR
    ============================================================ */
@@ -2682,6 +2829,11 @@ function render() {
   document.getElementById("app").innerHTML = (VIEWS[S.route] || viewStart)();
   document.getElementById("nav").innerHTML = navHTML();
   document.getElementById("tabbar").innerHTML = tabbarHTML();
+  let sb = document.getElementById("sessbox");
+  if (!sb) { sb = document.createElement("div"); sb.id = "sessbox"; document.body.appendChild(sb); }
+  sb.innerHTML = sessionBarHTML();
+  document.body.classList.toggle("harsession", !!SESSION);
+  tickSession();
   const dot = document.getElementById("notisDot");
   if (dot) dot.classList.toggle("on", NOTIS.some(n => n.unread));
   document.documentElement.lang = SET.lang;

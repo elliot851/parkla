@@ -327,3 +327,26 @@ button.d.special:hover{border-color:var(--brass)}
 .livebar b{display:block;font-size:.95rem;font-weight:600}
 .livebar span{display:block;font-size:.86rem;color:rgba(244,241,233,.72);margin-top:2px;max-width:70ch}
 .callout.clay{background:var(--clay-wash)}
+
+
+/* ---------- parkera nu ---------- */
+.tag.nu{position:relative}
+.tag.nu::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--green-lift);
+  animation:nuPuls 2s var(--ease) infinite}
+@keyframes nuPuls{0%,100%{opacity:1}50%{opacity:.25}}
+
+#sessbox{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:75}
+@media(min-width:981px){#sessbox{bottom:0}}
+.sessbar{display:flex;align-items:center;gap:14px;padding:13px 18px;
+  background:var(--pine);color:var(--on-dark);box-shadow:0 -6px 24px -14px rgba(0,0,0,.6);
+  max-width:var(--maxw);margin:0 auto}
+.sessbar.hold{background:var(--brass);color:#231703}
+.sessbar .ic{flex:0 0 auto}
+.sessbar .t{flex:1;min-width:0}
+.sessbar .t b{display:block;font-size:.94rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sessbar .t span{display:block;font-size:.83rem;opacity:.75;font-variant-numeric:tabular-nums}
+.sessbar .btn{flex:0 0 auto;border-color:rgba(255,255,255,.35);color:inherit}
+.sessbar .btn-p{background:var(--on-dark);color:var(--pine);border-color:transparent}
+.sessbar .btn-c{background:#fff;color:var(--clay);border-color:transparent}
+body.harsession{padding-bottom:calc(128px + env(safe-area-inset-bottom))}
+@media(min-width:981px){body.harsession{padding-bottom:70px}}
