@@ -266,3 +266,12 @@ button.d.ledig:active{transform:scale(.94)}
 .cal2-l .l-upptagen{background:var(--paper-2);border:1.5px solid var(--rule-2)}
 .cal2-l .l-vald{background:var(--green)}
 @media (pointer: coarse){.cal2-g .d{font-size:1rem}.cal2-h .nav{width:44px;height:44px}}
+
+
+/* ---------- värdens stängda dagar ---------- */
+.cal2-g .d.stangd{background:var(--clay-wash);color:var(--clay);border-color:transparent;
+  text-decoration:line-through;text-decoration-thickness:1.5px;cursor:pointer;
+  transition:transform .14s var(--ease)}
+button.d.stangd:hover{border-color:var(--clay);transform:scale(1.06)}
+button.d.stangd:active{transform:scale(.94)}
+.cal2-l .l-upptagen{background:var(--paper-2);border:1.5px solid var(--rule-2)}

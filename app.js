@@ -51,7 +51,7 @@ let S = {
   q: "", near: null, nearLabel: "", part: null, partZoom: null, maxPrice: 0,
   fCharge: false, fGarage: false, fSecure: false, fBig: false,
   sort: "pris", selSpot: null,
-  season: "kort",
+  season: "kort", blockFor: null,
   calc: { city: "Stockholm innerstad", type: "Uppfart", walk: 5, charger: false, gated: false, dyn: true },
   wizard: null, bk: null
 };
@@ -100,6 +100,7 @@ function priceSuggest(city, type, walk, charger, gated) {
   };
 }
 function ratingHTML(s) {
+  if (!s.n) return `<span class="tag green">Ny plats</span>`;
   return `<span class="rate">${IF("star", 12)}${s.rate.toFixed(1).replace(".", SET.lang === "sv" ? "," : ".")}<span class="muted">(${s.n})</span></span>`;
 }
 
@@ -370,8 +371,50 @@ ${footerHTML()}`;
 /* ============================================================
    VY: SÖK
    ============================================================ */
+const isoOf = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+/* Värdens egen annons blir en sökbar plats, så att det värden stänger
+   faktiskt syns för den som letar. */
+function listingToSpot(l) {
+  const d = Math.max(20, Math.round(l.pris / 22 * 1.6));
+  const feat = [];
+  if (l.charger) feat.push("Laddbox");
+  if (l.gated) feat.push("Låst");
+  if (l.cam) feat.push("Kamera");
+  if (l.vinter) feat.push("Vinterförvar");
+  return {
+    id: l.id, mine: true, area: l.area || SET.city, kind: TYPE_KIND[l.type] || "uppfart",
+    nm: l.ad, ad: "Din plats · " + esc(l.tid), type: l.type,
+    h: Math.max(5, Math.round(d / 8)), d: d, w: Math.round(d * 4.6 / 10) * 10,
+    m: l.pris, ev: l.vinter ? Math.round(d * 1.9 / 10) * 10 : Math.round(d * 1.9 / 10) * 10,
+    rate: 5, n: 0, host: "Du", hostSince: new Date().getFullYear(),
+    charge: !!l.charger, feat: feat.length ? feat : ["Ny plats"], size: l.size || "Personbil",
+    walk: 0, ll: l.ll || (AREAS.find(a => a.id === (l.area || SET.city)) || AREAS[0]).c,
+    instr: l.info || "Instruktion saknas ännu.", paused: l.paused
+  };
+}
+function allSpots() {
+  const mina = LISTINGS.filter(l => !l.paused).map(listingToSpot);
+  return mina.concat(SPOTS);
+}
+
+/* Är dagen upptagen? För egna annonser styrs det av vad värden stängt. */
+function dayIsBooked(sp, y, m, d) {
+  if (sp && sp.mine) {
+    const l = LISTINGS.find(x => x.id === sp.id);
+    return !!(l && l.blocked && l.blocked.indexOf(isoOf(y, m, d)) > -1);
+  }
+  return dayBooked(sp.id, y, m, d);
+}
+function freeLeft(sp, y, m, fromDay) {
+  const dagar = new Date(y, m + 1, 0).getDate();
+  let n = 0;
+  for (let d = Math.max(1, fromDay); d <= dagar; d++) if (!dayIsBooked(sp, y, m, d)) n++;
+  return n;
+}
+
 function baseList() {
-  let list = SPOTS.filter(s => s.area === S.area && priceFor(s, S.mode) > 0);
+  let list = allSpots().filter(s => s.area === S.area && priceFor(s, S.mode) > 0);
   if (S.q.trim()) {
     const q = S.q.toLowerCase();
     list = list.filter(s => (s.nm + " " + s.ad + " " + s.type + " " + s.feat.join(" ")).toLowerCase().includes(q));
@@ -518,7 +561,7 @@ function spotRow(s) {
   return `<button class="spot ${S.selSpot === s.id ? "sel" : ""}" onclick="openSpot(${s.id})">
     <span class="thumb">${kindIcon(s.kind, 28)}</span>
     <span class="body">
-      <span class="nm">${esc(s.nm)}</span>
+      <span class="nm">${s.mine ? '<span class="tag green" style="margin-right:6px">Din plats</span>' : ""}${esc(s.nm)}</span>
       <span class="ad">${esc(s.ad)}</span>
       <span class="tags">
         <span class="tag">${esc(s.type)}</span>
@@ -861,17 +904,26 @@ function calendarHTML(s, opts) {
   for (let d = 1; d <= antalDagar; d++) {
     const datum = new Date(y, m, d);
     const passerad = datum < idag;
-    const upptagen = !passerad && dayBooked(s.id, y, m, d);
+    const upptagen = !passerad && dayIsBooked(s, y, m, d);
     const iso = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const vald = opts.pick && S.bk && S.bk.date === iso;
     const kl = passerad ? "d passerad" : upptagen ? "d upptagen" : vald ? "d ledig vald" : "d ledig";
-    const klickbar = opts.pick && !passerad && !upptagen;
-    rutor += klickbar
-      ? `<button class="${kl}" onclick="pickDay('${iso}')" aria-label="${d} ${manad}, ledig">${d}</button>`
-      : `<span class="${kl}" aria-label="${d} ${manad}, ${passerad ? "passerad" : upptagen ? "upptagen" : "ledig"}">${d}</span>`;
+    if (opts.block) {
+      /* Värdläge: tryck för att stänga eller öppna dagen. */
+      const kl2 = passerad ? "d passerad" : upptagen ? "d stangd" : "d ledig";
+      rutor += passerad
+        ? `<span class="${kl2}">${d}</span>`
+        : `<button class="${kl2}" onclick="toggleDay2(${opts.listingId},'${iso}')"
+             aria-label="${d} ${manad}, ${upptagen ? "stängd – tryck för att öppna" : "öppen – tryck för att stänga"}">${d}</button>`;
+    } else {
+      const klickbar = opts.pick && !passerad && !upptagen;
+      rutor += klickbar
+        ? `<button class="${kl}" onclick="pickDay('${iso}')" aria-label="${d} ${manad}, ledig">${d}</button>`
+        : `<span class="${kl}" aria-label="${d} ${manad}, ${passerad ? "passerad" : upptagen ? "upptagen" : "ledig"}">${d}</span>`;
+    }
   }
 
-  const lediga = freeDaysLeft(s.id, y, m, (y === idag.getFullYear() && m === idag.getMonth()) ? idag.getDate() : 1);
+  const lediga = freeLeft(s, y, m, (y === idag.getFullYear() && m === idag.getMonth()) ? idag.getDate() : 1);
 
   return `<div class="cal2">
     <div class="cal2-h">
@@ -881,12 +933,13 @@ function calendarHTML(s, opts) {
     </div>
     <div class="cal2-w">${veckodagar.map(d => `<span>${d}</span>`).join("")}</div>
     <div class="cal2-g">${rutor}</div>
-    <div class="cal2-sum">${lediga > 0
-      ? `<b>${lediga} lediga dagar</b> kvar den här månaden`
-      : `<b>Inga lediga dagar</b> kvar den här månaden – prova nästa`}</div>
+    <div class="cal2-sum">${opts.block
+      ? (lediga > 0 ? `Du har <b>${lediga} dagar öppna</b> den här månaden` : `Du har <b>stängt hela månaden</b>`)
+      : (lediga > 0 ? `<b>${lediga} lediga dagar</b> kvar den här månaden`
+                    : `<b>Inga lediga dagar</b> kvar den här månaden – prova nästa`)}</div>
     <div class="cal2-l">
-      <span><i class="l-ledig"></i>Ledig</span>
-      <span><i class="l-upptagen"></i>Upptagen</span>
+      <span><i class="l-ledig"></i>${opts.block ? "Öppen" : "Ledig"}</span>
+      <span><i class="l-upptagen"></i>${opts.block ? "Du har stängt" : "Upptagen"}</span>
       ${opts.pick ? '<span><i class="l-vald"></i>Vald</span>' : ""}
     </div>
   </div>`;
@@ -909,9 +962,44 @@ function pickDay(iso) {
 function redrawCal() {
   const box = document.getElementById("calbox");
   if (!box) return;
+  if (S.blockFor != null) {
+    const l = LISTINGS.find(x => x.id === S.blockFor);
+    if (l) box.innerHTML = calendarHTML(listingToSpot(l), { block: true, listingId: l.id });
+    return;
+  }
   const id = S.bk ? S.bk.id : S.selSpot;
-  const sp = SPOTS.find(x => x.id === id);
+  const sp = allSpots().find(x => x.id === id);
   if (sp) box.innerHTML = calendarHTML(sp, { pick: !!S.bk });
+}
+
+/* Värden stänger eller öppnar en dag. */
+function toggleDay2(listingId, iso) {
+  const l = LISTINGS.find(x => x.id === listingId); if (!l) return;
+  l.blocked = l.blocked || [];
+  const i = l.blocked.indexOf(iso);
+  if (i > -1) l.blocked.splice(i, 1); else l.blocked.push(iso);
+  persist(); redrawCal();
+  const d = new Date(iso).toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
+  toast(i > -1 ? "Öppnade " + d : "Stängde " + d, i > -1 ? "check" : "lock");
+}
+
+/* Värdens kalender – samma vy som föraren ser, fast redigerbar. */
+function openBlockCal(listingId) {
+  const l = LISTINGS.find(x => x.id === listingId); if (!l) return;
+  S.blockFor = listingId; S.cal = null;
+  const antal = (l.blocked || []).filter(d => new Date(d) >= new Date(new Date().toDateString())).length;
+  openSheet(sheetHead("Vilka dagar är platsen ledig?") + `<div class="sheet-b stack">
+    <p class="dim">${esc(l.ad)}</p>
+    <div class="hint">${I("info", 17)}<div>Tryck på en dag för att stänga den. Stängda dagar går inte att boka och syns som upptagna för den som söker.</div></div>
+    <div id="calbox">${calendarHTML(listingToSpot(l), { block: true, listingId: l.id })}</div>
+    ${antal ? `<div class="callout">Du har stängt <b>${antal} dagar</b> framåt.
+      <button class="btn btn-sm" style="margin-top:10px" onclick="clearBlocks(${l.id})">Öppna alla igen</button></div>` : ""}
+    <button class="btn btn-p btn-block btn-lg" onclick="S.blockFor=null;closeSheet();render()">Klart</button>
+  </div>`);
+}
+function clearBlocks(id) {
+  const l = LISTINGS.find(x => x.id === id); if (!l) return;
+  l.blocked = []; persist(); openBlockCal(id); toast("Alla dagar är öppna igen", "check");
 }
 
 /* ---- bokning ---- */
@@ -1396,8 +1484,24 @@ function saveListing() {
   const rec = { id: w.editId || Date.now(), ad: w.ad.trim(), type: w.type, size: w.size, pris: w.pris,
     tid: w.tid, info: w.info, charger: w.charger, gated: w.gated, cam: w.cam, vinter: w.vinter, dyn: w.dyn,
     paused: false, since: new Date().toISOString().slice(0, 10) };
+  rec.area = (LISTINGS.find(x => x.id === rec.id) || {}).area || SET.city;
+  rec.blocked = (LISTINGS.find(x => x.id === rec.id) || {}).blocked || [];
+  rec.ll = (LISTINGS.find(x => x.id === rec.id) || {}).ll || null;
   const i = LISTINGS.findIndex(x => x.id === rec.id);
   if (i >= 0) LISTINGS[i] = rec; else LISTINGS.unshift(rec);
+  /* Slå upp adressen så platsen hamnar på rätt ställe på kartan. */
+  if (!rec.ll && rec.ad) {
+    PMap.geocode(rec.ad, rows => {
+      if (!rows || !rows.length) return;
+      const hit = LISTINGS.find(x => x.id === rec.id); if (!hit) return;
+      hit.ll = rows[0].ll;
+      let bast = AREAS[0], min = Infinity;
+      AREAS.forEach(a => { const km = distKm(a.c, hit.ll); if (km < min) { min = km; bast = a; } });
+      hit.area = bast.id;
+      persist();
+      if (S.route === "sok" || S.route === "start") render();
+    });
+  }
   EARNED = Math.round(LISTINGS.reduce((a, l) => a + l.pris * (1 - FEES.hostPctMonthly), 0) * 3.4);
   persist(); closeSheet();
   toast(i >= 0 ? "Ändringen är sparad" : "Platsen är upplagd", "check");
@@ -1449,7 +1553,8 @@ function viewMina() {
     <div class="panel pad">
       <div class="spread"><b style="font-size:1.02rem">${esc(l.ad)}</b>
         <span class="tag ${l.paused ? "" : "green"}">${l.paused ? "Pausad" : "Aktiv"}</span></div>
-      <p class="muted small" style="margin-top:5px">${esc(l.type)} · ${esc(l.size)} · ${esc(l.tid)}${l.charger ? " · Laddbox" : ""}${l.vinter ? " · Vinterförvar" : ""}${l.dyn ? " · Höjer priset vid matcher" : ""}</p>
+      <p class="muted small" style="margin-top:5px">${(l.blocked || []).filter(d => new Date(d) >= new Date(new Date().toDateString())).length
+          ? `<span style="color:var(--clay)">${(l.blocked || []).filter(d => new Date(d) >= new Date(new Date().toDateString())).length} dagar stängda</span> · ` : ""}${esc(l.type)} · ${esc(l.size)} · ${esc(l.tid)}${l.charger ? " · Laddbox" : ""}${l.vinter ? " · Vinterförvar" : ""}${l.dyn ? " · Höjer priset vid matcher" : ""}</p>
       <div class="grid g3 keep" style="margin-top:16px;gap:1px;background:var(--rule);border-radius:var(--r-sm);overflow:hidden">
         ${[["Pris", num(l.pris) + " " + sym()], ["Du får", num(Math.round(l.pris * (1 - FEES.hostPctMonthly))) + " " + sym()], ["På ett år", num(Math.round(l.pris * (1 - FEES.hostPctMonthly) * 12)) + " " + sym()]]
           .map(([a, b]) => `<div style="background:var(--card);padding:12px 14px">
@@ -1458,7 +1563,8 @@ function viewMina() {
       <div class="row wrap" style="margin-top:16px">
         <button class="btn btn-sm" onclick="togglePause(${l.id})">${I(l.paused ? "play" : "minus", 15)} ${l.paused ? "Aktivera" : "Pausa"}</button>
         <button class="btn btn-sm" onclick="openWizard(${l.id})">${I("sliders", 15)} Ändra</button>
-        <button class="btn btn-sm" onclick="openSchedule(${l.id})">${I("calendar", 15)} Tider</button>
+        <button class="btn btn-sm" onclick="openBlockCal(${l.id})">${I("calendar", 15)} Lediga dagar</button>
+        <button class="btn btn-sm" onclick="openSchedule(${l.id})">${I("clock", 15)} Veckotider</button>
         <button class="btn btn-sm btn-d" onclick="kickCar()">${I("door", 15)} Flytta bilen</button>
       </div>
     </div>`).join("")}</div>
