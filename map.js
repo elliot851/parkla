@@ -62,10 +62,11 @@ const PMap = (function () {
       /* Esri utan nyckel: rutorna slutar på z19 men vi låter kartan zooma till 21
          genom att skala upp sista nivån i stället för att stanna. */
       return L.layerGroup([
+        /* detectRetina av: den dubblar zoomen och skalar ner igen → suddigt */
         L.tileLayer(TILES.satellit.url, {
-          maxZoom: 21, maxNativeZoom: 19, attribution: TILES.satellit.attr, detectRetina: true
+          maxZoom: 21, maxNativeZoom: 19, attribution: TILES.satellit.attr, detectRetina: false
         }),
-        L.tileLayer(LABELS, { maxZoom: 21, maxNativeZoom: 19, opacity: .9 })
+        L.tileLayer(LABELS, { maxZoom: 21, maxNativeZoom: 19, opacity: .72, detectRetina: false })
       ]);
     }
     const t = isDark() ? TILES.morker : TILES.karta;
