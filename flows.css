@@ -303,8 +303,9 @@ button.d.special:hover{border-color:var(--brass)}
 .evtips{border:1px solid color-mix(in srgb,var(--clay) 35%,transparent);border-radius:var(--r-md);
   padding:16px;background:var(--clay-wash)}
 .evtips .ic{color:var(--clay);flex:0 0 auto}
-.evtips>.row b{display:block;font-size:.98rem;font-weight:600}
-.evtips>.row span{display:block;font-size:.86rem;color:var(--ink-70);margin-top:3px}
+.evtips>.row>div>b{display:block;font-size:.98rem;font-weight:600}
+.evtips>.row>div>span{display:block;font-size:.86rem;color:var(--ink-70);margin-top:3px;line-height:1.5}
+.evtips>.row>div>span b{display:inline;font-size:inherit;font-weight:600;color:var(--ink)}
 .evlist{margin-top:14px;display:flex;flex-direction:column;gap:2px}
 .evrow{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid color-mix(in srgb,var(--clay) 22%,transparent)}
 .evrow .t{flex:1;min-width:0}
