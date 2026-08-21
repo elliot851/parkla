@@ -3,7 +3,7 @@
    ============================================================ */
 "use strict";
 
-const VERSION = "2026-08-21.6";
+const VERSION = "2026-08-21.9";
 
 /* ---------- Avgiftsmodell ---------- */
 const FEES = {
@@ -94,6 +94,30 @@ const SPOTS = [
   {id:70, area:"vasteras", kind:"uppfart", nm:"Uppfart, Centrum", ad:"500 m från Stora torget",       type:"Uppfart", h:14,d:69,w:280,m:790,ev:0, rate:4.7,n:19, host:"Rolf",     hostSince:2025, charge:false, feat:["Egen infart"],                        size:"Personbil + SUV",   walk:6,  ll:[59.6100,16.5450], instr:"Kör in från Kopparbergsvägen."},
   {id:71, area:"vasteras", kind:"carport", nm:"Carport, Hamnen",  ad:"1,3 km från centrum · gästhamnen",type:"Carport", h:12,d:59,w:250,m:690,ev:0, rate:4.5,n:14, host:"Susanne", hostSince:2025, charge:true,  feat:["Tak","Laddbox 7,4 kW","Båtplats intill"], size:"Personbil, husvagn", walk:15, ll:[59.5980,16.5560], instr:"Carport längst bort mot vattnet."}
 ];
+
+/* ---------- Vinterförvar ----------
+   Juridiskt viktigt: detta är en UPPLÅTELSE AV YTA, inte förvaring.
+   Tar värden emot fordonet för förvaring uppstår vårdplikt (depositionsavtal)
+   och då blir värden ansvarig. Därför: värden har aldrig nyckeln, och
+   fordonsägarens egen försäkring gäller. Se viewVinter() i app.js. */
+const SEASON = {
+  kort: { id:"kort", label:"Vintersäsong", period:"1 november – 31 mars", months:5 },
+  lang: { id:"lang", label:"Lång säsong",  period:"1 oktober – 30 april",  months:7 }
+};
+const SEASON_RABATT = 0.85;   /* 15 % rabatt mot att betala månad för månad */
+
+/* Bara skyddade eller inhägnade platser får erbjuda vinterförvar.
+   En öppen uppfart duger inte – bilen ska stå bakom grind, tak eller staket. */
+function seasonOK(s) {
+  if (s.kind === "garage" || s.kind === "carport" || s.kind === "tomt") return true;
+  if (s.kind === "innergard") return s.feat.some(f => /Grind|Låst|Portkod|Kamera/.test(f));
+  return false;
+}
+function seasonPrice(s, key) {
+  if (!seasonOK(s) || !s.m) return 0;
+  const m = (SEASON[key] || SEASON.kort).months;
+  return Math.round(s.m * m * SEASON_RABATT / 10) * 10;
+}
 
 /* Stadsdelar — andra nivån i platsväljaren */
 const PARTS = {

@@ -52,3 +52,46 @@
 .placebtn>span{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .placebtn svg:first-child{color:var(--green);flex:0 0 auto}
 .placebtn .flip90{color:var(--ink-25);transform:rotate(90deg);flex:0 0 auto}
+
+/* ---------- vinterförvar ---------- */
+.seasonbar{display:flex;align-items:center;gap:16px;padding:14px 18px;border-radius:var(--r-md);
+  background:var(--pine);color:var(--on-dark);flex-wrap:wrap}
+.seasonbar .ic{color:var(--green-lift);flex:0 0 auto}
+.seasonbar .t{flex:1;min-width:200px}
+.seasonbar .t b{display:block;font-size:.98rem;font-weight:600}
+.seasonbar .t span{display:block;font-size:.82rem;color:rgba(244,241,233,.62);margin-top:2px}
+.seasonbar .seg{background:rgba(244,241,233,.1);border-color:rgba(244,241,233,.2)}
+.seasonbar .seg button{color:rgba(244,241,233,.66)}
+.seasonbar .seg button.on{background:var(--on-dark);color:var(--pine)}
+.seasonbar .btn{border-color:rgba(244,241,233,.3);color:var(--on-dark)}
+.seasonbar .btn:hover{background:rgba(244,241,233,.1)}
+
+.seasoncard{display:flex;align-items:center;gap:14px;width:100%;padding:16px 18px;text-align:left;
+  border:1.5px solid var(--rule);border-radius:var(--r-md);background:var(--card);
+  transition:all .22s var(--ease)}
+.seasoncard:hover{border-color:var(--ink-25)}
+.seasoncard.on{border-color:var(--green);background:var(--green-wash);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 12%,transparent)}
+.seasoncard .t{flex:1;min-width:0}
+.seasoncard .t b{display:block;font-size:1rem;font-weight:600}
+.seasoncard .t span{display:block;font-size:.82rem;color:var(--ink-45);margin-top:2px}
+.seasoncard .p{font-family:var(--display);font-weight:600;font-size:1.25rem;letter-spacing:-.028em;
+  white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* försäkringsintyg */
+.attest{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:var(--r-md);
+  border:1.5px dashed var(--rule-2);cursor:pointer;transition:all .22s var(--ease)}
+.attest:hover{border-color:var(--ink-25)}
+.attest.on{border-style:solid;border-color:var(--green);background:var(--green-wash)}
+.attest .box{width:24px;height:24px;flex:0 0 auto;border-radius:6px;border:1.5px solid var(--rule-2);
+  display:grid;place-items:center;color:transparent;background:var(--card);transition:all .2s var(--ease)}
+.attest.on .box{background:var(--green);border-color:var(--green);color:#fff}
+.attest .t{flex:1;min-width:0}
+.attest .t b{display:block;font-size:.95rem;font-weight:600}
+.attest .t span{display:block;font-size:.82rem;color:var(--ink-45);margin-top:5px;line-height:1.5}
+
+/* lägesväljaren rymmer sex lägen */
+#modeSeg{overflow-x:auto;scrollbar-width:none}
+#modeSeg::-webkit-scrollbar{display:none}
+#modeSeg button{flex:0 0 auto;min-width:72px}
+@media(min-width:760px){#modeSeg button{flex:1}}

@@ -51,6 +51,7 @@ let S = {
   q: "", near: null, nearLabel: "", part: null, partZoom: null, maxPrice: 0,
   fCharge: false, fGarage: false, fSecure: false, fBig: false,
   sort: "pris", selSpot: null,
+  season: "kort",
   calc: { city: "Stockholm innerstad", type: "Uppfart", walk: 5, charger: false, gated: false, dyn: true },
   wizard: null, bk: null
 };
@@ -75,9 +76,9 @@ function num(sek) {
 }
 const sym = () => (CURRENCIES[SET.currency] || CURRENCIES.SEK).sym;
 
-const priceFor = (s, m) => m === "evenemang" ? s.ev : m === "timme" ? s.h : m === "dygn" ? s.d : m === "vecka" ? s.w : s.m;
-const unitLong  = m => m === "evenemang" ? t("per_event") : m === "timme" ? t("per_hour") : m === "dygn" ? t("per_day") : m === "vecka" ? t("per_week") : t("per_month");
-const unitShort = m => m === "evenemang" ? t("u_event") : m === "timme" ? t("u_hour") : m === "dygn" ? t("u_day") : m === "vecka" ? t("u_week") : t("u_month");
+const priceFor = (s, m) => m === "sasong" ? seasonPrice(s, S.season) : m === "evenemang" ? s.ev : m === "timme" ? s.h : m === "dygn" ? s.d : m === "vecka" ? s.w : s.m;
+const unitLong  = m => m === "sasong" ? "för hela säsongen" : m === "evenemang" ? t("per_event") : m === "timme" ? t("per_hour") : m === "dygn" ? t("per_day") : m === "vecka" ? t("per_week") : t("per_month");
+const unitShort = m => m === "sasong" ? "/säsong" : m === "evenemang" ? t("u_event") : m === "timme" ? t("u_hour") : m === "dygn" ? t("u_day") : m === "vecka" ? t("u_week") : t("u_month");
 const reviewsFor = id => REVIEWS[id] || DEFAULT_REVIEWS;
 
 function feeSplit(base, m) {
@@ -155,6 +156,7 @@ function footerHTML() {
     <div><h5>För förare</h5><ul>
       <li><a href="#sok" data-go="sok">Hitta parkering</a></li>
       <li><a href="#evenemang" data-go="evenemang">Evenemang</a></li>
+      <li><a href="#vinterforvar" data-go="vinterforvar">Vinterförvar</a></li>
       <li><a href="#trygg" data-go="trygg">Så fungerar det</a></li>
       <li><a href="#priser" data-go="priser">Priser</a></li></ul></div>
     <div><h5>För värdar</h5><ul>
@@ -408,7 +410,7 @@ function viewSok() {
   </div>
 
   <div class="seg" style="margin-top:12px" id="modeSeg">
-    ${[["timme", t("hour")], ["dygn", t("day")], ["vecka", t("week")], ["manad", t("month")], ["evenemang", t("event")]]
+    ${[["timme", t("hour")], ["dygn", t("day")], ["vecka", t("week")], ["manad", t("month")], ["evenemang", t("event")], ["sasong", "Vinterförvar"]]
       .map(([k, l]) => `<button class="${S.mode === k ? "on" : ""}" onclick="setMode('${k}')">${esc(l)}</button>`).join("")}
   </div>
 
@@ -421,6 +423,16 @@ function viewSok() {
   </div>
 </div>
 
+${S.mode === "sasong" ? `<div class="wrap" style="margin-top:14px"><div class="seasonbar">
+  <span class="ic">${I("moon", 20)}</span>
+  <div class="t"><b>Vinterförvar · ${esc(SEASON[S.season].period)}</b>
+    <span>${SEASON[S.season].months} månader. Bara garage, carport, inhägnad tomt och låst innergård – öppna uppfarter visas inte.</span></div>
+  <div class="seg" style="max-width:190px">
+    ${Object.values(SEASON).map(x => `<button class="${S.season === x.id ? "on" : ""}"
+      onclick="S.season='${x.id}';render()">${x.months} mån</button>`).join("")}
+  </div>
+  <button class="btn btn-sm" data-go="vinterforvar">Så funkar det</button>
+</div></div>` : ""}
 <div class="wrap" style="margin-top:14px" id="sokBody">${sokBodyHTML(list, area)}</div>
 ${S.view === "lista" ? footerHTML() : ""}`;
 }
@@ -522,7 +534,7 @@ function setView(v) { S.view = v; PMap.destroy(); render(); }
 function setMode(m) {
   S.mode = m; S.maxPrice = 0;
   document.querySelectorAll("#modeSeg button").forEach((b, k) =>
-    b.classList.toggle("on", ["timme", "dygn", "vecka", "manad", "evenemang"][k] === m));
+    b.classList.toggle("on", ["timme", "dygn", "vecka", "manad", "evenemang", "sasong"][k] === m));
   refreshResults();
 }
 function tog(k, btn) { S[k] = !S[k]; btn.classList.toggle("on"); refreshResults(); }
@@ -819,14 +831,14 @@ function calendarHTML(s) {
 
 /* ---- bokning ---- */
 function startBooking(id) {
-  S.bk = { id, step: 1, qty: 1, charge: false, extraCar: false, code: "", pay: "swish",
+  S.bk = { id, step: 1, qty: 1, attest: false, charge: false, extraCar: false, code: "", pay: "swish",
            reg: LS.get("lastreg", ""), date: new Date(Date.now() + 864e5).toISOString().slice(0, 10) };
   renderBooking();
 }
 function bkTotals() {
   const s = SPOTS.find(x => x.id === S.bk.id), b = S.bk;
   const unit = priceFor(s, S.mode) || s.d || s.m;
-  const base = unit * b.qty;
+  const base = S.mode === "sasong" ? unit : unit * b.qty;
   const chargeCost = b.charge ? (S.mode === "manad" ? 380 : 55) * b.qty : 0;
   const extraCost = b.extraCar ? Math.round(base * 0.6) : 0;
   const sub = base + chargeCost + extraCost;
@@ -854,6 +866,14 @@ function renderBooking() {
       <div class="field"><label>Fr\u00e5n vilken dag?</label>
         <input class="inp" type="date" id="bkdate" value="${esc(b.date)}" onchange="S.bk.date=this.value"></div>
 
+      ${S.mode === "sasong" ? `
+      <div class="field"><label>Vilken säsong?</label>
+        <div class="stack tight">
+          ${Object.values(SEASON).map(x => `<button class="seasoncard ${S.season === x.id ? "on" : ""}"
+            onclick="pickSeason('${x.id}')">
+            <span class="t"><b>${x.label}</b><span>${x.period} · ${x.months} månader</span></span>
+            <span class="p">${kr(seasonPrice(s, x.id))}</span></button>`).join("")}
+        </div></div>` : `
       <div class="field"><label>Hur ${S.mode === "evenemang" ? "m\u00e5nga platser" : "l\u00e4nge"}?</label>
         <div class="chips" id="bkpre" style="margin-bottom:12px">
           ${(PRESETS[S.mode] || [1,2,3]).map(n => `<button class="chip ${b.qty === n ? "on" : ""}" data-n="${n}"
@@ -866,7 +886,7 @@ function renderBooking() {
             <button onclick="bkQty(1)" aria-label="Fler">${I("plus", 18)}</button>
           </div>
           <span class="muted small">${word}</span>
-        </div></div>
+        </div></div>`}
 
       <div class="bigprice" id="bkbig">${bigPriceHTML(T)}</div>
 
@@ -917,11 +937,23 @@ function renderBooking() {
         <button class="btn" onclick="S.bk.code=document.getElementById('bkcode').value;renderBooking()">Anv\u00e4nd</button></div></div>
     </div>
 
+    ${S.mode === "sasong" ? `
+    <div class="attest ${b.attest ? "on" : ""}" onclick="bkAttest(this)" role="checkbox" aria-checked="${!!b.attest}">
+      <span class="box">${I("check", 15)}</span>
+      <span class="t"><b>Jag intygar att fordonet är försäkrat</b>
+      <span>Du hyr en yta – du lämnar inte in bilen. Värden tar aldrig emot fordonet och har aldrig nyckeln.
+      Brand, stöld och skadegörelse på fordonet går på din egen försäkring. Är bilen avställd räcker en avställningsförsäkring.</span></span>
+    </div>
+    <button class="btn btn-sm" style="align-self:flex-start" data-go="vinterforvar">Läs hela ansvarsfördelningen</button>` : ""}
+
     <div class="panel pad" id="bksum">${bkSumHTML(T)}</div>
 
     <div class="sticky-cta">
-      <button class="btn btn-p btn-block btn-lg" onclick="confirmBooking()">${I("shield", 18)} ${esc(t("book"))}</button>
-      <p class="muted small center" style="margin-top:10px">Avboka gratis fram till 24 timmar innan.</p>
+      <button class="btn btn-p btn-block btn-lg" ${S.mode === "sasong" && !b.attest ? "disabled" : ""}
+        onclick="confirmBooking()">${I("shield", 18)} ${esc(t("book"))}</button>
+      <p class="muted small center" style="margin-top:10px">${S.mode === "sasong"
+        ? (b.attest ? "Uppställningsavtalet skickas till din e-post." : "Kryssa i intyget ovan för att kunna boka.")
+        : "Avboka gratis fram till 24 timmar innan."}</p>
     </div>
   </div>`);
 }
@@ -937,6 +969,17 @@ function bkStep(n) {
   S.bk.step = n; renderBooking();
 }
 function bkPreset(n) { S.bk.qty = n; patchBkSum(); }
+function pickSeason(id) { S.season = id; renderBooking(); }
+function bkAttest(el) {
+  S.bk.attest = !S.bk.attest;
+  el.classList.toggle("on", S.bk.attest);
+  el.setAttribute("aria-checked", String(!!S.bk.attest));
+  const cta = document.querySelector(".sticky-cta .btn-p");
+  if (cta) cta.disabled = !S.bk.attest;
+  const note = document.querySelector(".sticky-cta p");
+  if (note) note.textContent = S.bk.attest ? "Uppställningsavtalet skickas till din e-post."
+    : "Kryssa i intyget ovan för att kunna boka.";
+}
 function bkMore(btn) {
   const m = document.getElementById("bkmore");
   m.hidden = !m.hidden;
@@ -1147,7 +1190,7 @@ function openWizard(edit) {
   } else {
     const sug = priceSuggest(S.calc.city, S.calc.type, S.calc.walk, S.calc.charger, S.calc.gated);
     S.wizard = { step: 0, ad: "", type: S.calc.type, size: "Personbil", pris: sug.month, tid: "Alltid",
-                 info: "", charger: S.calc.charger, gated: S.calc.gated, cam: false, dyn: true, editId: null };
+                 info: "", charger: S.calc.charger, gated: S.calc.gated, cam: false, vinter: false, dyn: true, editId: null };
   }
   renderWizard();
 }
@@ -1161,7 +1204,7 @@ function renderWizard() {
        ${Object.keys(TYPE_MULT).map(k => `<option ${k === w.type ? "selected" : ""}>${k}</option>`).join("")}</select></div>
      <div class="field"><label>Vad får plats?</label><select class="inp" id="w_size">
        ${["Personbil", "Personbil + SUV", "Personbil, husbil", "Personbil, släp", "Buss eller lastbil"].map(k => `<option ${k === w.size ? "selected" : ""}>${k}</option>`).join("")}</select></div>
-     ${[["charger", "bolt", "Laddbox", "Man kan ladda elbil"], ["gated", "lock", "Låst eller grind", "Port, bom eller grind"], ["cam", "camera", "Kamera", "Platsen är bevakad"]]
+     ${[["charger", "bolt", "Laddbox", "Man kan ladda elbil"], ["gated", "lock", "Låst eller grind", "Port, bom eller grind"], ["cam", "camera", "Kamera", "Platsen är bevakad"], ["vinter", "moon", "Erbjud vinterförvar", "Kräver garage, carport, inhägnad tomt eller låst innergård"]]
        .map(([k, ic, tt, ss]) => `<div class="setrow"><span style="color:var(--ink-45)">${I(ic, 20)}</span>
          <div class="t"><b>${tt}</b><span>${ss}</span></div>
          <div class="switch ${w[k] ? "on" : ""}" role="switch" onclick="S.wizard['${k}']=!S.wizard['${k}'];this.classList.toggle('on')"></div></div>`).join("")}`,
@@ -1213,7 +1256,7 @@ function wizNext() {
 function saveListing() {
   const w = S.wizard;
   const rec = { id: w.editId || Date.now(), ad: w.ad.trim(), type: w.type, size: w.size, pris: w.pris,
-    tid: w.tid, info: w.info, charger: w.charger, gated: w.gated, cam: w.cam, dyn: w.dyn,
+    tid: w.tid, info: w.info, charger: w.charger, gated: w.gated, cam: w.cam, vinter: w.vinter, dyn: w.dyn,
     paused: false, since: new Date().toISOString().slice(0, 10) };
   const i = LISTINGS.findIndex(x => x.id === rec.id);
   if (i >= 0) LISTINGS[i] = rec; else LISTINGS.unshift(rec);
@@ -1268,7 +1311,7 @@ function viewMina() {
     <div class="panel pad">
       <div class="spread"><b style="font-size:1.02rem">${esc(l.ad)}</b>
         <span class="tag ${l.paused ? "" : "green"}">${l.paused ? "Pausad" : "Aktiv"}</span></div>
-      <p class="muted small" style="margin-top:5px">${esc(l.type)} · ${esc(l.size)} · ${esc(l.tid)}${l.charger ? " · Laddbox" : ""}${l.dyn ? " · Höjer priset vid matcher" : ""}</p>
+      <p class="muted small" style="margin-top:5px">${esc(l.type)} · ${esc(l.size)} · ${esc(l.tid)}${l.charger ? " · Laddbox" : ""}${l.vinter ? " · Vinterförvar" : ""}${l.dyn ? " · Höjer priset vid matcher" : ""}</p>
       <div class="grid g3 keep" style="margin-top:16px;gap:1px;background:var(--rule);border-radius:var(--r-sm);overflow:hidden">
         ${[["Pris", num(l.pris) + " " + sym()], ["Du får", num(Math.round(l.pris * (1 - FEES.hostPctMonthly))) + " " + sym()], ["På ett år", num(Math.round(l.pris * (1 - FEES.hostPctMonthly) * 12)) + " " + sym()]]
           .map(([a, b]) => `<div style="background:var(--card);padding:12px 14px">
@@ -1853,6 +1896,7 @@ function viewMer() {
   const links = [
     ["installningar", "sliders", t("settings"), "Utseende, språk, valuta, aviseringar"],
     ["evenemang", "ticket", "Evenemang", "Matcher och konserter nära dig"],
+    ["vinterforvar", "moon", "Vinterförvar", "Ställ undan bilen över vintern"],
     ["meddelanden", "message", "Meddelanden", "Skriv till värdar och förare"],
     ["trygg", "shield", t("nav_trust"), "BankID, skadegaranti, flytta bilen"],
     ["priser", "wallet", t("nav_price"), "Exakt vad vi tar, och varför"],
@@ -1902,6 +1946,77 @@ function viewMer() {
 ${footerHTML()}`;
 }
 
+
+/* ============================================================
+   VY: VINTERFÖRVAR
+   ============================================================ */
+function withMode(m, fn) { const old = S.mode; S.mode = m; try { return fn(); } finally { S.mode = old; } }
+
+function viewVinter() {
+  const ex = SPOTS.filter(seasonOK).filter(x => x.m).sort((a, b) => seasonPrice(a, "kort") - seasonPrice(b, "kort")).slice(0, 4);
+  return `
+<section class="tight"><div class="wrap">
+  <span class="kicker" data-reveal>Vinterförvar</span>
+  <h1 style="margin:14px 0 0;font-size:clamp(2rem,4.4vw,3.2rem)" data-reveal>Ställ undan bilen<br><em>över vintern.</em></h1>
+  <p class="lede" style="margin-top:18px" data-reveal>Har du en sommarbil, husvagn eller motorcykel som ska stå still i fem månader? Hyr en plats hos någon som har ett garage över. Betydligt billigare än en förvaringsfirma, och du vet var bilen står.</p>
+
+  <div class="grid g2" style="margin-top:34px">
+    <div class="panel pad-lg" data-reveal>
+      <h3>Två säsonger</h3>
+      <div style="margin-top:14px">
+        ${Object.values(SEASON).map(x => `<div class="kv"><span><b>${x.label}</b><br><span class="muted small">${x.period}</span></span>
+          <b>${x.months} mån</b></div>`).join("")}
+      </div>
+      <p class="dim small" style="margin-top:14px">Du får ${Math.round((1 - SEASON_RABATT) * 100)} % rabatt jämfört med att betala månad för månad, mot att du bokar hela säsongen.</p>
+    </div>
+    <div class="panel pad-lg" data-reveal>
+      <h3>Vad som får hyras ut</h3>
+      <p class="dim" style="margin-top:10px">Bilen ska stå skyddad. Därför får bara dessa platser erbjuda vinterförvar:</p>
+      <div class="row wrap" style="margin-top:14px">
+        <span class="tag green">Garage</span><span class="tag green">Carport</span>
+        <span class="tag green">Inhägnad tomt</span><span class="tag green">Låst innergård</span>
+      </div>
+      <p class="dim small" style="margin-top:14px">En öppen uppfart duger inte och visas aldrig i det här läget.</p>
+    </div>
+  </div>
+
+  <div class="panel pad-lg" style="margin-top:22px;border-color:var(--brass)" data-reveal>
+    <div class="row"><span style="color:var(--brass)">${I("shield", 24)}</span><h3>Vem ansvarar för vad?</h3></div>
+    <p class="dim" style="margin-top:12px;max-width:64ch">Det här är det viktigaste att förstå, och vi är tydliga med det innan du bokar. <b>Du hyr en yta – du lämnar inte in bilen.</b> Värden tar aldrig emot fordonet, har aldrig nyckeln och sköter det inte. Det gör att ingen vårdplikt uppstår för värden, precis som när du hyr en förrådsbox.</p>
+    <div class="tblwrap" style="margin-top:18px"><table class="tbl">
+      <thead><tr><th>Vad som händer</th><th>Vem som står för det</th></tr></thead>
+      <tbody>
+        <tr><td>Brand, stöld eller skadegörelse på fordonet</td><td><b>Fordonsägarens egen försäkring</b></td></tr>
+        <tr><td>Fordonet skadar garaget, porten eller staketet</td><td><b>Parkla Trygg</b>, upp till ${kr(FEES.garantiBelopp)}</td></tr>
+        <tr><td>Fordonet står kvar efter säsongens slut</td><td>Övertidsavgift ${kr(FEES.overtidPerTimme)}/timme till värden, vi ordnar bärgning</td></tr>
+        <tr><td>Vattenläcka eller takras i värdens byggnad</td><td>Värdens fastighetsförsäkring</td></tr>
+        <tr><td>Nycklar och tillsyn</td><td>Ingen – värden rör aldrig fordonet</td></tr>
+      </tbody></table></div>
+    <div class="callout brass" style="margin-top:16px">Innan du bokar måste du intyga att fordonet är försäkrat. Är bilen avställd räcker en avställnings- eller garageförsäkring – den täcker brand och stöld men inte trafik.</div>
+  </div>
+
+  <h2 style="margin:44px 0 18px" data-reveal>Så går det till</h2>
+  <ul class="numlist" data-reveal>
+    ${[["Välj säsong och plats", "Fem eller sju månader. Du ser hela priset direkt, inga avgifter tillkommer."],
+       ["Intyga att fordonet är försäkrat", "En ruta att kryssa i. Vi sparar intyget tillsammans med avtalet."],
+       ["Kör dit och lås", "Du parkerar själv och behåller nyckeln. Värden öppnar bara grinden eller porten."],
+       ["Hämta när säsongen är slut", "Vi påminner två veckor innan. Vill du förlänga gör du det i appen."]]
+      .map(([a, b], k) => `<li><span class="n">0${k + 1}</span><div><b>${a}</b><p>${b}</p></div></li>`).join("")}
+  </ul>
+
+  ${ex.length ? `<h2 style="margin:44px 0 18px" data-reveal>Billigast just nu</h2>
+    <div class="spotlist" data-reveal>${withMode("sasong", () => ex.map(spotRow).join(""))}</div>
+    <button class="btn btn-p" style="margin-top:20px" onclick="S.mode='sasong';go('sok')">Se alla platser${I("arrow", 16, "arw")}</button>` : ""}
+
+  <div class="panel pad-lg" style="margin-top:34px;background:var(--green-wash);border-color:transparent" data-reveal>
+    <h3>Har du ett garage som står tomt i vinter?</h3>
+    <p class="dim" style="margin-top:10px;max-width:58ch">Ett garage som annars står oanvänt mellan november och mars kan ge ${kr(9000)}–${kr(12000)} för säsongen. Du behöver inte göra något mer än att öppna porten två gånger.</p>
+    <button class="btn btn-p" style="margin-top:18px" data-go="hyrut">Räkna på mitt garage${I("arrow", 16, "arw")}</button>
+  </div>
+</div></section>
+${footerHTML()}`;
+}
+
 /* ============================================================
    RUNDTUR
    ============================================================ */
@@ -1934,7 +2049,8 @@ function startTour() {
 const VIEWS = {
   start: viewStart, sok: viewSok, hyrut: viewHyrut, mina: viewMina, mer: viewMer,
   trygg: viewTrygg, priser: viewPriser, skatt: viewSkatt, brf: viewBrf, affar: viewAffar,
-  evenemang: viewEvenemang, meddelanden: viewMeddelanden, installningar: viewInstallningar, bjudin: viewBjudin
+  evenemang: viewEvenemang, meddelanden: viewMeddelanden, installningar: viewInstallningar, bjudin: viewBjudin,
+  vinterforvar: viewVinter
 };
 
 let io = null, revealTimer = null;
