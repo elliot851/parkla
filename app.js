@@ -522,7 +522,9 @@ function spotRow(s) {
       <span class="ad">${esc(s.ad)}</span>
       <span class="tags">
         <span class="tag">${esc(s.type)}</span>
-        ${s.charge ? `<span class="tag green">${I("bolt", 11)} Laddbox</span>` : ""}
+        ${needsApproval(s, S.mode) ? `<span class="tag">${I("clock", 11)} Värden svarar</span>`
+          : `<span class="tag green">${I("bolt", 11)} Boka direkt</span>`}
+        ${s.charge ? `<span class="tag">${I("bolt", 11)} Laddbox</span>` : ""}
         ${s._km != null ? `<span class="tag">${s._km < 1 ? Math.round(s._km * 1000) + " m" : s._km.toFixed(1).replace(".", ",") + " km"}</span>` : ""}
         ${ratingHTML(s)}
       </span>
@@ -619,16 +621,22 @@ function openPlacePicker() {
     <p class="muted small center" style="margin-top:-4px">Vi frågar din telefon om din position – inget sparas.</p>
 
     <div class="rule"></div>
-    <div class="field"><label>Stad eller område</label>
-      <div class="chips" style="flex-wrap:wrap;overflow:visible">
-        ${AREAS.map(x => `<button class="chip ${x.id === S.area ? "on" : ""}"
-          onclick="pickCity('${x.id}')">${esc(x.name.split(" ")[0])}</button>`).join("")}
+    <div class="field"><label>Välj stad</label>
+      <div class="pickrows">
+        ${AREAS.map(x => `<button class="pickrow ${x.id === S.area ? "on" : ""}" onclick="pickCity('${x.id}')">
+          <span class="mark">${I("check", 15)}</span>
+          <span class="t"><b>${esc(x.name)}</b><span>${SPOTS.filter(z => z.area === x.id).length} platser</span></span>
+          ${x.id === S.area ? '<span class="tag green">Vald</span>' : ""}</button>`).join("")}
       </div></div>
 
     ${parts.length ? `<div class="field"><label>Var i ${esc(a.name.split(" ")[0])}?</label>
-      <div class="chips" style="flex-wrap:wrap;overflow:visible">
-        ${parts.map((p, i) => `<button class="chip ${(S.part || parts[0][0]) === p[0] ? "on" : ""}"
-          onclick="pickPart(${i})">${esc(p[0])}</button>`).join("")}
+      <div class="pickrows">
+        ${parts.map((p, i) => {
+          const on = (S.part || parts[0][0]) === p[0];
+          return `<button class="pickrow ${on ? "on" : ""}" onclick="pickPart(${i})">
+            <span class="mark">${I("check", 15)}</span>
+            <span class="t"><b>${esc(p[0])}</b></span>
+            ${on ? '<span class="tag green">Vald</span>' : ""}</button>`; }).join("")}
       </div></div>` : ""}
 
     <button class="btn btn-p btn-block btn-lg" onclick="closeSheet();render()">Visa platserna</button>
@@ -851,7 +859,7 @@ function calendarHTML(s) {
 
 /* ---- bokning ---- */
 function startBooking(id) {
-  S.bk = { id, step: 1, qty: 1, attest: false, charge: false, extraCar: false, code: "", pay: "swish",
+  S.bk = { id, step: 1, qty: 1, start: "09:00", attest: false, charge: false, extraCar: false, code: "", pay: "swish",
            reg: LS.get("lastreg", ""), date: new Date(Date.now() + 864e5).toISOString().slice(0, 10) };
   renderBooking();
 }
@@ -886,6 +894,19 @@ function renderBooking() {
       <div class="field"><label>Fr\u00e5n vilken dag?</label>
         <input class="inp" type="date" id="bkdate" value="${esc(b.date)}" onchange="S.bk.date=this.value"></div>
 
+      ${S.mode === "timme" ? `
+      <div class="field"><label>Från vilken tid?</label>
+        <select class="inp" id="bktime" onchange="S.bk.start=this.value;patchBkSum()">
+          ${timeOptions(b.start)}
+        </select></div>
+      <div class="field"><label>Hur länge?</label>
+        <div class="chips" id="bkdur" style="flex-wrap:wrap;overflow:visible">
+          ${DURATIONS.map(d => `<button class="chip ${b.qty === d.h ? "on" : ""}"
+            onclick="bkPreset(${d.h})">${d.label}</button>`).join("")}
+        </div>
+        <p class="muted small" style="margin-top:9px" id="bkspan">${timeSpanText(b)}</p>
+      </div>` : ""}
+
       ${S.mode === "sasong" ? `
       <div class="field"><label>Vilken säsong?</label>
         <div class="stack tight">
@@ -909,6 +930,14 @@ function renderBooking() {
         </div></div>`}
 
       <div class="bigprice" id="bkbig">${bigPriceHTML(T)}</div>
+
+      <div class="bookmode ${needsApproval(s, S.mode) ? "ask" : "now"}">
+        ${needsApproval(s, S.mode) ? I("clock", 19) : I("bolt", 19)}
+        <div><b>${needsApproval(s, S.mode) ? "Värden svarar på din förfrågan" : "Du får platsen direkt"}</b>
+        <span>${needsApproval(s, S.mode)
+          ? "Oftast inom en timme. Du betalar först när värden sagt ja."
+          : "Ingen väntan. Koden till platsen kommer så fort du bokat."}</span></div>
+      </div>
 
       <div class="sticky-cta">
         <button class="btn btn-p btn-block btn-lg" onclick="bkStep(2)">Forts\u00e4tt${I("arrow", 17, "arw")}</button>
@@ -990,6 +1019,25 @@ function bkStep(n) {
 }
 function bkPreset(n) { S.bk.qty = n; patchBkSum(); }
 function pickSeason(id) { S.season = id; renderBooking(); }
+
+/* Starttider i halvtimmessteg inom värdens öppettider. */
+function timeOptions(sel) {
+  let out = "";
+  for (let h = OPEN_HOURS.from; h <= OPEN_HOURS.to; h++) {
+    for (const m of ["00", "30"]) {
+      const v = String(h).padStart(2, "0") + ":" + m;
+      out += `<option value="${v}" ${v === sel ? "selected" : ""}>${v}</option>`;
+    }
+  }
+  return out;
+}
+function timeSpanText(b) {
+  const [h, m] = (b.start || "09:00").split(":").map(Number);
+  const end = new Date(2000, 0, 1, h + b.qty, m);
+  const endTxt = String(end.getHours()).padStart(2, "0") + ":" + String(end.getMinutes()).padStart(2, "0");
+  const over = end.getDate() > 1 ? " (dagen efter)" : "";
+  return `Du står från ${b.start || "09:00"} till ${endTxt}${over}.`;
+}
 function bkAttest(el) {
   S.bk.attest = !S.bk.attest;
   el.classList.toggle("on", S.bk.attest);
@@ -1021,6 +1069,11 @@ function patchBkSum() {
   if (box) { box.innerHTML = bkSumHTML(T); box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash"); }
   const big = document.getElementById("bkbig"); if (big) big.innerHTML = bigPriceHTML(T);
   const q = document.getElementById("bkq"); if (q) q.textContent = S.bk.qty;
+  const span = document.getElementById("bkspan"); if (span) span.textContent = timeSpanText(S.bk);
+  document.querySelectorAll("#bkdur .chip").forEach(c => {
+    const n = parseInt(c.textContent, 10);
+    c.classList.toggle("on", (isNaN(n) ? 8 : n) === S.bk.qty);
+  });
   const minus = document.querySelector(".stepper button:first-child");
   if (minus) minus.disabled = S.bk.qty <= 1;
   document.querySelectorAll("#bkpre .chip").forEach(c => c.classList.toggle("on", +c.dataset.n === S.bk.qty));
@@ -1055,12 +1108,15 @@ function finishBooking(reg, date) {
   BOOKINGS.unshift(bk);
   NOTIS.unshift({ id: "n" + Date.now(), ic: "check", t: "Bokningen är klar", s: `${s.nm} · ${bk.date} · ${kr(T.driverTotal)}`, unread: true });
   persist();
+  const vantar = needsApproval(s, S.mode);
   openSheet(`<div class="sheet-b center" style="padding-top:36px">
-    <div class="tick">${I("check", 32)}</div>
-    <h3 style="font-family:var(--serif);font-size:1.7rem">Platsen är din</h3>
+    <div class="tick"${vantar ? ' style="background:var(--brass)"' : ""}>${I(vantar ? "clock" : "check", 32)}</div>
+    <h3 style="font-family:var(--display);font-size:1.6rem">${vantar ? "Förfrågan skickad" : "Platsen är din"}</h3>
     <p class="dim" style="margin-top:8px">${esc(s.nm)} · ${esc(bk.date)}</p>
-    <div class="code" style="margin-top:22px">${code}</div>
-    <p class="muted small" style="margin-top:10px">Koden till grinden. Den finns alltid under Mitt.</p>
+    ${vantar ? `<div class="callout brass" style="margin-top:20px;text-align:left">
+      ${I("clock", 16)} ${esc(s.host)} svarar oftast inom en timme. Du får en avisering, och pengarna dras först när svaret kommit.</div>`
+    : `<div class="code" style="margin-top:22px">${code}</div>
+    <p class="muted small" style="margin-top:10px">Koden till grinden. Den finns alltid under Mitt.</p>`}
     <div class="callout" style="margin-top:18px;text-align:left">${I("info", 16)} ${esc(s.instr)}</div>
     <button class="btn btn-p btn-block btn-lg" style="margin-top:22px" onclick="closeSheet();go('mina')">Till mina bokningar</button>
     <button class="btn btn-block" style="margin-top:10px" onclick="closeSheet()">${esc(t("close"))}</button>
@@ -1230,7 +1286,11 @@ function renderWizard() {
          <div class="switch ${w[k] ? "on" : ""}" role="switch" onclick="S.wizard['${k}']=!S.wizard['${k}'];this.classList.toggle('on')"></div></div>`).join("")}`,
     `<div class="field"><label>När får folk parkera?</label><select class="inp" id="w_tid">
        ${["Alltid", "Vardagar 08–17", "Kvällar och helger", "Bara vid matcher", "Bara långtid (månad)"].map(k => `<option ${k === w.tid ? "selected" : ""}>${k}</option>`).join("")}</select></div>
-     <div class="field"><label>Vad behöver föraren veta?</label>
+     <div class="setrow"><span style="color:var(--green)">${I("bolt", 20)}</span>
+       <div class="t"><b>Låt folk boka direkt</b><span>Utan att du godkänner varje gång. Krävs för att korttidsbokningar ska funka – annars hinner de tröttna.</span></div>
+       <div class="switch ${w.instant !== false ? "on" : ""}" role="switch" onclick="S.wizard.instant=!(S.wizard.instant!==false);this.classList.toggle('on')"></div></div>
+     <div class="hint" style="margin-top:12px">${I("info", 17)}<div>Månadsuthyrning och vinterförvar går alltid via ditt godkännande, oavsett den här inställningen.</div></div>
+     <div class="field" style="margin-top:14px"><label>Vad behöver föraren veta?</label>
        <textarea class="inp" id="w_info" rows="3" placeholder="Kör in från gatan, plats närmast garaget. Vänd bilen så nosen pekar ut.">${esc(w.info)}</textarea></div>`,
     `<div class="field"><label>Pris per månad (${sym()})</label>
        <input class="inp mono" id="w_pris" value="${w.pris}" inputmode="numeric" style="font-size:1.4rem" oninput="wizPrice(this)"></div>

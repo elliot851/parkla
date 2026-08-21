@@ -3,7 +3,7 @@
    ============================================================ */
 "use strict";
 
-const VERSION = "2026-08-21.9";
+const VERSION = "2026-08-21.14";
 
 /* ---------- Avgiftsmodell ---------- */
 const FEES = {
@@ -93,6 +93,23 @@ const SPOTS = [
   /* Västerås */
   {id:70, area:"vasteras", kind:"uppfart", nm:"Uppfart, Centrum", ad:"500 m från Stora torget",       type:"Uppfart", h:14,d:69,w:280,m:790,ev:0, rate:4.7,n:19, host:"Rolf",     hostSince:2025, charge:false, feat:["Egen infart"],                        size:"Personbil + SUV",   walk:6,  ll:[59.6100,16.5450], instr:"Kör in från Kopparbergsvägen."},
   {id:71, area:"vasteras", kind:"carport", nm:"Carport, Hamnen",  ad:"1,3 km från centrum · gästhamnen",type:"Carport", h:12,d:59,w:250,m:690,ev:0, rate:4.5,n:14, host:"Susanne", hostSince:2025, charge:true,  feat:["Tak","Laddbox 7,4 kW","Båtplats intill"], size:"Personbil, husvagn", walk:15, ll:[59.5980,16.5560], instr:"Carport längst bort mot vattnet."}
+];
+
+/* ---------- Direktbokning kontra godkännande ----------
+   Regel: korttid bokas DIREKT, annars är produkten död. Ingen som behöver en plats
+   om tio minuter väntar på ett svar. Långa åtaganden (månad, vinterförvar) går alltid
+   via godkännande – där är det rimligt att värden vill veta vem som kommer. */
+const APPROVAL_IDS = [5, 8, 14, 30, 31, 32];   /* värdar som vill godkänna även korttid */
+const LONG_MODES = ["manad", "sasong"];
+function needsApproval(s, mode) {
+  return LONG_MODES.indexOf(mode) > -1 || APPROVAL_IDS.indexOf(s.id) > -1;
+}
+
+/* Tider en plats får bokas. Värden målar sitt fönster en gång. */
+const OPEN_HOURS = { from: 6, to: 23 };
+const DURATIONS = [
+  { h: 1, label: "1 timme" }, { h: 2, label: "2 timmar" }, { h: 3, label: "3 timmar" },
+  { h: 4, label: "4 timmar" }, { h: 8, label: "Hela arbetsdagen" }
 ];
 
 /* ---------- Vinterförvar ----------

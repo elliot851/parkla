@@ -210,3 +210,51 @@ if (!openDeepLink()) {
   }, { passive: false });
   /* Dubbeltryck-zoom sköts av touch-action:manipulation i app.css. */
 })();
+
+
+/* ============================================================
+   Alltid senaste versionen.
+   Adressen https://elliot851.github.io/parkla/ ska funka för alltid:
+   spara den på hemskärmen en gång, sedan håller appen sig själv aktuell.
+   ============================================================ */
+(function keepFresh() {
+  let banner = null;
+
+  function showBanner(ny) {
+    if (banner) return;
+    banner = document.createElement("button");
+    banner.className = "updbar";
+    banner.innerHTML = I("refresh", 17) + "<span>Ny version finns</span><b>Uppdatera</b>";
+    banner.onclick = reloadNow;
+    document.body.appendChild(banner);
+    requestAnimationFrame(() => banner.classList.add("on"));
+  }
+  function reloadNow() {
+    if ("caches" in window) {
+      caches.keys().then(ks => Promise.all(ks.map(k => caches.delete(k)))).finally(hardReload);
+    } else hardReload();
+  }
+  function hardReload() { location.replace(location.pathname); }
+
+  function busy() {
+    return document.getElementById("sheet").classList.contains("on")
+      || (typeof Tour !== "undefined" && Tour.active());
+  }
+
+  async function check() {
+    if (!navigator.onLine) return;
+    try {
+      const r = await fetch("version.json?cb=" + Date.now(), { cache: "no-store" });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (!j.v || j.v === VERSION) return;
+      /* Är användaren mitt i något visar vi bara en knapp. Annars byter vi direkt. */
+      if (busy()) showBanner(j.v);
+      else reloadNow();
+    } catch (e) {}
+  }
+
+  window.addEventListener("load", () => setTimeout(check, 1200));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+  setInterval(check, 5 * 60 * 1000);
+})();

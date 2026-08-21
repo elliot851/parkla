@@ -3,11 +3,11 @@
    NÄTET FÖRST, cache bara som reserv. Då kan man aldrig fastna
    på en gammal version, men appen funkar ändå utan täckning.
    ============================================================ */
-const CACHE = "parkla-v13";
+const CACHE = "parkla-v14";
 const SHELL = [
   "./", "./index.html", "./app.css", "./map.css", "./tour.css", "./book.css", "./flows.css",
   "./icons.js", "./data.js", "./map.js", "./tour.js", "./app.js", "./flows.js",
-  "./icon.svg", "./icon-180.png", "./icon-512.png", "./manifest.webmanifest"
+  "./version.json", "./icon.svg", "./icon-180.png", "./icon-512.png", "./manifest.webmanifest"
 ];
 
 self.addEventListener("install", e => {
@@ -44,6 +44,9 @@ self.addEventListener("fetch", e => {
 
   /* Adressökning ska aldrig cachas */
   if (/nominatim/.test(url.hostname)) return;
+
+  /* versionskollen måste alltid gå mot nätet */
+  if (/version\.json/.test(url.pathname)) return;
 
   /* Allt eget: nätet först, cache som reserv */
   if (sameOrigin) {

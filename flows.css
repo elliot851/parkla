@@ -194,3 +194,39 @@
   .lede{font-size:1.06rem}
   .door .d{font-size:1rem}
 }
+
+
+/* ---------- valbara rader som syns ---------- */
+.pickrows{display:flex;flex-direction:column;gap:8px}
+.pickrow{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:15px 16px;
+  border:2px solid var(--rule);border-radius:var(--r-md);background:var(--card);
+  transition:border-color .2s,background .2s}
+.pickrow:hover{border-color:var(--ink-25)}
+.pickrow.on{border-color:var(--green);background:var(--green-wash)}
+.pickrow .mark{width:26px;height:26px;flex:0 0 auto;border-radius:50%;border:2px solid var(--rule-2);
+  display:grid;place-items:center;color:transparent;background:var(--card);transition:all .2s var(--ease)}
+.pickrow.on .mark{background:var(--green);border-color:var(--green);color:#fff}
+.pickrow .t{flex:1;min-width:0}
+.pickrow .t b{display:block;font-size:1rem;font-weight:600}
+.pickrow .t span{display:block;font-size:.84rem;color:var(--ink-45);margin-top:1px}
+
+/* ---------- direkt eller godkännande ---------- */
+.bookmode{display:flex;gap:13px;align-items:flex-start;padding:14px 16px;border-radius:var(--r-md);
+  font-size:.9rem}
+.bookmode.now{background:var(--green-wash);color:var(--ink-70)}
+.bookmode.now svg{color:var(--green);flex:0 0 auto}
+.bookmode.ask{background:var(--brass-wash);color:var(--ink-70)}
+.bookmode.ask svg{color:var(--brass);flex:0 0 auto}
+.bookmode b{display:block;color:var(--ink);font-weight:600}
+.bookmode span{display:block;margin-top:2px}
+
+
+/* ---------- ny version finns ---------- */
+.updbar{position:fixed;left:50%;bottom:calc(140px + env(safe-area-inset-bottom));z-index:140;
+  transform:translate(-50%,16px);opacity:0;transition:.35s var(--ease);
+  display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:999px;
+  background:var(--green);color:#fff;font-size:.9rem;font-weight:500;box-shadow:var(--lift-2);
+  max-width:92vw}
+.updbar.on{opacity:1;transform:translate(-50%,0)}
+.updbar b{font-weight:600;text-decoration:underline;text-underline-offset:3px}
+@media(min-width:981px){.updbar{bottom:90px}}
