@@ -398,6 +398,28 @@ function allSpots() {
   return mina.concat(SPOTS);
 }
 
+/* Evenemang som ligger nära en plats och som inte redan varit. */
+function eventsNear(sp) {
+  if (!sp || !sp.ll) return [];
+  const idag = new Date(); idag.setHours(0, 0, 0, 0);
+  return EVENTS
+    .map(e => Object.assign({ km: distKm(sp.ll, e.ll) }, e))
+    .filter(e => e.km <= EVENT_RADIE_KM && new Date(e.date) >= idag)
+    .sort((a, b) => a.date < b.date ? -1 : 1);
+}
+function eventOn(sp, iso) { return eventsNear(sp).find(e => e.date === iso) || null; }
+
+/* Förslag på dagspris när det är evenemang.
+   Skalar med hur många som kommer, men aldrig mer än 2,5 gånger ordinarie –
+   över det uppfattas det som ocker och folk bokar inte. */
+function eventPrice(l, ev) {
+  const bas = baseDayPrice(l);
+  const takt = ev.crowd >= 30000 ? 2.5 : ev.crowd >= 15000 ? 2.0 : 1.6;
+  const närhet = ev.km <= 1 ? 1 : ev.km <= 3 ? 0.9 : 0.78;
+  return Math.round(bas * takt * närhet / 10) * 10;
+}
+function kmText(km) { return km < 1 ? Math.round(km * 1000) + " m" : km.toFixed(1).replace(".", ",") + " km"; }
+
 /* Ordinarie dygnspris för en egen annons. */
 function baseDayPrice(l) { return Math.max(20, Math.round(l.pris / 22 * 1.6)); }
 /* Priset för en bestämd dag – värdens specialpris om det finns, annars ordinarie. */
@@ -937,9 +959,11 @@ function calendarHTML(s, opts) {
       const l = LISTINGS.find(x => x.id === opts.listingId);
       const special = l && l.prices && l.prices[iso];
       const dagpris = l ? dayPriceFor(l, iso) : 0;
+      const ev = opts.spot ? eventOn(opts.spot, iso) : null;
       const kl2 = (passerad ? "d passerad" : upptagen ? "d stangd" : "d ledig")
-        + (special && !upptagen && !passerad ? " special" : "") + " medpris";
-      const inne = `<i>${d}</i>${passerad ? "" : `<u>${num(dagpris)}</u>`}`;
+        + (special && !upptagen && !passerad ? " special" : "")
+        + (ev && !passerad ? " harevent" : "") + " medpris";
+      const inne = `<i>${d}</i>${passerad ? "" : `<u>${num(dagpris)}</u>`}${ev && !passerad ? '<b class="evdot"></b>' : ""}`;
       rutor += passerad
         ? `<span class="${kl2}">${inne}</span>`
         : `<button class="${kl2}" onclick="${S.calMode === "pris" ? `openDayPrice(${opts.listingId},'${iso}')` : `toggleDay2(${opts.listingId},'${iso}')`}"
@@ -969,6 +993,7 @@ function calendarHTML(s, opts) {
     ${opts.block && S.calMode === "pris" ? `<div class="calquick">
       <button class="btn btn-sm" onclick="setMonthPrice(${opts.listingId},'helg')">${I("spark", 14)} Höj helgpriset 25 %</button>
       <button class="btn btn-sm" onclick="setMonthPrice(${opts.listingId},'alla')">Sätt pris för hela månaden</button>
+      <button class="btn btn-sm" onclick="applyAllEventPrices(${opts.listingId})">${I("ticket", 14)} Matchdagar</button>
       <button class="btn btn-sm" onclick="setMonthPrice(${opts.listingId},'rensa')">Återställ</button>
     </div>` : ""}
     <div class="cal2-sum">${opts.block
@@ -981,6 +1006,7 @@ function calendarHTML(s, opts) {
       <span><i class="l-ledig"></i>${opts.block ? "Öppen" : "Ledig"}</span>
       <span><i class="l-upptagen"></i>${opts.block ? "Du har stängt" : "Upptagen"}</span>
       ${opts.block && S.calMode === "pris" ? '<span><i class="l-special"></i>Eget pris</span>' : ""}
+      ${opts.block ? '<span><i class="l-event"></i>Evenemang</span>' : ""}
       ${opts.pick ? '<span><i class="l-vald"></i>Vald</span>' : ""}
     </div>
   </div>`;
@@ -1005,7 +1031,7 @@ function redrawCal() {
   if (!box) return;
   if (S.blockFor != null) {
     const l = LISTINGS.find(x => x.id === S.blockFor);
-    if (l) box.innerHTML = calendarHTML(listingToSpot(l), { block: true, listingId: l.id });
+    if (l) box.innerHTML = calendarHTML(listingToSpot(l), { block: true, listingId: l.id, spot: listingToSpot(l) });
     return;
   }
   const id = S.bk ? S.bk.id : S.selSpot;
@@ -1031,26 +1057,89 @@ function openBlockCal(listingId) {
   const antal = (l.blocked || []).filter(d => new Date(d) >= new Date(new Date().toDateString())).length;
   openSheet(sheetHead("Dina dagar och priser") + `<div class="sheet-b stack">
     <p class="dim">${esc(l.ad)}</p>
+    ${eventTipsHTML(l)}
     <div class="hint" id="calhint">${I("info", 17)}<div>Välj läge ovanför kalendern: stäng dagar du behöver själv, eller sätt ett eget pris på enskilda dagar.</div></div>
-    <div id="calbox">${calendarHTML(listingToSpot(l), { block: true, listingId: l.id })}</div>
+    <div id="calbox">${calendarHTML(listingToSpot(l), { block: true, listingId: l.id, spot: listingToSpot(l) })}</div>
     ${antal ? `<div class="callout">Du har stängt <b>${antal} dagar</b> framåt.
       <button class="btn btn-sm" style="margin-top:10px" onclick="clearBlocks(${l.id})">Öppna alla igen</button></div>` : ""}
     <button class="btn btn-p btn-block btn-lg" onclick="S.blockFor=null;closeSheet();render()">Klart</button>
   </div>`);
 }
+/* Tips till värden om evenemang som är värda att höja priset inför. */
+function eventTipsHTML(l) {
+  const sp = listingToSpot(l);
+  const evs = eventsNear(sp);
+  if (!evs.length) return "";
+  const kvar = evs.filter(e => (l.prices || {})[e.date] !== eventPrice(l, e));
+  const total = evs.reduce((a, e) => a + Math.max(0, eventPrice(l, e) - baseDayPrice(l)), 0);
+  return `<div class="evtips">
+    <div class="row" style="align-items:flex-start;gap:12px">
+      <span class="ic">${I("ticket", 20)}</span>
+      <div style="flex:1;min-width:0">
+        <b>${evs.length} evenemang nära din plats</b>
+        <span>De dagarna är folk beredda att betala mer. Höjer du priset på alla kan du tjäna
+        <b>${kr(total)}</b> extra.</span>
+      </div>
+    </div>
+    <div class="evlist">
+      ${evs.map(e => {
+        const p = eventPrice(l, e);
+        const satt = (l.prices || {})[e.date] === p;
+        return `<div class="evrow">
+          <div class="t"><b>${esc(e.name)}</b>
+            <span>${esc(e.date)} · ${esc(e.venue)}, ${kmText(e.km)} · ${e.crowd.toLocaleString("sv-SE")} personer</span></div>
+          ${satt ? `<span class="tag green">${kr(p)} satt</span>`
+                 : `<button class="btn btn-sm btn-g" onclick="applyEventPrice(${l.id},'${e.id}')">Höj till ${kr(p)}</button>`}
+        </div>`; }).join("")}
+    </div>
+    ${kvar.length > 1 ? `<button class="btn btn-p btn-block btn-sm" style="margin-top:12px"
+      onclick="applyAllEventPrices(${l.id})">Höj priset alla ${kvar.length} dagarna</button>` : ""}
+  </div>`;
+}
+function applyEventPrice(listingId, eventId) {
+  const l = LISTINGS.find(x => x.id === listingId); if (!l) return;
+  const ev = eventsNear(listingToSpot(l)).find(e => e.id === eventId); if (!ev) return;
+  l.prices = l.prices || {};
+  l.prices[ev.date] = eventPrice(l, ev);
+  persist(); openBlockCal(listingId);
+  toast(esc(ev.name) + ": " + kr(l.prices[ev.date]), "ticket");
+}
+function applyAllEventPrices(listingId) {
+  const l = LISTINGS.find(x => x.id === listingId); if (!l) return;
+  const evs = eventsNear(listingToSpot(l));
+  l.prices = l.prices || {};
+  let n = 0, extra = 0;
+  evs.forEach(e => {
+    const p = eventPrice(l, e);
+    if (l.prices[e.date] !== p) { extra += Math.max(0, p - baseDayPrice(l)); n++; }
+    l.prices[e.date] = p;
+  });
+  persist(); openBlockCal(listingId);
+  toast(n + " evenemangsdagar höjda, " + kr(extra) + " extra", "spark");
+}
+
 /* Sätt pris för en enskild dag. */
 function openDayPrice(listingId, iso) {
   const l = LISTINGS.find(x => x.id === listingId); if (!l) return;
   const bas = baseDayPrice(l), nu = dayPriceFor(l, iso);
   const d = new Date(iso);
   const namn = d.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
+  const ev = eventOn(listingToSpot(l), iso);
+  const evPris = ev ? eventPrice(l, ev) : 0;
   openSheet(sheetHead(namn.charAt(0).toUpperCase() + namn.slice(1)) + `<div class="sheet-b stack">
+    ${ev ? `<div class="evbanner">
+      <span class="ic">${I("ticket", 20)}</span>
+      <div><b>${esc(ev.name)}</b>
+      <span>${esc(ev.venue)}, ${kmText(ev.km)} härifrån · ${ev.crowd.toLocaleString("sv-SE")} personer kl ${esc(ev.time)}</span></div>
+      <button class="btn btn-sm btn-g" onclick="document.getElementById('dp').value=${evPris};dpHint(${bas})">${kr(evPris)}</button>
+    </div>` : ""}
     <div class="field"><label>Pris för den här dagen (${sym()})</label>
       <input class="inp mono" id="dp" value="${nu}" inputmode="numeric" style="font-size:1.5rem;text-align:center"
         oninput="dpHint(${bas})"></div>
     <p class="muted small center" id="dphint">${nu === bas ? "Samma som ditt ordinarie pris" : nu > bas ? `${Math.round((nu / bas - 1) * 100)} % över ordinarie ${kr(bas)}` : `${Math.round((1 - nu / bas) * 100)} % under ordinarie ${kr(bas)}`}</p>
     <div class="row wrap" style="justify-content:center">
       ${[["Ordinarie", bas], ["+25 %", Math.round(bas * 1.25 / 5) * 5], ["+50 %", Math.round(bas * 1.5 / 5) * 5], ["Dubbelt", bas * 2]]
+        .concat(ev ? [["Matchpris", evPris]] : [])
         .map(([t2, v]) => `<button class="chip" onclick="document.getElementById('dp').value=${v};dpHint(${bas})">${t2}</button>`).join("")}
     </div>
     <div class="hint">${I("info", 17)}<div>Matchdagar och storhelger är värda mer. Höjer du priset de dagarna tjänar du mer utan att platsen står tom fler dagar.</div></div>

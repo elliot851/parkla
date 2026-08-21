@@ -292,3 +292,28 @@ button.d.special:hover{border-color:var(--brass)}
 
 /* "från" framför priset i listan */
 .spot .price .fran{display:block;font-style:normal;font-size:.7rem;color:var(--ink-45);margin-bottom:1px}
+
+
+/* ---------- evenemang i kalendern ---------- */
+.cal2-g .d.harevent{position:relative}
+.cal2-g .d .evdot{position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;
+  background:var(--clay);box-shadow:0 0 0 2px var(--card)}
+.cal2-l .l-event{background:var(--clay);border:0}
+
+.evtips{border:1px solid color-mix(in srgb,var(--clay) 35%,transparent);border-radius:var(--r-md);
+  padding:16px;background:var(--clay-wash)}
+.evtips .ic{color:var(--clay);flex:0 0 auto}
+.evtips>.row b{display:block;font-size:.98rem;font-weight:600}
+.evtips>.row span{display:block;font-size:.86rem;color:var(--ink-70);margin-top:3px}
+.evlist{margin-top:14px;display:flex;flex-direction:column;gap:2px}
+.evrow{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid color-mix(in srgb,var(--clay) 22%,transparent)}
+.evrow .t{flex:1;min-width:0}
+.evrow .t b{display:block;font-size:.9rem;font-weight:600}
+.evrow .t span{display:block;font-size:.78rem;color:var(--ink-45);margin-top:1px}
+
+.evbanner{display:flex;align-items:center;gap:13px;padding:14px 16px;border-radius:var(--r-md);
+  background:var(--clay-wash);border:1px solid color-mix(in srgb,var(--clay) 30%,transparent)}
+.evbanner .ic{color:var(--clay);flex:0 0 auto}
+.evbanner div{flex:1;min-width:0}
+.evbanner b{display:block;font-size:.94rem;font-weight:600}
+.evbanner span{display:block;font-size:.79rem;color:var(--ink-45);margin-top:2px}

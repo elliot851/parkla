@@ -3,7 +3,7 @@
    ============================================================ */
 "use strict";
 
-const VERSION = "2026-08-21.17";
+const VERSION = "2026-08-21.18";
 
 /* ---------- Avgiftsmodell ---------- */
 const FEES = {
@@ -178,13 +178,15 @@ const spotFree = s => BUSY_IDS.indexOf(s.id) === -1;
 
 /* ---------- Evenemang ---------- */
 const EVENTS = [
-  { id:"e1", kind:"Fotboll", name:"AIK – Djurgården",            venue:"Friends Arena", area:"solna", date:"2026-08-29", time:"19:00", crowd:48000 },
-  { id:"e2", kind:"Konsert", name:"Veronica Maggio",             venue:"Avicii Arena",  area:"solna", date:"2026-09-05", time:"20:00", crowd:16000 },
-  { id:"e3", kind:"Hockey",  name:"Frölunda – Skellefteå",       venue:"Scandinavium",  area:"gbg",   date:"2026-09-12", time:"19:00", crowd:12000 },
-  { id:"e4", kind:"Musik",   name:"Melodifestivalen, deltävling",venue:"Malmö Arena",   area:"malmo", date:"2026-09-19", time:"20:00", crowd:13000 },
-  { id:"e5", kind:"Landskamp",name:"Sverige – Norge",            venue:"Friends Arena", area:"solna", date:"2026-10-03", time:"18:00", crowd:50000 },
-  { id:"e6", kind:"Lopp",    name:"Göteborgsvarvet, start",      venue:"Slottsskogen",  area:"gbg",   date:"2026-10-10", time:"09:00", crowd:60000 }
+  { id:"e1", kind:"Fotboll",  name:"AIK – Djurgården",            venue:"Friends Arena", area:"solna", date:"2026-08-29", time:"19:00", crowd:48000, ll:[59.3727,18.0009] },
+  { id:"e2", kind:"Konsert",  name:"Veronica Maggio",             venue:"Avicii Arena",  area:"sthlm", date:"2026-09-05", time:"20:00", crowd:16000, ll:[59.2937,18.0831] },
+  { id:"e3", kind:"Hockey",   name:"Frölunda – Skellefteå",       venue:"Scandinavium",  area:"gbg",   date:"2026-09-12", time:"19:00", crowd:12000, ll:[57.7002,11.9866] },
+  { id:"e4", kind:"Musik",    name:"Melodifestivalen, deltävling",venue:"Malmö Arena",   area:"malmo", date:"2026-09-19", time:"20:00", crowd:13000, ll:[55.5648,12.9784] },
+  { id:"e5", kind:"Landskamp",name:"Sverige – Norge",             venue:"Friends Arena", area:"solna", date:"2026-10-03", time:"18:00", crowd:50000, ll:[59.3727,18.0009] },
+  { id:"e6", kind:"Lopp",     name:"Göteborgsvarvet, start",      venue:"Slottsskogen",  area:"gbg",   date:"2026-10-10", time:"09:00", crowd:60000, ll:[57.6839,11.9420] }
 ];
+/* Hur långt från en arena det är värt att höja priset. */
+const EVENT_RADIE_KM = 6;
 
 /* ---------- Omdömen ---------- */
 const REVIEWS = {
