@@ -1964,7 +1964,8 @@ function viewVinter() {
     <div class="panel pad-lg" data-reveal>
       <h3>Två säsonger</h3>
       <div style="margin-top:14px">
-        ${Object.values(SEASON).map(x => `<div class="kv"><span><b>${x.label}</b><br><span class="muted small">${x.period}</span></span>
+        ${Object.values(SEASON).map(x => `<div class="kv"><span style="font-weight:600">${x.label}
+          <span class="muted small" style="display:block;font-weight:400">${x.period}</span></span>
           <b>${x.months} mån</b></div>`).join("")}
       </div>
       <p class="dim small" style="margin-top:14px">Du får ${Math.round((1 - SEASON_RABATT) * 100)} % rabatt jämfört med att betala månad för månad, mot att du bokar hela säsongen.</p>
