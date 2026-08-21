@@ -350,3 +350,73 @@ button.d.special:hover{border-color:var(--brass)}
 .sessbar .btn-c{background:#fff;color:var(--clay);border-color:transparent}
 body.harsession{padding-bottom:calc(128px + env(safe-area-inset-bottom))}
 @media(min-width:981px){body.harsession{padding-bottom:70px}}
+
+/* ============================================================
+   Betalningsrutan — Stripe Payment Element
+   ============================================================ */
+.paysheet{
+  position:fixed; inset:0; z-index:9000;
+  display:flex; align-items:flex-end; justify-content:center;
+  background:rgba(10,15,14,.42);
+  backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+  opacity:0; transition:opacity .22s ease;
+}
+.paysheet.pa{ opacity:1 }
+@media (min-width:640px){ .paysheet{ align-items:center } }
+
+.paysheet-in{
+  position:relative; width:100%; max-width:460px;
+  background:var(--card); color:var(--ink);
+  border-radius:24px 24px 0 0;
+  padding:26px 22px calc(26px + env(safe-area-inset-bottom));
+  box-shadow:0 -12px 48px rgba(10,15,14,.22);
+  transform:translateY(14px); transition:transform .26s cubic-bezier(.22,1,.36,1);
+  max-height:92vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+}
+.paysheet.pa .paysheet-in{ transform:translateY(0) }
+@media (min-width:640px){
+  .paysheet-in{ border-radius:22px; box-shadow:0 22px 64px rgba(10,15,14,.26) }
+}
+
+.paysheet-in h2{
+  font-family:var(--display); font-size:1.4rem; line-height:1.2;
+  letter-spacing:-.015em; margin:0 40px 0 0;
+}
+.paysheet-sub{ margin-top:8px; color:var(--ink-55); font-size:.94rem; line-height:1.5 }
+
+.paysheet-x{
+  position:absolute; top:18px; right:16px;
+  width:38px; height:38px; border-radius:50%;
+  display:grid; place-items:center;
+  border:1px solid var(--rule); background:var(--paper); color:var(--ink-55);
+  cursor:pointer; transition:background .16s ease, color .16s ease, transform .16s ease;
+}
+.paysheet-x:hover{ background:var(--rule); color:var(--ink); transform:scale(1.05) }
+.paysheet-x:active{ transform:scale(.94) }
+
+#pay-el{ margin-top:20px; min-height:64px }
+
+.paysheet-ok{
+  width:100%; margin-top:18px; padding:16px;
+  font-size:1.02rem; font-weight:600; border-radius:15px;
+}
+.paysheet-ok:disabled{ opacity:.6; cursor:progress }
+
+.paysheet-trygg{
+  margin-top:14px; text-align:center;
+  color:var(--ink-45); font-size:.8rem; line-height:1.45;
+}
+
+.paysheet-fel{
+  margin-top:12px; padding:11px 13px; border-radius:12px;
+  background:color-mix(in srgb, var(--clay) 10%, transparent);
+  color:var(--clay); font-size:.88rem; line-height:1.45;
+  border:1px solid color-mix(in srgb, var(--clay) 24%, transparent);
+}
+
+/* Röd bricka: skarpt läge med riktiga pengar */
+.tag.red{
+  background:color-mix(in srgb, var(--clay) 12%, transparent);
+  color:var(--clay);
+  border-color:color-mix(in srgb, var(--clay) 26%, transparent);
+}

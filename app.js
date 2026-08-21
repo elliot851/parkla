@@ -2286,6 +2286,8 @@ function viewInstallningar() {
 <section class="tight"><div class="wrap" style="max-width:760px">
   <h1 style="font-size:clamp(2rem,4.6vw,3rem)">${esc(t("settings"))}</h1>
 
+  ${skarptPanelHTML()}
+
   <div class="panel pad-lg" style="margin-top:24px">
     <h3>Utseende</h3>
     <div class="field" style="margin-top:14px"><label>${esc(t("theme"))}</label>
@@ -2781,6 +2783,153 @@ function startTour() {
 /* ============================================================
    RENDERING
    ============================================================ */
+
+/* ══════════════════════════════════════════════════════════
+   SKARPT LÄGE — riktig databas och riktiga betalningar
+
+   De tre nycklarna här är alla publika. Den hemliga
+   Stripe-nyckeln finns aldrig i appen; den bor som en secret
+   på servern och lämnar den aldrig.
+   ══════════════════════════════════════════════════════════ */
+
+function skarptPa() { return typeof PAPI !== "undefined" && PAPI.pa(); }
+function inloggad()  { return skarptPa() && PAPI.jag(); }
+
+function skarptPanelHTML() {
+  const c = typeof PAPI !== "undefined" ? PAPI.cfg() : {};
+  const pa = skarptPa(), u = inloggad();
+  const live = /^pk_live_/.test(c.pk || "");
+
+  return `
+  <div class="panel pad-lg" style="margin-top:24px">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:14px">
+      <div><h3>Skarpt läge</h3>
+        <p class="dim small" style="margin-top:6px">Databas, inloggning och riktiga betalningar.</p></div>
+      <span class="tag ${pa ? (live ? "red" : "green") : ""}">${pa ? (live ? "Riktiga pengar" : "Testläge") : "Demo"}</span>
+    </div>
+
+    ${pa ? "" : `<p class="dim small" style="margin-top:14px">Utan nycklar kör appen som demo: allt sparas bara
+      i den här telefonen och inga pengar rör sig. Klistra in de tre publika nycklarna nedan för att koppla på
+      riktigt. <b>Klistra aldrig in en nyckel som börjar på <span class="mono">sk_</span></b> — den ska bara
+      finnas på servern.</p>`}
+
+    <div class="field" style="margin-top:16px"><label>Supabase URL</label>
+      <input class="inp mono" id="cfg-url" placeholder="https://xxxxxxxx.supabase.co" value="${esc(c.url || "")}"></div>
+    <div class="field" style="margin-top:12px"><label>Supabase anon key</label>
+      <input class="inp mono" id="cfg-anon" placeholder="eyJhbGciOi…" value="${esc(c.anon || "")}"></div>
+    <div class="field" style="margin-top:12px"><label>Stripe publishable key</label>
+      <input class="inp mono" id="cfg-pk" placeholder="pk_test_…" value="${esc(c.pk || "")}"></div>
+    <div class="paysheet-fel" id="cfg-fel" hidden></div>
+
+    <div class="row wrap" style="margin-top:14px">
+      <button class="btn btn-p btn-sm" onclick="sparaSkarpt()">${I("check", 15)} Koppla på</button>
+      ${pa ? `<button class="btn btn-sm" onclick="stangSkarpt()">Tillbaka till demo</button>` : ""}
+    </div>
+
+    ${pa ? `<div style="margin-top:18px;border-top:1px solid var(--rule);padding-top:16px">
+      ${u ? `<div class="setrow"><span style="color:var(--green)">${I("check", 20)}</span>
+          <div class="t"><b>Inloggad</b><span>${esc(u.email || "")}</span></div>
+          <button class="btn btn-sm" onclick="PAPI.loggaUt();render()">Logga ut</button></div>`
+        : `<div class="setrow"><span style="color:var(--ink-45)">${I("user", 20)}</span>
+          <div class="t"><b>Inte inloggad</b><span>Krävs för att boka och hyra ut</span></div>
+          <button class="btn btn-p btn-sm" onclick="openLogin()">Logga in</button></div>`}
+    </div>` : ""}
+  </div>`;
+}
+
+function sparaSkarpt() {
+  const url  = (document.getElementById("cfg-url").value  || "").trim().replace(/\/+$/, "");
+  const anon = (document.getElementById("cfg-anon").value || "").trim();
+  const pk   = (document.getElementById("cfg-pk").value   || "").trim();
+  const fel  = document.getElementById("cfg-fel");
+  const visa = m => { fel.textContent = m; fel.hidden = false; };
+
+  /* Skydd mot det farligaste misstaget: hemlig nyckel i webbläsaren. */
+  if (/^(sk|rk)_/.test(pk) || /^(sk|rk)_/.test(anon)) {
+    return visa("Det där är en hemlig nyckel. Den får aldrig ligga i appen – bara på servern. " +
+                "Använd den som börjar på pk_.");
+  }
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url)) return visa("Supabase-adressen ser inte rätt ut.");
+  if (!/^eyJ/.test(anon)) return visa("Anon-nyckeln ska börja på eyJ.");
+  if (!/^pk_(test|live)_/.test(pk)) return visa("Stripe-nyckeln ska börja på pk_test_ eller pk_live_.");
+
+  PAPI.setCfg({ url: url, anon: anon, pk: pk });
+  toast(/^pk_live_/.test(pk) ? "Skarpt läge – riktiga pengar" : "Skarpt läge – testkort", "check");
+  render();
+}
+
+function stangSkarpt() {
+  PAPI.setCfg({}); PAPI.loggaUt();
+  toast("Tillbaka till demo", "check"); render();
+}
+
+/* ── Inloggning: sexsiffrig kod till mejlen ───────────────── */
+
+let LOGIN_EFTER = null, LOGIN_EPOST = "";
+
+function loginFel(m) {
+  const f = document.getElementById("log-fel");
+  if (f) { f.textContent = m; f.hidden = false; }
+}
+
+function openLogin(efterat) {
+  LOGIN_EFTER = typeof efterat === "function" ? efterat : null;
+  openSheet(sheetHead("Logga in") + `<div class="sheet-b stack">
+    <p class="dim">Vi skickar en sexsiffrig kod till din mejl. Inget lösenord att komma ihåg.</p>
+    <div class="field"><label>E-post</label>
+      <input class="inp" id="log-epost" type="email" inputmode="email" autocomplete="email"
+        placeholder="du@exempel.se" onkeydown="if(event.key==='Enter')loginSkicka(this.parentNode.parentNode.querySelector('.btn-p'))"></div>
+    <div class="paysheet-fel" id="log-fel" hidden></div>
+    <button class="btn btn-p btn-lg" style="width:100%" onclick="loginSkicka(this)">Skicka koden</button>
+  </div>`);
+  setTimeout(() => { const e = document.getElementById("log-epost"); if (e) e.focus(); }, 260);
+}
+
+function loginSkicka(knapp) {
+  const e = (document.getElementById("log-epost").value || "").trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return loginFel("Skriv en riktig mejladress.");
+  LOGIN_EPOST = e;
+  if (knapp) { knapp.disabled = true; knapp.textContent = "Skickar…"; }
+  PAPI.skickaKod(e).then(() => {
+    openSheet(sheetHead("Kolla mejlen") + `<div class="sheet-b stack">
+      <p class="dim">Vi skickade en kod till <b>${esc(e)}</b>.</p>
+      <div class="field"><label>Koden</label>
+        <input class="inp mono" id="log-kod" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+          placeholder="123456" style="font-size:1.55rem;letter-spacing:.3em;text-align:center"
+          oninput="if(this.value.length===6)loginVerifiera(this.parentNode.parentNode.querySelector('.btn-p'))"></div>
+      <div class="paysheet-fel" id="log-fel" hidden></div>
+      <button class="btn btn-p btn-lg" style="width:100%" onclick="loginVerifiera(this)">Logga in</button>
+      <button class="btn" style="width:100%" onclick="openLogin(LOGIN_EFTER)">Byt mejladress</button>
+    </div>`);
+    setTimeout(() => { const k = document.getElementById("log-kod"); if (k) k.focus(); }, 260);
+  }).catch(err => {
+    loginFel(err.message);
+    if (knapp) { knapp.disabled = false; knapp.textContent = "Skicka koden"; }
+  });
+}
+
+function loginVerifiera(knapp) {
+  const k = (document.getElementById("log-kod").value || "").trim();
+  if (!/^\d{6}$/.test(k)) return loginFel("Koden är sex siffror.");
+  if (knapp) { knapp.disabled = true; knapp.textContent = "Loggar in…"; }
+  PAPI.verifieraKod(LOGIN_EPOST, k).then(() => {
+    closeSheet(); toast("Inloggad", "check");
+    const f = LOGIN_EFTER; LOGIN_EFTER = null;
+    render();
+    if (typeof f === "function") setTimeout(f, 120);
+  }).catch(err => {
+    loginFel(err.message || "Fel kod. Försök igen.");
+    if (knapp) { knapp.disabled = false; knapp.textContent = "Logga in"; }
+  });
+}
+
+/* Kräv inloggning innan något som kostar pengar. I demo krävs inget. */
+function kravInlogg(fortsatt) {
+  if (!skarptPa()) return fortsatt();
+  if (PAPI.jag()) return fortsatt();
+  openLogin(fortsatt);
+}
+
 const VIEWS = {
   start: viewStart, sok: viewSok, hyrut: viewHyrut, mina: viewMina, mer: viewMer,
   trygg: viewTrygg, priser: viewPriser, skatt: viewSkatt, brf: viewBrf, affar: viewAffar,
