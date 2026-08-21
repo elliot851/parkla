@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1">
+<meta name="theme-color" content="#0B6B4F">
+<meta name="description" content="Parkla – hyr ut din uppfart eller p-plats till grannar och besökare. Tjäna upp till 40 000 kr skattefritt om året. BankID, trygghetsgaranti och utbetalning varje månad.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Parkla">
+<meta property="og:title" content="Parkla – Hyr ut din uppfart">
+<meta property="og:description" content="Din uppfart står tom 22 timmar om dygnet. Den kan ge dig 40 000 kr skattefritt om året.">
+<meta property="og:type" content="website">
+<title>Parkla – Hyr ut din uppfart</title>
+
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="app.css?v=2">
+</head>
+<body>
+
+<!-- ==================== TOPPRAD ==================== -->
+<header class="top" id="top">
+  <div class="top-in">
+    <button class="logo" data-go="start" aria-label="Parkla, till startsidan">
+      <svg class="logomark" viewBox="0 0 40 40" aria-hidden="true">
+        <rect width="40" height="40" rx="11" fill="var(--green)"/>
+        <path d="M7 19.5 20 9l13 10.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M15 31V18.5h6.6a4.6 4.6 0 0 1 0 9.2H15" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="logotype">Parkla</span>
+    </button>
+
+    <nav class="nav" id="nav" aria-label="Huvudmeny"></nav>
+
+    <button class="icon-btn only-mobile" id="btnNotis" aria-label="Aviseringar">
+      <span aria-hidden="true">🔔</span><span class="dot" id="notisDot"></span>
+    </button>
+  </div>
+  <div id="ctxbar"></div>
+</header>
+
+<main id="app" tabindex="-1"></main>
+
+<!-- ==================== BOTTENMENY ==================== -->
+<nav class="tabbar" id="tabbar" aria-label="Snabbmeny"></nav>
+
+<!-- ==================== ÖVERLÄGG ==================== -->
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div id="sheetContent"></div></div>
+<div class="toast" id="toast" role="status"></div>
+<div class="fab" id="fab" hidden></div>
+
+<script src="data.js?v=2"></script>
+<script src="app.js?v=2"></script>
+</body>
+</html>
