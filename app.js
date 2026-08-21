@@ -408,6 +408,9 @@ function allSpots() {
 function nowFree(sp) {
   if (!sp) return false;
   if (SESSION && SESSION.spotId === sp.id) return false;
+  /* Kräver värden godkännande är det per definition inte kör-in. */
+  if (!sp.mine && APPROVAL_IDS.indexOf(sp.id) > -1) return false;
+  if (sp.mine) { const li = LISTINGS.find(x => x.id === sp.id); if (li && li.instant === false) return false; }
   const nu = new Date();
   if (!(priceOnDate(sp, isoOf(nu.getFullYear(), nu.getMonth(), nu.getDate()), "timme") || sp.h)) return false;
   if (dayIsBooked(sp, nu.getFullYear(), nu.getMonth(), nu.getDate())) return false;
