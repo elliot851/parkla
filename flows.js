@@ -234,7 +234,11 @@ if (!openDeepLink()) {
       caches.keys().then(ks => Promise.all(ks.map(k => caches.delete(k)))).finally(hardReload);
     } else hardReload();
   }
-  function hardReload() { location.replace(location.pathname); }
+  function hardReload() {
+    /* Pages cachar HTML i tio minuter. Utan en ny adress serverar webbläsaren
+       samma gamla sida igen och uppdateringen fastnar. */
+    location.replace(location.pathname + "?u=" + Date.now());
+  }
 
   function busy() {
     return document.getElementById("sheet").classList.contains("on")
