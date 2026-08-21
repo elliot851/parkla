@@ -21,7 +21,7 @@
 /* ---------- stor prislapp i steg 1 ---------- */
 .bigprice{display:flex;flex-direction:column;gap:5px;padding:20px 22px;border-radius:var(--r-md);
   background:var(--pine);color:var(--on-dark);animation:fadeUp .4s var(--ease) both}
-.bigprice .lbl{font-family:var(--mono);font-size:.63rem;letter-spacing:.15em;text-transform:uppercase;opacity:.6;color:inherit}
+.bigprice .lbl{font-size:.85rem;opacity:.7;color:inherit;font-weight:400}
 .bigprice b{font-family:var(--display);font-size:clamp(2.1rem,7vw,2.7rem);line-height:1;letter-spacing:-.05em;
   font-variant-numeric:tabular-nums;font-weight:600}
 .bigprice .muted{color:rgba(244,241,233,.62)!important}

@@ -28,14 +28,14 @@
 .photo{position:relative;aspect-ratio:1;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--rule);
   background:var(--paper-2)}
 .photo img{width:100%;height:100%;object-fit:cover;display:block}
-.photo .when{position:absolute;left:0;right:0;bottom:0;padding:4px 6px;font-family:var(--mono);font-size:.53rem;
-  letter-spacing:.04em;text-transform:uppercase;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.72))}
+.photo .when{position:absolute;left:0;right:0;bottom:0;padding:4px 6px;font-size:.66rem;
+  color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.72))}
 .photo .del{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;display:grid;
   place-items:center;background:rgba(0,0,0,.55);color:#fff;backdrop-filter:blur(4px)}
 .photo.add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;
   border-style:dashed;border-color:var(--rule-2);color:var(--ink-45);transition:all .22s var(--ease)}
 .photo.add:hover{border-color:var(--green);color:var(--green);background:var(--green-wash)}
-.photo.add span{font-family:var(--mono);font-size:.55rem;letter-spacing:.08em;text-transform:uppercase}
+.photo.add span{font-size:.74rem;font-weight:500}
 
 /* ---------- betygsätt ---------- */
 .stars{display:flex;gap:6px;justify-content:center;margin:8px 0 4px}
@@ -43,3 +43,12 @@
 .star:hover{transform:scale(1.14)}
 .star:active{transform:scale(.94)}
 .star.on{color:var(--brass)}
+
+/* ---------- platsväljare ---------- */
+.placebtn{display:flex;align-items:center;gap:11px;width:100%;min-height:52px;padding:12px 16px;
+  border:1px solid var(--rule-2);border-radius:var(--r-md);background:var(--card);
+  font-size:1rem;font-weight:500;transition:border-color .2s,background .2s}
+.placebtn:hover{border-color:var(--ink-25);background:var(--paper-2)}
+.placebtn>span{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.placebtn svg:first-child{color:var(--green);flex:0 0 auto}
+.placebtn .flip90{color:var(--ink-25);transform:rotate(90deg);flex:0 0 auto}

@@ -21,6 +21,17 @@ const PMap = (function () {
       attr: 'Bilder &copy; Esri, Maxar, Earthstar Geographics', max: 19
     }
   };
+  /* Skarpare satellit när användaren lagt in en egen nyckel (Settings → Karta). */
+  const SAT_KEYED = {
+    mapbox: {
+      url: "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/512/{z}/{x}/{y}@2x?access_token={key}",
+      attr: '&copy; Mapbox &copy; Maxar', max: 22, tileSize: 512, zoomOffset: -1
+    },
+    google: {
+      url: "https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?session={session}&key={key}",
+      attr: '&copy; Google', max: 22
+    }
+  };
   const LABELS = "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
 
   function isDark() {
@@ -30,23 +41,48 @@ const PMap = (function () {
     return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
   }
 
-  function baseFor(m) {
-    if (m === "satellit") {
-      const g = L.layerGroup([
-        L.tileLayer(TILES.satellit.url, { maxZoom: TILES.satellit.max, attribution: TILES.satellit.attr }),
-        L.tileLayer(LABELS, { maxZoom: 19, opacity: .9 })
-      ]);
-      return g;
-    }
-    const t = isDark() ? TILES.morker : TILES.karta;
-    return L.tileLayer(t.url, { maxZoom: t.max, subdomains: t.sub, attribution: t.attr, detectRetina: true });
+  function satKey() {
+    try { return (typeof SET !== "undefined" && SET.satKey) ? String(SET.satKey).trim() : ""; } catch (e) { return ""; }
+  }
+  function satProvider() {
+    try { return (typeof SET !== "undefined" && SET.satProvider) ? SET.satProvider : "mapbox"; } catch (e) { return "mapbox"; }
   }
 
-  /* Prisnål som HTML → helt stylad i CSS */
-  function priceIcon(label, selected, charge) {
+  function baseFor(m) {
+    if (m === "satellit") {
+      const key = satKey();
+      if (key && satProvider() === "mapbox") {
+        /* Mapbox Satellite: 512 px @2x, skarpt hela vägen till zoom 22 */
+        return L.layerGroup([
+          L.tileLayer(SAT_KEYED.mapbox.url.replace("{key}", key), {
+            maxZoom: 22, tileSize: 512, zoomOffset: -1, attribution: SAT_KEYED.mapbox.attr
+          })
+        ]);
+      }
+      /* Esri utan nyckel: rutorna slutar på z19 men vi låter kartan zooma till 21
+         genom att skala upp sista nivån i stället för att stanna. */
+      return L.layerGroup([
+        L.tileLayer(TILES.satellit.url, {
+          maxZoom: 21, maxNativeZoom: 19, attribution: TILES.satellit.attr, detectRetina: true
+        }),
+        L.tileLayer(LABELS, { maxZoom: 21, maxNativeZoom: 19, opacity: .9 })
+      ]);
+    }
+    const t = isDark() ? TILES.morker : TILES.karta;
+    return L.tileLayer(t.url, { maxZoom: 21, maxNativeZoom: t.max, subdomains: t.sub,
+      attribution: t.attr, detectRetina: true });
+  }
+
+  /* Prisnål som HTML → helt stylad i CSS.
+     st = { label, free, best, charge, selected } */
+  function priceIcon(st) {
+    const cls = ["mpin", st.free ? "free" : "busy", st.best ? "best" : "", st.selected ? "on" : ""]
+      .filter(Boolean).join(" ");
     return L.divIcon({
       className: "",
-      html: `<div class="mpin${selected ? " on" : ""}">${charge ? '<i class="b"></i>' : ""}<span>${label}</span></div>`,
+      html: `<div class="${cls}"><i class="dot"></i><span>${st.label}</span>` +
+            `${st.best ? '<i class="flag">billigast</i>' : ""}` +
+            `${st.charge ? '<i class="b" title="Laddbox"></i>' : ""}</div>`,
       iconSize: null, iconAnchor: [0, 0]
     });
   }
@@ -71,6 +107,7 @@ const PMap = (function () {
       doubleClickZoom: true,
       touchZoom: true,
       bounceAtZoomLimits: false,
+      maxZoom: 21,
       worldCopyJump: true
     });
     layers.base = baseFor(mode).addTo(map);
@@ -89,12 +126,16 @@ const PMap = (function () {
   }
   function getMode() { return mode; }
 
-  function setSpots(list, priceOf, selectedId) {
+  function setSpots(list, stateOf, selectedId) {
     if (!map) return;
     Object.keys(markers).forEach(k => map.removeLayer(markers[k]));
     markers = {};
     list.forEach(s => {
-      const mk = L.marker(s.ll, { icon: priceIcon(priceOf(s), s.id === selectedId, s.charge), riseOnHover: true });
+      const st = stateOf(s);
+      st.selected = s.id === selectedId;
+      st.charge = s.charge;
+      const mk = L.marker(s.ll, { icon: priceIcon(st), riseOnHover: true,
+        zIndexOffset: st.selected ? 900 : st.best ? 500 : st.free ? 200 : 0 });
       mk.on("click", () => { if (onPick) onPick(s.id); });
       mk.addTo(map);
       markers[s.id] = mk;

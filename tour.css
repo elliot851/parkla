@@ -19,7 +19,7 @@
   transform:rotate(45deg)}
 .tour-arrow.up{top:-8px;border-right:0;border-bottom:0}
 .tour-arrow.down{bottom:-8px;border-left:0;border-top:0}
-.tour-count{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--green)}
+.tour-count{font-size:.82rem;font-weight:500;color:var(--green)}
 .tour-title{margin:9px 0 6px;font-size:1.06rem;font-weight:600;letter-spacing:-.015em}
 .tour-body{font-size:.9rem;color:var(--ink-70);line-height:1.5}
 .tour-dots{display:flex;gap:5px;margin:16px 0 14px}
@@ -56,8 +56,7 @@ button:active,.chip:active,.linkrow:active,.railcard:active,.notif:active{transf
 .slider input[type=range]:active::-webkit-slider-thumb{transform:scale(1.22);border-color:var(--green)}
 .slider input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--card);
   border:1.5px solid var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.2)}
-.slider .scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.62rem;
-  letter-spacing:.08em;color:var(--ink-25);margin-top:-2px}
+.slider .scale{display:flex;justify-content:space-between;font-size:.78rem;color:var(--ink-25);margin-top:-2px}
 
 /* stegare (antal) */
 .stepper{display:flex;align-items:center;border:1px solid var(--rule-2);border-radius:999px;overflow:hidden;

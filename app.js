@@ -48,7 +48,7 @@ function persist() {
 let S = {
   route: (location.hash.replace("#", "").split("?")[0]) || "start",
   area: SET.city, mode: "manad", view: "karta",
-  q: "", near: null, nearLabel: "", maxPrice: 0,
+  q: "", near: null, nearLabel: "", part: null, partZoom: null, maxPrice: 0,
   fCharge: false, fGarage: false, fSecure: false, fBig: false,
   sort: "pris", selSpot: null,
   calc: { city: "Stockholm innerstad", type: "Uppfart", walk: 5, charger: false, gated: false, dyn: true },
@@ -188,16 +188,20 @@ function viewStart() {
   return `
 <div class="hero"><div class="wrap"><div class="hero-grid">
   <div>
-    <span class="kicker" data-reveal>Sverige · BankID · Swish</span>
     <h1 data-reveal style="--d:60ms">Din uppfart står tom.<br>Den kan ge dig <em>${num(FEES.schablon)} ${sym()}</em> om året.</h1>
     <p class="lede" style="margin-top:26px" data-reveal>Har du en ledig plats framför huset? Lägg upp den. Någon som behöver parkera betalar dig varje månad. Vi sköter pengarna, legitimeringen och tryggheten.</p>
     <div class="hero-cta" data-reveal style="--d:120ms">
       <button class="btn btn-p btn-lg" data-go="hyrut">${I("wallet", 18)}Se vad min plats är värd${I("arrow", 17, "arw")}</button>
       <button class="btn btn-lg" onclick="document.getElementById('kartan').scrollIntoView({behavior:'smooth',block:'start'})">${I("search", 18)}Se lediga platser</button>
     </div>
-    <div class="figures" data-reveal style="--d:180ms">
-      <div><b class="countup" data-count="${Math.round(sug.month * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(sug.month)}</b><span>${sym()} i snitt per månad, Stockholm</span></div>
-      <div><b class="countup" data-count="${Math.round(FEES.schablon * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(FEES.schablon)}</b><span>${sym()} skattefritt varje år</span></div>
+    <div class="trustrow" data-reveal style="--d:150ms">
+      <span>${I("shield", 16)} Alla legitimerar sig med BankID</span>
+      <span>${I("swish", 16)} Betala med Swish</span>
+      <span>${I("lock", 16)} Skador ersätts upp till ${num(FEES.garantiBelopp)} ${sym()}</span>
+    </div>
+    <div class="figures" data-reveal style="--d:210ms">
+      <div><b><span class="countup" data-count="${Math.round(sug.month * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(sug.month)}</span> ${sym()}</b><span>i snitt per månad i Stockholm</span></div>
+      <div><b><span class="countup" data-count="${Math.round(FEES.schablon * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(FEES.schablon)}</span> ${sym()}</b><span>får du tjäna skattefritt varje år</span></div>
       <div><b class="countup" data-count="${SPOTS.length}">${SPOTS.length}</b><span>platser i ${AREAS.length} områden</span></div>
     </div>
   </div>
@@ -231,9 +235,9 @@ function viewStart() {
     </div>
     <button class="btn" data-go="sok">Öppna hela kartan${I("arrow", 16, "arw")}</button>
   </div>
-  <div class="chips" style="margin-top:18px">
-    ${AREAS.map(a => `<button class="chip ${a.id === S.area ? "on" : ""}" onclick="setAreaOnMap('${a.id}',this)">
-      <span class="mono" style="font-size:.72em;opacity:.6">${a.code}</span> ${esc(a.name.split(" ")[0])}</button>`).join("")}
+  <div class="row wrap" style="margin-top:18px;gap:10px">
+    <button class="placebtn" onclick="openPlacePicker()">${I("pin", 19)}<span>${esc(placeLabel())}</span>${I("chevron", 16, "flip90")}</button>
+    <button class="btn" onclick="usePlacePos()">${I("target", 16)} Nära mig</button>
   </div>
 </div>
 <div class="wrap" style="margin-top:16px">
@@ -255,7 +259,11 @@ function viewStart() {
       </div>
       <button class="mbtn" onclick="locateMe()" title="Var är jag?">${I("target", 19)}</button>
     </div>
-    <div class="mapui bl"><span class="mapnote" style="position:static">Tryck på ett pris</span></div>
+    <div class="maplegend">
+      <span class="l-free"><i></i>Ledig nu</span>
+      <span class="l-busy"><i></i>Upptagen</span>
+      <span class="l-best"><i></i>Billigast</span>
+    </div>
   </div>
   <p class="muted small center" style="margin-top:12px">Dra i kartan för att flytta den. Tryck på ett pris så ser du platsen.</p>
 </div></section>
@@ -362,6 +370,15 @@ function baseList() {
   };
   return list.slice().sort(by[S.sort] || by.pris);
 }
+/* Vilken nål som ska lysa grönt, vilken som är billigast av de lediga. */
+function makeStateOf(list) {
+  const free = list.filter(spotFree);
+  const pool = free.length ? free : list;
+  let best = null, min = Infinity;
+  pool.forEach(x => { const p = priceFor(x, S.mode); if (p && p < min) { min = p; best = x.id; } });
+  return s => ({ label: num(priceFor(s, S.mode)) + " " + sym(), free: spotFree(s), best: s.id === best });
+}
+
 function activeFilterCount() { return [S.fCharge, S.fGarage, S.fSecure, S.fBig, !!S.maxPrice].filter(Boolean).length; }
 
 function viewSok() {
@@ -370,6 +387,10 @@ function viewSok() {
   const nf = activeFilterCount();
   return `
 <div class="wrap" style="padding-top:16px">
+  <div class="row" style="gap:10px;margin-bottom:12px">
+    <button class="placebtn" onclick="openPlacePicker()">${I("pin", 19)}<span>${esc(placeLabel())}</span>${I("chevron", 16, "flip90")}</button>
+    <button class="btn" onclick="usePlacePos()" title="Nära mig" aria-label="Nära mig">${I("target", 18)}</button>
+  </div>
   <div class="spread" style="gap:12px;flex-wrap:wrap">
     <div class="seg" style="max-width:230px;flex:1">
       <button class="${S.view === "karta" ? "on" : ""}" onclick="setView('karta')">${I("map", 15)} ${esc(t("map"))}</button>
@@ -426,12 +447,20 @@ function sokBodyHTML(list, area) {
         <button class="mbtn" onclick="locateMe()" aria-label="Visa var jag är" title="Var är jag?">${I("target", 19)}</button>
         <button class="mbtn" onclick="fitAll()" aria-label="Visa alla platser" title="Visa alla">${I("layers", 19)}</button>
       </div>
-      <div class="mapui bl">
-        <span class="mapnote" style="position:static">${list.length} ${esc(t("free_spots"))}</span>
+      <div class="maplegend">
+        <span class="l-free"><i></i>Ledig nu</span>
+        <span class="l-busy"><i></i>Upptagen</span>
+        <span class="l-best"><i></i>Billigast</span>
       </div>
       <div id="mcard"></div>
     </div>
-    <p class="muted small center" style="margin-top:12px">Dra i kartan för att flytta den. Nyp eller rulla för att zooma. Tryck på ett pris för att se platsen.</p>`;
+    <div class="maplegend">
+      <span class="l-free"><i></i>Ledig nu</span>
+      <span class="l-busy"><i></i>Upptagen</span>
+      <span class="l-best"><i></i>Billigast</span>
+    </div>
+    </div>
+    <p class="muted small center" style="margin-top:12px">Dra i kartan för att flytta den. Nyp med två fingrar för att zooma. Tryck på ett pris för att se platsen.</p>`;
   }
   return `
   <div class="mapwrap short" style="margin-bottom:18px">
@@ -516,7 +545,7 @@ function refreshResults() {
     const card = document.getElementById("mcard"); if (card) card.innerHTML = "";
     S.selSpot = null;
   }
-  if (PMap.alive()) PMap.setSpots(list, s => num(priceFor(s, S.mode)) + " " + sym(), S.selSpot);
+  if (PMap.alive()) PMap.setSpots(list, makeStateOf(list), S.selSpot);
 }
 function toggleFav(id) {
   const i = FAVS.indexOf(id);
@@ -535,14 +564,65 @@ function mountMap(id, opts) {
   const el = document.getElementById(id || "lmap");
   if (!el || typeof L === "undefined") return;
   const area = AREAS.find(a => a.id === S.area) || AREAS[0];
-  PMap.init(el, S.near || area.c, S.near ? 14 : area.z, { onPick: opts.onPick || pickSpot });
+  PMap.init(el, S.near || area.c, S.near ? (S.partZoom || 14) : area.z, { onPick: opts.onPick || pickSpot });
   PMap.setMode(SET.mapMode);
   const list = baseList();
-  PMap.setSpots(list, s => num(priceFor(s, S.mode)) + " " + sym(), S.selSpot);
+  PMap.setSpots(list, makeStateOf(list), S.selSpot);
   if (S.near) PMap.showMe(S.near);
   if (opts.fit) setTimeout(() => PMap.fitSpots(list, opts.pad || 40), 140);
 }
 /* Startsidans karta: ett tryck på ett pris öppnar platsen direkt. */
+/* Var vill du parkera? Egen position, stad, och sedan stadsdel. */
+function placeLabel() {
+  if (S.nearLabel) return S.nearLabel;
+  const a = AREAS.find(x => x.id === S.area) || AREAS[0];
+  return S.part ? a.name.split(" ")[0] + " · " + S.part : a.name;
+}
+function openPlacePicker() {
+  const a = AREAS.find(x => x.id === S.area) || AREAS[0];
+  const parts = (typeof PARTS !== "undefined" && PARTS[S.area]) || [];
+  openSheet(sheetHead("Var vill du parkera?") + `<div class="sheet-b stack">
+    <button class="btn btn-p btn-block btn-lg" onclick="usePlacePos()">
+      ${I("target", 18)} Använd min plats</button>
+    <p class="muted small center" style="margin-top:-4px">Vi frågar din telefon om din position – inget sparas.</p>
+
+    <div class="rule"></div>
+    <div class="field"><label>Stad eller område</label>
+      <div class="chips" style="flex-wrap:wrap;overflow:visible">
+        ${AREAS.map(x => `<button class="chip ${x.id === S.area ? "on" : ""}"
+          onclick="pickCity('${x.id}')">${esc(x.name.split(" ")[0])}</button>`).join("")}
+      </div></div>
+
+    ${parts.length ? `<div class="field"><label>Var i ${esc(a.name.split(" ")[0])}?</label>
+      <div class="chips" style="flex-wrap:wrap;overflow:visible">
+        ${parts.map((p, i) => `<button class="chip ${(S.part || parts[0][0]) === p[0] ? "on" : ""}"
+          onclick="pickPart(${i})">${esc(p[0])}</button>`).join("")}
+      </div></div>` : ""}
+
+    <button class="btn btn-p btn-block btn-lg" onclick="closeSheet();render()">Visa platserna</button>
+  </div>`);
+}
+function usePlacePos() {
+  toast("Letar upp var du är …", "target");
+  PMap.locate((ll, err) => {
+    if (!ll) { toast(err || "Kunde inte hitta dig. Tillåt platstjänster i webbläsaren.", "info"); return; }
+    S.near = ll; S.nearLabel = "Nära mig"; S.part = null; S.sort = "avstand";
+    closeSheet(); render(); toast("Visar platser nära dig", "check");
+  });
+}
+function pickCity(id) {
+  S.area = id; SET.city = id; saveSettings();
+  S.near = null; S.nearLabel = ""; S.part = null; S.selSpot = null;
+  openPlacePicker();
+}
+function pickPart(i) {
+  const parts = PARTS[S.area] || []; const p = parts[i]; if (!p) return;
+  S.part = i === 0 ? null : p[0];
+  S.near = i === 0 ? null : p[1];
+  S.nearLabel = ""; S.partZoom = p[2];
+  openPlacePicker();
+}
+
 function setAreaOnMap(id, btn) {
   S.area = id; SET.city = id; saveSettings();
   S.near = null; S.nearLabel = ""; S.selSpot = null;
@@ -569,7 +649,7 @@ function locateMe() {
 function pickSpot(id) {
   S.selSpot = id;
   const s = SPOTS.find(x => x.id === id); if (!s) return;
-  PMap.setSpots(baseList(), x => num(priceFor(x, S.mode)) + " " + sym(), id);
+  const _l = baseList(); PMap.setSpots(_l, makeStateOf(_l), id);
   PMap.flyTo(s.ll, Math.max(15, 15));
   const box = document.getElementById("mcard");
   if (!box) return;
@@ -634,11 +714,8 @@ function openFilters() {
   const hi = prices.length ? Math.max.apply(null, prices) : 100;
   const cur = S.maxPrice || hi;
   openSheet(sheetHead(t("filters")) + `<div class="sheet-b stack">
-    <div class="field">
-      <label>Var vill du parkera?</label>
-      <select class="inp" onchange="S.area=this.value;SET.city=this.value;saveSettings();S.near=null;S.nearLabel='';closeSheet();render()">
-        ${AREAS.map(a => `<option value="${a.id}" ${a.id === S.area ? "selected" : ""}>${esc(a.name)}</option>`).join("")}
-      </select>
+    <div class="field"><label>Var vill du parkera?</label>
+      <button class="placebtn" onclick="openPlacePicker()">${I("pin", 19)}<span>${esc(placeLabel())}</span>${I("chevron", 16, "flip90")}</button>
     </div>
     <div class="slider">
       <div class="top"><span class="lbl">Högsta pris ${esc(unitLong(S.mode))}</span>

@@ -3,7 +3,7 @@
    ============================================================ */
 "use strict";
 
-const VERSION = "2026-08-21.3";
+const VERSION = "2026-08-21.6";
 
 /* ---------- Avgiftsmodell ---------- */
 const FEES = {
@@ -94,6 +94,29 @@ const SPOTS = [
   {id:70, area:"vasteras", kind:"uppfart", nm:"Uppfart, Centrum", ad:"500 m från Stora torget",       type:"Uppfart", h:14,d:69,w:280,m:790,ev:0, rate:4.7,n:19, host:"Rolf",     hostSince:2025, charge:false, feat:["Egen infart"],                        size:"Personbil + SUV",   walk:6,  ll:[59.6100,16.5450], instr:"Kör in från Kopparbergsvägen."},
   {id:71, area:"vasteras", kind:"carport", nm:"Carport, Hamnen",  ad:"1,3 km från centrum · gästhamnen",type:"Carport", h:12,d:59,w:250,m:690,ev:0, rate:4.5,n:14, host:"Susanne", hostSince:2025, charge:true,  feat:["Tak","Laddbox 7,4 kW","Båtplats intill"], size:"Personbil, husvagn", walk:15, ll:[59.5980,16.5560], instr:"Carport längst bort mot vattnet."}
 ];
+
+/* Stadsdelar — andra nivån i platsväljaren */
+const PARTS = {
+  sthlm:[["Hela innerstaden",[59.3251,18.0711],13],["Södermalm",[59.3130,18.0760],14],["Vasastan",[59.3428,18.0490],14],
+         ["Östermalm",[59.3383,18.0900],14],["Kungsholmen",[59.3336,18.0290],14],["Danderyd",[59.4050,18.0400],13]],
+  arn:  [["Hela området",[59.6180,17.8480],11],["Märsta",[59.6200,17.8550],13],["Sigtuna",[59.6170,17.7230],13],
+         ["Rosersberg",[59.5940,17.8880],13],["Upplands Väsby",[59.5190,17.9280],13],["Knivsta",[59.7250,17.7900],13]],
+  gbg:  [["Hela Göteborg",[57.7010,11.9640],13],["Linné",[57.6980,11.9530],14],["Majorna",[57.6975,11.9310],14],
+         ["Vasastan",[57.6980,11.9720],14],["Örgryte",[57.7060,11.9930],14],["Hisingen",[57.7070,11.9380],14]],
+  solna:[["Hela Solna",[59.3648,18.0000],14],["Råsunda",[59.3690,18.0030],15],["Solna Centrum",[59.3600,18.0010],15],
+         ["Huvudsta",[59.3550,17.9800],15],["Hagalund",[59.3660,18.0100],15]],
+  malmo:[["Hela Malmö",[55.5960,12.9950],13],["Västra hamnen",[55.6140,12.9760],14],["Möllevången",[55.5900,13.0090],14],
+         ["Davidshall",[55.5940,13.0010],14],["Limhamn",[55.5750,12.9250],14]],
+  uppsala:[["Hela Uppsala",[59.8590,17.6420],13],["Luthagen",[59.8620,17.6280],14],["Kungsängen",[59.8540,17.6420],14],
+         ["Fålhagen",[59.8570,17.6560],14]],
+  lund: [["Hela Lund",[55.7030,13.1870],14],["Professorsstaden",[55.7010,13.1900],15],["Väster",[55.7050,13.1830],15]],
+  vasteras:[["Hela Västerås",[59.6050,16.5500],13],["Centrum",[59.6100,16.5450],14],["Hamnen",[59.5980,16.5560],14],
+         ["Bäckby",[59.6180,16.4900],14],["Skiljebo",[59.6300,16.5800],14]]
+};
+
+/* Upptagna just nu — resten lyser grönt på kartan */
+const BUSY_IDS = [5, 7, 12, 22, 32, 41, 52, 61, 71];
+const spotFree = s => BUSY_IDS.indexOf(s.id) === -1;
 
 /* ---------- Evenemang ---------- */
 const EVENTS = [
