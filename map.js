@@ -61,12 +61,13 @@ const PMap = (function () {
       }
       /* Esri utan nyckel: rutorna slutar på z19 men vi låter kartan zooma till 21
          genom att skala upp sista nivån i stället för att stanna. */
+      /* Utan nyckel: Esri har ~0,5–1 m/pixel i svenska bostadsområden och tar slut
+         runt zoom 18. Vi stannar där i stället för att visa uppskalad gröt. */
       return L.layerGroup([
-        /* detectRetina av: den dubblar zoomen och skalar ner igen → suddigt */
         L.tileLayer(TILES.satellit.url, {
-          maxZoom: 21, maxNativeZoom: 19, attribution: TILES.satellit.attr, detectRetina: false
+          maxZoom: 18, maxNativeZoom: 18, attribution: TILES.satellit.attr, detectRetina: false
         }),
-        L.tileLayer(LABELS, { maxZoom: 21, maxNativeZoom: 19, opacity: .72, detectRetina: false })
+        L.tileLayer(LABELS, { maxZoom: 18, maxNativeZoom: 18, opacity: .72, detectRetina: false })
       ]);
     }
     const t = isDark() ? TILES.morker : TILES.karta;
@@ -112,6 +113,7 @@ const PMap = (function () {
       worldCopyJump: true
     });
     layers.base = baseFor(mode).addTo(map);
+    map.setMaxZoom((mode === "satellit" && !satKey()) ? 18 : 21);
     L.control.zoom({ position: "bottomright" }).addTo(map);
     map.attributionControl.setPrefix("");
     onPick = opts.onPick || null;
@@ -124,7 +126,12 @@ const PMap = (function () {
     if (!map) return;
     if (layers.base) map.removeLayer(layers.base);
     layers.base = baseFor(mode).addTo(map);
+    /* Zoomtaket följer lagret: 18 för nyckellös satellit, annars 21–22 */
+    const cap = (m === "satellit" && !satKey()) ? 18 : 21;
+    map.setMaxZoom(cap);
+    if (map.getZoom() > cap) map.setZoom(cap);
   }
+  function maxZoomNow() { return (mode === "satellit" && !satKey()) ? 18 : 21; }
   function getMode() { return mode; }
 
   function setSpots(list, stateOf, selectedId) {
@@ -193,7 +200,7 @@ const PMap = (function () {
   }
   function alive() { return !!map; }
 
-  return { init, setMode, getMode, setSpots, fitSpots, flyTo, invalidate, locate, geocode, showMe, destroy, alive };
+  return { init, setMode, getMode, maxZoomNow, setSpots, fitSpots, flyTo, invalidate, locate, geocode, showMe, destroy, alive };
 })();
 
 /* Avstånd i km mellan två koordinater */

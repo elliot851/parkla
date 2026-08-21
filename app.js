@@ -1753,6 +1753,20 @@ function viewInstallningar() {
   </div>
 
   <div class="panel pad-lg" style="margin-top:18px">
+    <h3>Satellitbilder</h3>
+    <p class="dim small" style="margin-top:8px">Utan nyckel använder vi Esris öppna flygbilder. De räcker till zoom 18 – i svenska bostadsområden är de ungefär en meter per bildpunkt, så vi stannar där i stället för att visa uppskalad gröt.</p>
+    <p class="dim small" style="margin-top:8px">Med en egen <b>Mapbox-nyckel</b> blir bilderna skarpa hela vägen till zoom 22 och du kan se enskilda uppfarter. Mapbox har 50 000 kartvisningar i månaden gratis. Skapa ett konto på mapbox.com, kopiera din <i>public access token</i> och klistra in den här.</p>
+    <div class="field" style="margin-top:14px"><label>Mapbox access token (frivilligt)</label>
+      <input class="inp mono" style="font-size:.85rem" id="satkey" placeholder="pk.eyJ1Ijoi…"
+        value="${esc(SET.satKey || "")}"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn btn-p btn-sm" onclick="saveSatKey()">Spara nyckel</button>
+      ${SET.satKey ? `<button class="btn btn-sm" onclick="SET.satKey='';saveSettings();render();toast('Nyckeln är borttagen','close')">Ta bort</button>` : ""}
+      ${SET.satKey ? `<span class="tag green">Skarp satellit aktiv</span>` : `<span class="tag">Esri, upp till zoom 18</span>`}
+    </div>
+  </div>
+
+  <div class="panel pad-lg" style="margin-top:18px">
     <h3>Var letar du oftast?</h3>
     <div class="field" style="margin-top:14px">
       <select class="inp" onchange="SET.city=this.value;S.area=this.value;saveSettings();toast('Sparat','check')">
@@ -1803,6 +1817,15 @@ function viewInstallningar() {
 </div></section>
 ${footerHTML()}`;
 }
+function saveSatKey() {
+  const v = (document.getElementById("satkey") || {}).value || "";
+  const k = v.trim();
+  if (k && !/^pk\./.test(k)) { toast("En Mapbox-token börjar med pk.", "info"); return; }
+  SET.satKey = k; SET.satProvider = "mapbox"; saveSettings();
+  toast(k ? "Nyckeln är sparad – satelliten blir skarp nu" : "Nyckeln är borttagen", "check");
+  render();
+}
+
 function exportData() {
   const json = JSON.stringify({ version: VERSION, settings: SET, bookings: BOOKINGS, listings: LISTINGS, favs: FAVS, watch: WATCH }, null, 2);
   try {
