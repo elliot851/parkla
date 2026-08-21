@@ -1,0 +1,61 @@
+/* ============================================================
+   Parkla — startsidans karta och tvåstegsbokningen
+   ============================================================ */
+
+/* ---------- karta på startsidan ---------- */
+.mapwrap.heromap{height:min(58vh,470px)}
+@media(max-width:760px){.mapwrap.heromap{height:min(56vh,400px)}}
+@media(max-width:480px){.mapwrap.heromap{height:340px}}
+.heromap .mapui.tl{top:14px;left:14px;right:14px;max-width:none}
+.heromap .msearch{max-width:420px}
+
+/* ---------- steg 2: sammanfattning högst upp ---------- */
+.recap{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--rule);
+  border-radius:var(--r-md);background:var(--paper-2)}
+.recap .ic{width:42px;height:38px;flex:0 0 auto;display:grid;place-items:center;border-radius:var(--r-sm);
+  background:var(--card);border:1px solid var(--rule);color:var(--green)}
+.recap .t{flex:1;min-width:0}
+.recap .t b{display:block;font-size:.95rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recap .t span{display:block;font-size:.8rem;color:var(--ink-45);margin-top:1px}
+
+/* ---------- stor prislapp i steg 1 ---------- */
+.bigprice{display:flex;flex-direction:column;gap:5px;padding:20px 22px;border-radius:var(--r-md);
+  background:var(--pine);color:var(--on-dark);animation:fadeUp .4s var(--ease) both}
+.bigprice .lbl{font-family:var(--mono);font-size:.63rem;letter-spacing:.15em;text-transform:uppercase;opacity:.6;color:inherit}
+.bigprice b{font-family:var(--display);font-size:clamp(2.1rem,7vw,2.7rem);line-height:1;letter-spacing:-.05em;
+  font-variant-numeric:tabular-nums;font-weight:600}
+.bigprice .muted{color:rgba(244,241,233,.62)!important}
+
+/* ---------- registreringsnummer ---------- */
+.inp.plate{font-family:var(--mono);font-size:1.35rem;letter-spacing:.16em;text-transform:uppercase;
+  text-align:center;min-height:60px;font-weight:500}
+.inp.plate::placeholder{letter-spacing:.16em;opacity:.32}
+
+/* ---------- betalsätt som stora tryckytor ---------- */
+.paygrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+@media(max-width:520px){.paygrid{grid-template-columns:repeat(2,1fr)}}
+.paycard{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  min-height:82px;padding:12px 8px;border:1.5px solid var(--rule);border-radius:var(--r-md);
+  background:var(--card);color:var(--ink-45);font-size:.84rem;font-weight:600;
+  transition:all .22s var(--ease)}
+.paycard:hover{border-color:var(--ink-25);color:var(--ink)}
+.paycard.on{border-color:var(--green);color:var(--ink);background:var(--green-wash);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 13%,transparent)}
+.paycard.on svg{color:var(--green)}
+
+/* ---------- hopfällbara tillägg ---------- */
+.morebtn{display:flex;align-items:center;gap:9px;width:100%;padding:14px 16px;border-radius:var(--r-md);
+  border:1px dashed var(--rule-2);color:var(--ink-45);font-size:.88rem;font-weight:500;
+  transition:all .22s var(--ease)}
+.morebtn:hover{border-color:var(--ink-25);color:var(--ink)}
+.morebtn svg{transition:transform .3s var(--ease)}
+.morebtn.open{color:var(--ink);border-style:solid}
+.morebtn.open svg{transform:rotate(45deg)}
+.moreblock{animation:fadeUp .35s var(--ease) both;border:1px solid var(--rule);border-radius:var(--r-md);
+  padding:4px 16px 16px;margin-top:-6px}
+.moreblock[hidden]{display:none}
+
+/* bakåtpilen i sheet-huvudet */
+.flip{display:inline-flex;transform:rotate(180deg)}
+.sheet-h .x:hover .flip{transform:rotate(180deg)}
+.sheet-h .x:has(.flip):hover{transform:none}

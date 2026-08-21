@@ -189,7 +189,7 @@ function viewStart() {
     <p class="lede" style="margin-top:26px" data-reveal>Har du en ledig plats framför huset? Lägg upp den. Någon som behöver parkera betalar dig varje månad. Vi sköter pengarna, legitimeringen och tryggheten.</p>
     <div class="hero-cta" data-reveal style="--d:120ms">
       <button class="btn btn-p btn-lg" data-go="hyrut">${I("wallet", 18)}Se vad min plats är värd${I("arrow", 17, "arw")}</button>
-      <button class="btn btn-lg" data-go="sok">${I("search", 18)}Hitta parkering</button>
+      <button class="btn btn-lg" onclick="document.getElementById('kartan').scrollIntoView({behavior:'smooth',block:'start'})">${I("search", 18)}Se lediga platser</button>
     </div>
     <div class="figures" data-reveal style="--d:180ms">
       <div><b class="countup" data-count="${Math.round(sug.month * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(sug.month)}</b><span>${sym()} i snitt per månad, Stockholm</span></div>
@@ -219,14 +219,48 @@ function viewStart() {
   ${[...cities, ...cities].map(c => `<span>${esc(c)}</span>`).join("")}
 </div></div>
 
-<section class="tight"><div class="wrap">
-  <div class="callout brass" data-reveal style="display:flex;gap:13px;align-items:flex-start">
-    ${I("info", 18)}<div><b>Så ser det ut idag.</b> Att parkera vid Arlanda kostar 1 495–1 995 kr i veckan. Boendeparkering i centrala Stockholm kostar 1 100 kr i månaden och kön till garage är flera år lång. Samtidigt står tusentals uppfarter tomma.</div>
+<section class="tight" id="kartan"><div class="wrap">
+  <div class="spread" style="align-items:flex-end;flex-wrap:wrap;gap:16px">
+    <div>
+      <span class="kicker">Lediga just nu</span>
+      <h2 style="margin-top:12px">Var vill du parkera?</h2>
+    </div>
+    <button class="btn" data-go="sok">Öppna hela kartan${I("arrow", 16, "arw")}</button>
   </div>
+  <div class="chips" style="margin-top:18px">
+    ${AREAS.map(a => `<button class="chip ${a.id === S.area ? "on" : ""}" onclick="setAreaOnMap('${a.id}',this)">
+      <span class="mono" style="font-size:.72em;opacity:.6">${a.code}</span> ${esc(a.name.split(" ")[0])}</button>`).join("")}
+  </div>
+</div>
+<div class="wrap" style="margin-top:16px">
+  <div class="mapwrap heromap">
+    <div id="hmap" class="leafletmap"></div>
+    <div class="mapui tl">
+      <div class="msearch">
+        <span class="mi">${I("search", 18)}</span>
+        <input id="mapq" placeholder="Sök adress eller stad" autocomplete="off"
+          oninput="onMapSearch(this.value)" onfocus="this.select()">
+        <button class="mx" onclick="clearSearch()" aria-label="Rensa">${I("close", 15)}</button>
+        <div id="mres"></div>
+      </div>
+    </div>
+    <div class="mapui tr">
+      <div class="mseg">
+        <button class="${SET.mapMode !== "satellit" ? "on" : ""}" onclick="setMapMode('karta')">${I("map", 14)} Karta</button>
+        <button class="${SET.mapMode === "satellit" ? "on" : ""}" onclick="setMapMode('satellit')">${I("layers", 14)} Satellit</button>
+      </div>
+      <button class="mbtn" onclick="locateMe()" title="Var är jag?">${I("target", 19)}</button>
+    </div>
+    <div class="mapui bl"><span class="mapnote" style="position:static">Tryck på ett pris</span></div>
+  </div>
+  <p class="muted small center" style="margin-top:12px">Dra i kartan för att flytta den. Tryck på ett pris så ser du platsen.</p>
 </div></section>
 
 <section class="snug"><div class="wrap">
-  <div class="panel pad" data-reveal style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+  <div class="callout brass" data-reveal style="display:flex;gap:13px;align-items:flex-start">
+    ${I("info", 18)}<div><b>Så ser det ut idag.</b> Att parkera vid Arlanda kostar 1 495–1 995 kr i veckan. Boendeparkering i centrala Stockholm kostar 1 100 kr i månaden och kön till garage är flera år lång. Samtidigt står tusentals uppfarter tomma.</div>
+  </div>
+  <div class="panel pad" data-reveal style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-top:18px">
     <span class="tag clay">Nästa stora match</span>
     <div style="flex:1;min-width:210px">
       <h3>${esc(ev.name)}</h3>
@@ -465,7 +499,7 @@ function clearFilters() {
 }
 function refreshResults() {
   const list = baseList(), area = AREAS.find(a => a.id === S.area) || AREAS[0];
-  if (S.view === "lista") {
+  if (S.route === "sok" && S.view === "lista") {
     const box = document.querySelector(".spotlist");
     if (box) {
       box.innerHTML = list.length ? list.map(spotRow).join("") : emptyHTML();
@@ -492,16 +526,27 @@ function addWatch() {
 }
 
 /* ---- karta ---- */
-function mountMap() {
-  const el = document.getElementById("lmap");
+function mountMap(id, opts) {
+  opts = opts || {};
+  const el = document.getElementById(id || "lmap");
   if (!el || typeof L === "undefined") return;
   const area = AREAS.find(a => a.id === S.area) || AREAS[0];
-  PMap.init(el, S.near || area.c, S.near ? 14 : area.z, { onPick: pickSpot });
+  PMap.init(el, S.near || area.c, S.near ? 14 : area.z, { onPick: opts.onPick || pickSpot });
   PMap.setMode(SET.mapMode);
   const list = baseList();
   PMap.setSpots(list, s => num(priceFor(s, S.mode)) + " " + sym(), S.selSpot);
   if (S.near) PMap.showMe(S.near);
-  if (S.view === "lista") setTimeout(() => PMap.fitSpots(list, 30), 120);
+  if (opts.fit) setTimeout(() => PMap.fitSpots(list, opts.pad || 40), 140);
+}
+/* Startsidans karta: ett tryck på ett pris öppnar platsen direkt. */
+function setAreaOnMap(id, btn) {
+  S.area = id; SET.city = id; saveSettings();
+  S.near = null; S.nearLabel = ""; S.selSpot = null;
+  if (btn) { btn.parentElement.querySelectorAll(".chip").forEach(c => c.classList.remove("on")); btn.classList.add("on"); }
+  const area = AREAS.find(a => a.id === id);
+  const box = document.getElementById("mapq"); if (box) box.value = "";
+  PMap.flyTo(area.c, area.z);
+  refreshResults();
 }
 function setMapMode(m) {
   SET.mapMode = m; saveSettings(); PMap.setMode(m);
@@ -692,7 +737,8 @@ function calendarHTML(s) {
 
 /* ---- bokning ---- */
 function startBooking(id) {
-  S.bk = { id, qty: 1, charge: false, extraCar: false, code: "", pay: "swish" };
+  S.bk = { id, step: 1, qty: 1, charge: false, extraCar: false, code: "", pay: "swish",
+           reg: LS.get("lastreg", ""), date: new Date(Date.now() + 864e5).toISOString().slice(0, 10) };
   renderBooking();
 }
 function bkTotals() {
@@ -705,60 +751,116 @@ function bkTotals() {
   const disc = b.code.toUpperCase() === "PARKLA50" ? Math.round(sub * .5) : b.code.toUpperCase() === "GRANNE" ? 100 : 0;
   return Object.assign({ unit, base, chargeCost, extraCost, disc }, feeSplit(sub - disc, S.mode));
 }
+const PRESETS  = { timme:[1,2,4,8], dygn:[1,2,3,7], vecka:[1,2,4], manad:[1,3,6,12], evenemang:[1,2,3] };
+const QTY_WORD = { timme:"timmar", dygn:"dygn", vecka:"veckor", manad:"m\u00e5nader", evenemang:"platser" };
+const QTY_ONE  = { timme:"timme",  dygn:"dygn", vecka:"vecka",  manad:"m\u00e5nad",   evenemang:"plats" };
+
 function renderBooking() {
   const s = SPOTS.find(x => x.id === S.bk.id), b = S.bk, T = bkTotals();
-  const qtyLabel = S.mode === "manad" ? "månader" : S.mode === "timme" ? "timmar" : S.mode === "vecka" ? "veckor" : S.mode === "evenemang" ? "platser" : "dygn";
-  openSheet(sheetHead("Boka " + s.nm) + `<div class="sheet-b stack">
-    <div class="progress"><i class="on"></i><i></i><i></i></div>
+  const word = QTY_WORD[S.mode] || "dygn", one = QTY_ONE[S.mode] || "dygn";
+  const dots = n => `<div class="progress">${[1,2,3].map(k => `<i class="${k <= n ? "on" : ""}"></i>`).join("")}</div>`;
 
-    <div class="field"><label>Hur ${S.mode === "evenemang" ? "många platser" : "länge"}?</label>
-      <div class="row" style="justify-content:space-between">
-        <div class="stepper">
-          <button onclick="bkQty(-1)" ${b.qty <= 1 ? "disabled" : ""} aria-label="Färre">${I("minus", 18)}</button>
-          <span class="v" id="bkq">${b.qty}</span>
-          <button onclick="bkQty(1)" aria-label="Fler">${I("plus", 18)}</button>
+  /* ---------- Steg 1: n\u00e4r? ---------- */
+  if (b.step === 1) {
+    openSheet(sheetHead(s.nm) + `<div class="sheet-b stack">
+      ${dots(1)}
+      <div>
+        <h3 style="font-size:1.3rem">N\u00e4r vill du parkera?</h3>
+        <p class="muted small" style="margin-top:5px">Tv\u00e5 steg. Du betalar f\u00f6rst n\u00e4r v\u00e4rden sagt ja.</p>
+      </div>
+
+      <div class="field"><label>Fr\u00e5n vilken dag?</label>
+        <input class="inp" type="date" id="bkdate" value="${esc(b.date)}" onchange="S.bk.date=this.value"></div>
+
+      <div class="field"><label>Hur ${S.mode === "evenemang" ? "m\u00e5nga platser" : "l\u00e4nge"}?</label>
+        <div class="chips" id="bkpre" style="margin-bottom:12px">
+          ${(PRESETS[S.mode] || [1,2,3]).map(n => `<button class="chip ${b.qty === n ? "on" : ""}" data-n="${n}"
+            onclick="bkPreset(${n})">${n} ${n === 1 ? one : word}</button>`).join("")}
         </div>
-        <span class="muted small">${qtyLabel}</span>
-      </div></div>
+        <div class="row" style="justify-content:space-between">
+          <div class="stepper">
+            <button onclick="bkQty(-1)" ${b.qty <= 1 ? "disabled" : ""} aria-label="F\u00e4rre">${I("minus", 18)}</button>
+            <span class="v" id="bkq">${b.qty}</span>
+            <button onclick="bkQty(1)" aria-label="Fler">${I("plus", 18)}</button>
+          </div>
+          <span class="muted small">${word}</span>
+        </div></div>
 
-    <div class="field"><label>Från vilken dag?</label>
-      <input class="inp" type="date" id="bkdate" value="${new Date(Date.now() + 864e5).toISOString().slice(0, 10)}"></div>
+      <div class="bigprice" id="bkbig">${bigPriceHTML(T)}</div>
 
-    <div>
-      <div class="lbl" style="margin-bottom:4px">Vill du ha något mer?</div>
-      ${s.charge ? `<div class="setrow"><span style="color:var(--green)">${I("bolt", 20)}</span>
-        <div class="t"><b>Ladda elbilen</b><span>${S.mode === "manad" ? kr(380) + " i månaden, fri laddning" : kr(55) + " per gång"}</span></div>
-        <div class="switch ${b.charge ? "on" : ""}" role="switch" onclick="bkTog('charge',this)"></div></div>` : ""}
-      <div class="setrow"><span style="color:var(--ink-45)">${I("car", 20)}</span>
-        <div class="t"><b>En bil till</b><span>Om platsen rymmer två fordon</span></div>
-        <div class="switch ${b.extraCar ? "on" : ""}" role="switch" onclick="bkTog('extraCar',this)"></div></div>
-    </div>
+      <div class="sticky-cta">
+        <button class="btn btn-p btn-block btn-lg" onclick="bkStep(2)">Forts\u00e4tt${I("arrow", 17, "arw")}</button>
+      </div>
+    </div>`);
+    return;
+  }
 
-    <div class="field"><label>Har du en rabattkod?</label>
-      <div class="row"><input class="inp" id="bkcode" placeholder="Till exempel GRANNE" value="${esc(b.code)}">
-      <button class="btn" onclick="S.bk.code=document.getElementById('bkcode').value;renderBooking()">Använd</button></div>
-      ${T.disc ? `<span class="tag green" style="margin-top:8px">Rabatt −${kr(T.disc)}</span>` : ""}
+  /* ---------- Steg 2: betala ---------- */
+  const pays = [["swish","swish","Swish"],["kort","card","Kort"],["klarna","receipt","Klarna"],["faktura","bank","Faktura"]];
+  openSheet(`<div class="sheet-h">
+      <button class="x" onclick="bkStep(1)" aria-label="${t("back")}"><span class="flip">${I("chevron", 16)}</span></button>
+      <h3>N\u00e4stan klart</h3>
+      <button class="x" onclick="closeSheet()" aria-label="${t("close")}">${I("close", 16)}</button>
+    </div><div class="sheet-b stack">
+    ${dots(2)}
+
+    <div class="recap">
+      <span class="ic">${kindIcon(s.kind, 22)}</span>
+      <div class="t"><b>${esc(s.nm)}</b><span>${b.qty} ${b.qty === 1 ? one : word} fr\u00e5n ${esc(b.date)}</span></div>
+      <button class="btn btn-sm" onclick="bkStep(1)">\u00c4ndra</button>
     </div>
 
     <div class="field"><label>Bilens registreringsnummer</label>
-      <input class="inp mono" id="regnr" placeholder="ABC 123" maxlength="8" style="text-transform:uppercase;letter-spacing:.1em"
-        value="${esc(LS.get("lastreg", ""))}"></div>
+      <input class="inp plate" id="regnr" placeholder="ABC 123" maxlength="8"
+        value="${esc(b.reg)}" oninput="S.bk.reg=this.value" autocomplete="off"></div>
 
     <div>
-      <div class="lbl" style="margin-bottom:8px">Hur vill du betala?</div>
-      <div class="row wrap">
-        ${[["swish", "swish", "Swish"], ["kort", "card", "Kort"], ["klarna", "receipt", "Klarna"], ["faktura", "bank", "Faktura"]]
-          .map(([k, ic, l]) => `<button class="chip ${b.pay === k ? "on" : ""}" onclick="bkPay('${k}',this)">${I(ic, 15)} ${l}</button>`).join("")}
+      <div class="lbl" style="margin-bottom:9px">Hur vill du betala?</div>
+      <div class="paygrid">
+        ${pays.map(([k, ic, l]) => `<button class="paycard ${b.pay === k ? "on" : ""}" data-pay="${k}"
+          onclick="bkPay('${k}')">${I(ic, 22)}<span>${l}</span></button>`).join("")}
       </div></div>
+
+    <button class="morebtn ${(b.charge || b.extraCar || b.code) ? "open" : ""}" onclick="bkMore(this)">
+      ${I("plus", 15)} Laddning, en bil till eller rabattkod</button>
+    <div class="moreblock" id="bkmore" ${(b.charge || b.extraCar || b.code) ? "" : "hidden"}>
+      ${s.charge ? `<div class="setrow"><span style="color:var(--green)">${I("bolt", 20)}</span>
+        <div class="t"><b>Ladda elbilen</b><span>${S.mode === "manad" ? kr(380) + " i m\u00e5naden" : kr(55) + " per g\u00e5ng"}</span></div>
+        <div class="switch ${b.charge ? "on" : ""}" role="switch" onclick="bkTog('charge',this)"></div></div>` : ""}
+      <div class="setrow"><span style="color:var(--ink-45)">${I("car", 20)}</span>
+        <div class="t"><b>En bil till</b><span>Om platsen rymmer tv\u00e5 fordon</span></div>
+        <div class="switch ${b.extraCar ? "on" : ""}" role="switch" onclick="bkTog('extraCar',this)"></div></div>
+      <div class="field" style="margin-top:14px"><label>Rabattkod</label>
+        <div class="row"><input class="inp" id="bkcode" placeholder="Till exempel GRANNE" value="${esc(b.code)}">
+        <button class="btn" onclick="S.bk.code=document.getElementById('bkcode').value;renderBooking()">Anv\u00e4nd</button></div></div>
+    </div>
 
     <div class="panel pad" id="bksum">${bkSumHTML(T)}</div>
 
     <div class="sticky-cta">
       <button class="btn btn-p btn-block btn-lg" onclick="confirmBooking()">${I("shield", 18)} ${esc(t("book"))}</button>
-      <p class="muted small center" style="margin-top:10px">Du betalar först när värden har sagt ja.</p>
+      <p class="muted small center" style="margin-top:10px">Avboka gratis fram till 24 timmar innan.</p>
     </div>
   </div>`);
 }
+
+function bigPriceHTML(T) {
+  return `<span class="lbl">Du betalar</span>
+    <b>${kr(T.driverTotal)}</b>
+    <span class="muted small">${num(T.unit)} ${sym()} ${esc(unitLong(S.mode))}, avgifter inr\u00e4knade</span>`;
+}
+function bkStep(n) {
+  const d = document.getElementById("bkdate"); if (d && d.value) S.bk.date = d.value;
+  const r = document.getElementById("regnr");  if (r) S.bk.reg = r.value;
+  S.bk.step = n; renderBooking();
+}
+function bkPreset(n) { S.bk.qty = n; patchBkSum(); }
+function bkMore(btn) {
+  const m = document.getElementById("bkmore");
+  m.hidden = !m.hidden;
+  btn.classList.toggle("open", !m.hidden);
+}
+
 function bkSumHTML(T) {
   return `<div class="kv"><span>${num(T.unit)} ${sym()} × ${S.bk.qty}</span><b>${kr(T.base)}</b></div>
     ${T.chargeCost ? `<div class="kv"><span>Laddning</span><b>${kr(T.chargeCost)}</b></div>` : ""}
@@ -769,22 +871,27 @@ function bkSumHTML(T) {
     <div class="tot"><span>Totalt</span><span>${kr(T.driverTotal)}</span></div>`;
 }
 function patchBkSum() {
+  const T = bkTotals();
   const box = document.getElementById("bksum");
-  if (box) { box.innerHTML = bkSumHTML(bkTotals()); box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash"); }
+  if (box) { box.innerHTML = bkSumHTML(T); box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash"); }
+  const big = document.getElementById("bkbig"); if (big) big.innerHTML = bigPriceHTML(T);
   const q = document.getElementById("bkq"); if (q) q.textContent = S.bk.qty;
-}
-function bkQty(d) {
-  S.bk.qty = clamp(S.bk.qty + d, 1, 24); patchBkSum();
   const minus = document.querySelector(".stepper button:first-child");
   if (minus) minus.disabled = S.bk.qty <= 1;
+  document.querySelectorAll("#bkpre .chip").forEach(c => c.classList.toggle("on", +c.dataset.n === S.bk.qty));
 }
+function bkQty(d) { S.bk.qty = clamp(S.bk.qty + d, 1, 24); patchBkSum(); }
 function bkTog(k, el) { S.bk[k] = !S.bk[k]; el.classList.toggle("on"); patchBkSum(); }
-function bkPay(k, el) { S.bk.pay = k; document.querySelectorAll(".chip").forEach(c => { if (c.parentElement === el.parentElement) c.classList.remove("on"); }); el.classList.add("on"); }
+function bkPay(k) {
+  S.bk.pay = k;
+  document.querySelectorAll(".paycard").forEach(c => c.classList.toggle("on", c.dataset.pay === k));
+}
 
 function confirmBooking() {
-  const reg = (document.getElementById("regnr") || {}).value || "";
-  if (reg.trim().length < 5) { toast("Fyll i registreringsnumret", "info"); document.getElementById("regnr").focus(); return; }
-  const date = (document.getElementById("bkdate") || {}).value || "";
+  const el = document.getElementById("regnr");
+  const reg = (el ? el.value : S.bk.reg) || "";
+  if (reg.trim().length < 5) { toast("Fyll i registreringsnumret", "info"); if (el) el.focus(); return; }
+  const date = S.bk.date || "";
   LS.set("lastreg", reg.toUpperCase().trim());
   openSheet(`<div class="bankid">
     <div class="ring"></div>
@@ -1758,7 +1865,8 @@ function render() {
   document.documentElement.lang = SET.lang;
   observeReveals();
   countUps();
-  if (S.route === "sok") setTimeout(mountMap, 40);
+  if (S.route === "sok") setTimeout(() => mountMap("lmap", { fit: S.view === "lista", pad: 30 }), 40);
+  if (S.route === "start") setTimeout(() => mountMap("hmap", { fit: true, pad: 46, onPick: openSpot }), 60);
   if (typeof Tour !== "undefined" && Tour.active()) setTimeout(Tour.place, 120);
 }
 

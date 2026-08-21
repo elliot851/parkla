@@ -1,6 +1,6 @@
 /* ============================================================
    Parkla — designsystem
-   Typografi:  Instrument Serif (display) · Schibsted Grotesk (UI) · DM Mono (etiketter)
+   Typografi:  Familjen Grotesk (display) · Schibsted Grotesk (UI) · DM Mono (etiketter)
    Struktur:   hårfina linjer före kort, asymmetri före rutnät
    ============================================================ */
 
@@ -33,10 +33,11 @@
   --lift:0 1px 1px rgba(20,25,26,.04), 0 6px 18px -14px rgba(20,25,26,.5);
   --lift-2:0 2px 4px rgba(20,25,26,.06), 0 30px 60px -34px rgba(20,25,26,.55);
 
-  /* typsnitt */
-  --serif:"Instrument Serif","Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  /* typsnitt — Familjen Grotesk (Letters from Sweden) i display, Schibsted i brödtext */
+  --display:"Familjen Grotesk","Schibsted Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
   --sans:"Schibsted Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --mono:"DM Mono",ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --serif:var(--display); /* bakåtkompatibelt alias */
 
   --maxw:1180px;
   --ease:cubic-bezier(.16,1,.3,1);
@@ -92,15 +93,16 @@ p{margin:0}
 ::selection{background:var(--green);color:var(--on-dark)}
 
 /* ---------- 3. Typografi ---------- */
-h1,h2,h3,h4,h5{margin:0;font-weight:400}
-.d1,.d2,h1,h2{font-family:var(--serif);font-weight:400;letter-spacing:-.02em;line-height:1.02}
-.d1,h1{font-size:clamp(2.55rem,6.4vw,5.5rem)}
-.d2,h2{font-size:clamp(1.95rem,3.9vw,3.2rem);line-height:1.05}
-h3{font-family:var(--sans);font-size:1.14rem;font-weight:600;letter-spacing:-.015em;line-height:1.25}
-h4{font-family:var(--sans);font-size:.98rem;font-weight:600;letter-spacing:-.01em}
-.serif{font-family:var(--serif);font-weight:400}
-em,.it{font-family:var(--serif);font-style:italic}
+h1,h2,h3,h4,h5{margin:0;font-weight:600}
+.d1,.d2,h1,h2{font-family:var(--display);font-weight:600;letter-spacing:-.045em;line-height:1.0}
+.d1,h1{font-size:clamp(2.35rem,5.6vw,4.6rem)}
+.d2,h2{font-size:clamp(1.75rem,3.4vw,2.7rem);line-height:1.04;letter-spacing:-.038em}
+h3{font-family:var(--sans);font-size:1.1rem;font-weight:600;letter-spacing:-.018em;line-height:1.28}
+h4{font-family:var(--sans);font-size:.97rem;font-weight:600;letter-spacing:-.012em}
+.serif,.display{font-family:var(--display);font-weight:600;letter-spacing:-.035em}
+em,.it{font-style:normal;font-family:inherit;color:var(--green)}
 h1 em,h2 em{color:var(--green)}
+.figure,.figures b,.receipt-h .v,.spot .price b,.tot span:last-child{font-weight:600}
 
 .kicker{
   font-family:var(--mono);font-size:.66rem;font-weight:500;text-transform:uppercase;
@@ -116,7 +118,7 @@ h1 em,h2 em{color:var(--green)}
 .mono{font-family:var(--mono);letter-spacing:-.02em}
 .muted{color:var(--ink-45)} .dim{color:var(--ink-70)} .center{text-align:center}
 .hide{display:none!important}
-.figure{font-family:var(--serif);font-size:clamp(2.4rem,5vw,4rem);line-height:.94;letter-spacing:-.028em;
+.figure{font-family:var(--display);font-size:clamp(2.15rem,4.4vw,3.4rem);line-height:.96;letter-spacing:-.045em;
   font-variant-numeric:tabular-nums}
 
 /* ---------- 4. Layout ---------- */
@@ -169,7 +171,7 @@ section.snug{padding:30px 0}
 @media(max-width:560px){.top-in{padding:11px 18px}}
 .logo{display:flex;align-items:center;gap:10px}
 .logomark{width:30px;height:30px;flex:0 0 auto;border-radius:8px}
-.logotype{font-family:var(--serif);font-size:1.55rem;letter-spacing:-.028em;line-height:1}
+.logotype{font-family:var(--display);font-weight:600;font-size:1.3rem;letter-spacing:-.05em;line-height:1}
 .nav{margin-left:auto;display:flex;gap:26px;align-items:center}
 .nav a{position:relative;font-size:.895rem;font-weight:500;color:var(--ink-70);padding:5px 0;letter-spacing:-.005em}
 .nav a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:currentColor;
@@ -234,7 +236,7 @@ section.snug{padding:30px 0}
 .tag.solid{background:var(--ink);color:var(--paper);border-color:transparent}
 .band .tag{color:rgba(244,241,233,.72);border-color:rgba(244,241,233,.22)}
 .band .tag.green{color:var(--green-lift);background:rgba(23,163,119,.13);border-color:rgba(23,163,119,.32)}
-.code{font-family:var(--mono);font-size:1.9rem;font-weight:500;letter-spacing:.3em;text-indent:.3em;
+.code{font-family:var(--mono);font-size:1.75rem;font-weight:500;letter-spacing:.3em;text-indent:.3em;
   border:1px dashed var(--rule-2);border-radius:var(--r-sm);padding:18px;text-align:center;background:var(--paper-2)}
 
 /* ---------- 9. Formulär ---------- */
@@ -284,8 +286,8 @@ input[type=range]{width:100%;accent-color:var(--green);height:30px}
 .figures>div{padding:20px 26px 0 0;border-right:1px solid var(--rule)}
 .figures>div:last-child{border-right:0;padding-right:0}
 .figures>div:not(:first-child){padding-left:26px}
-.figures b{display:block;font-family:var(--serif);font-size:clamp(1.6rem,2.6vw,2.15rem);line-height:1;
-  letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+.figures b{display:block;font-family:var(--display);font-size:clamp(1.45rem,2.3vw,1.95rem);line-height:1;
+  letter-spacing:-.045em;font-variant-numeric:tabular-nums}
 .figures span{display:block;margin-top:7px;font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;
   text-transform:uppercase;color:var(--ink-45);line-height:1.5}
 @media(max-width:600px){
@@ -301,7 +303,7 @@ input[type=range]{width:100%;accent-color:var(--green);height:30px}
 @media(max-width:940px){.receipt{margin:0 auto}}
 .receipt-h{background:var(--pine);color:var(--on-dark);padding:20px 22px 22px}
 .receipt-h .k{font-family:var(--mono);font-size:.63rem;letter-spacing:.15em;text-transform:uppercase;opacity:.62}
-.receipt-h .v{font-family:var(--serif);font-size:2.5rem;line-height:1;margin-top:9px;letter-spacing:-.03em;
+.receipt-h .v{font-family:var(--display);font-size:2.15rem;line-height:1;margin-top:9px;letter-spacing:-.05em;
   font-variant-numeric:tabular-nums}
 .receipt-h .s{font-size:.8rem;opacity:.68;margin-top:7px}
 .receipt-b{padding:4px 22px 18px}
@@ -357,7 +359,7 @@ ul.numlist{padding:0;margin:0}
 .spot .ad{font-size:.82rem;color:var(--ink-45);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .spot .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
 .spot .price{text-align:right;white-space:nowrap}
-.spot .price b{display:block;font-family:var(--serif);font-size:1.4rem;letter-spacing:-.02em;line-height:1;
+.spot .price b{display:block;font-family:var(--display);font-size:1.22rem;letter-spacing:-.04em;line-height:1;
   font-variant-numeric:tabular-nums}
 .spot .price span{display:block;margin-top:4px;font-family:var(--mono);font-size:.62rem;letter-spacing:.09em;
   text-transform:uppercase;color:var(--ink-45)}
@@ -415,7 +417,7 @@ ul.numlist{padding:0;margin:0}
 .tot{display:flex;justify-content:space-between;gap:16px;align-items:baseline;
   padding-top:15px;margin-top:6px;border-top:1.5px solid var(--ink)}
 .tot span:first-child{font-weight:600}
-.tot span:last-child{font-family:var(--serif);font-size:1.6rem;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tot span:last-child{font-family:var(--display);font-size:1.42rem;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
 .tbl{width:100%;border-collapse:collapse;font-size:.9rem}
 .tbl th,.tbl td{padding:13px 12px;text-align:left;border-bottom:1px solid var(--rule)}
 .tbl th{font-family:var(--mono);font-size:.63rem;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-45);font-weight:500}
@@ -433,8 +435,8 @@ ul.numlist{padding:0;margin:0}
 .entry h3{margin-bottom:7px}
 .entry p{color:var(--ink-70);font-size:.95rem;max-width:62ch}
 @media(max-width:560px){.entry{grid-template-columns:1fr;gap:12px;padding:22px 0}}
-.quote{border-left:2px solid var(--green);padding:2px 0 2px 20px;margin:16px 0;
-  font-family:var(--serif);font-size:1.12rem;line-height:1.45;color:var(--ink-70)}
+.quote{border-left:2px solid var(--green);padding:3px 0 3px 18px;margin:16px 0;
+  font-size:.95rem;line-height:1.55;color:var(--ink-70)}
 .callout{background:var(--green-wash);border-radius:var(--r-sm);padding:15px 17px;font-size:.9rem;color:var(--ink-70)}
 .callout.clay{background:var(--clay-wash)}
 .callout.brass{background:var(--brass-wash)}
@@ -525,7 +527,7 @@ ul.numlist{padding:0;margin:0}
 .rev .who{display:flex;align-items:center;gap:11px}
 .rev .av{width:30px;height:30px;border-radius:50%;background:var(--pine);color:var(--on-dark);
   display:grid;place-items:center;font-size:.78rem;font-weight:600}
-.rev p{margin-top:9px;color:var(--ink-70);font-size:.93rem;font-family:var(--serif);font-size:1.02rem;line-height:1.5}
+.rev p{margin-top:9px;color:var(--ink-70);font-size:.94rem;line-height:1.55}
 .rev .d{font-family:var(--mono);font-size:.63rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-25)}
 
 /* ---------- 22. Kalender ---------- */
