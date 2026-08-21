@@ -318,3 +318,12 @@ button.d.special:hover{border-color:var(--brass)}
 .evbanner div{flex:1;min-width:0}
 .evbanner b{display:block;font-size:.94rem;font-weight:600}
 .evbanner span{display:block;font-size:.79rem;color:var(--ink-45);margin-top:2px}
+
+
+/* ---------- tidig tillgång ---------- */
+.livebar{display:flex;align-items:flex-start;gap:13px;padding:14px 22px;
+  background:var(--pine);color:var(--on-dark)}
+.livebar svg{color:var(--green-lift);flex:0 0 auto;margin-top:2px}
+.livebar b{display:block;font-size:.95rem;font-weight:600}
+.livebar span{display:block;font-size:.86rem;color:rgba(244,241,233,.72);margin-top:2px;max-width:70ch}
+.callout.clay{background:var(--clay-wash)}

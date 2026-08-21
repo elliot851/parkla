@@ -12,6 +12,7 @@ const LS = {
 
 const DEFAULT_SETTINGS = {
   theme: "system", lang: "sv", currency: "SEK", font: "instrument",
+  live: false, formUrl: "",
   city: "sthlm", mapMode: "satellit",
   notis: { bokning: true, betalning: true, pris: true, evenemang: true, nyheter: false },
   bigText: false
@@ -21,6 +22,8 @@ SET.notis = Object.assign({}, DEFAULT_SETTINGS.notis, SET.notis || {});
 /* Engångsflytt: satellit blev standard, och typsnittet är nu valbart. */
 if (!SET.v5) { SET.v5 = 1; SET.mapMode = "satellit"; SET.font = SET.font || "instrument"; LS.set("settings", SET); }
 function setFont(k) { SET.font = k; saveSettings(); render(); toast("Typsnitt: " + k, "eye"); }
+/* Skarpt läge: inga påhittade platser går att boka, bara intresseanmälan. */
+const isLive = () => !!SET.live;
 function saveSettings() { LS.set("settings", SET); applyTheme(); }
 function applyTheme() {
   const el = document.documentElement;
@@ -189,6 +192,7 @@ function viewStart() {
   const ev = EVENTS[0];
   const cities = AREAS.map(a => a.name.split(" ")[0]);
   return `
+${liveBanner()}
 <div class="hero"><div class="wrap"><div class="hero-grid">
   <div>
     <h1 data-reveal style="--d:60ms">Din uppfart står tom.<br>Den kan ge dig <em>${num(FEES.schablon)} ${sym()}</em> om året.</h1>
@@ -229,13 +233,13 @@ function viewStart() {
 
 <section class="snug"><div class="wrap">
   <div class="doors">
-    <button class="door" onclick="document.getElementById('kartan').scrollIntoView({behavior:'smooth',block:'start'})">
+    <button class="door" onclick="${'isLive() ? openLeadDriver() : document.getElementById(\'kartan\').scrollIntoView({behavior:\'smooth\',block:\'start\'})'}">
       <span class="ic">${I("search", 30)}</span>
       <b>Jag behöver parkera</b>
       <span class="d">Hitta en plats nära dig. Från ${kr(12)} i timmen.</span>
       <span class="go">Visa lediga platser ${I("arrow", 17, "arw")}</span>
     </button>
-    <button class="door alt" data-go="hyrut">
+    <button class="door alt" onclick="${'isLive() ? openLeadHost() : go(\'hyrut\')'}">
       <span class="ic">${I("wallet", 30)}</span>
       <b>Jag har en plats att hyra ut</b>
       <span class="d">Se vad din uppfart eller ditt garage kan ge dig.</span>
@@ -608,7 +612,7 @@ function spotRow(s) {
   return `<button class="spot ${S.selSpot === s.id ? "sel" : ""}" onclick="openSpot(${s.id})">
     <span class="thumb">${kindIcon(s.kind, 28)}</span>
     <span class="body">
-      <span class="nm">${s.mine ? '<span class="tag green" style="margin-right:6px">Din plats</span>' : ""}${esc(s.nm)}</span>
+      <span class="nm">${s.mine ? '<span class="tag green" style="margin-right:6px">Din plats</span>' : demoBadge()}${esc(s.nm)}</span>
       <span class="ad">${esc(s.ad)}</span>
       <span class="tags">
         <span class="tag">${esc(s.type)}</span>
@@ -926,8 +930,12 @@ function openSpot(id) {
       <div class="spotlist">${sim.map(spotRow).join("")}</div>` : ""}
 
     <div class="sticky-cta">
-      <button class="btn btn-p btn-block btn-lg" onclick="startBooking(${s.id})">
-        Boka – ${kr(f.driverTotal)}${I("arrow", 17, "arw")}</button>
+      ${isLive() && !s.mine
+        ? `<button class="btn btn-p btn-block btn-lg" onclick="openLeadDriver()">
+             ${I("bell", 17)} Säg till när det finns platser här</button>
+           <p class="muted small center" style="margin-top:10px">Den här platsen är ett exempel på hur en annons ser ut. Vi öppnar för bokning när utbudet finns på plats.</p>`
+        : `<button class="btn btn-p btn-block btn-lg" onclick="startBooking(${s.id})">
+             Boka – ${kr(f.driverTotal)}${I("arrow", 17, "arw")}</button>`}
     </div>
   </div>`);
 }
@@ -2265,6 +2273,20 @@ function viewInstallningar() {
   </div>
 
   <div class="panel pad-lg" style="margin-top:18px">
+    <h3>Lansering</h3>
+    <div class="setrow" style="margin-top:8px"><span style="color:var(--green)">${I("spark", 20)}</span>
+      <div class="t"><b>Skarpt läge</b><span>Döljer bokning av exempelplatserna och visar intresseanmälan i stället. Slå på det här innan du delar länken publikt.</span></div>
+      <div class="switch ${SET.live ? "on" : ""}" role="switch" onclick="SET.live=!SET.live;saveSettings();render()"></div></div>
+    <div class="field" style="margin-top:14px"><label>Formulärlänk för anmälningar (frivilligt)</label>
+      <input class="inp mono" id="formurl" placeholder="https://formspree.io/f/xxxx" value="${esc(SET.formUrl || "")}"></div>
+    <p class="muted small" style="margin-top:8px">Skapa ett gratisformulär hos Formspree eller Tally, klistra in adressen här, så skickas varje anmälan dit automatiskt. Utan länk sparas de på den här enheten.</p>
+    <div class="row wrap" style="margin-top:12px">
+      <button class="btn btn-sm btn-p" onclick="SET.formUrl=(document.getElementById('formurl').value||'').trim();saveSettings();toast('Sparat','check')">Spara länken</button>
+      <button class="btn btn-sm" onclick="copyLeads()">${I("copy", 15)} Kopiera anmälningar (${typeof LEADS !== "undefined" ? LEADS.length : 0})</button>
+    </div>
+  </div>
+
+  <div class="panel pad-lg" style="margin-top:18px">
     <h3>Satellitbilder</h3>
     <p class="dim small" style="margin-top:8px">Utan nyckel använder vi Esris öppna flygbilder. De räcker till zoom 18 – i svenska bostadsområden är de ungefär en meter per bildpunkt, så vi stannar där i stället för att visa uppskalad gröt.</p>
     <p class="dim small" style="margin-top:8px">Med en egen <b>Mapbox-nyckel</b> blir bilderna skarpa hela vägen till zoom 22 och du kan se enskilda uppfarter. Mapbox har 50 000 kartvisningar i månaden gratis. Skapa ett konto på mapbox.com, kopiera din <i>public access token</i> och klistra in den här.</p>
@@ -2485,6 +2507,99 @@ function viewVinter() {
   </div>
 </div></section>
 ${footerHTML()}`;
+}
+
+
+/* ============================================================
+   TIDIG TILLGÅNG — det som faktiskt kan släppas innan betalning finns
+   ============================================================ */
+let LEADS = LS.get("leads", []);
+
+function liveBanner() {
+  if (!isLive()) return "";
+  return `<div class="livebar">
+    ${I("spark", 17)}
+    <div><b>Parkla öppnar snart</b>
+    <span>Vi bygger upp utbudet område för område. Anmäl din plats eller ditt intresse så hör vi av oss innan vi öppnar.</span></div>
+  </div>`;
+}
+function demoBadge() {
+  return isLive() ? '<span class="tag brass" style="margin-right:6px">Exempel</span>' : "";
+}
+
+/* ---------- anmälan: jag har en plats ---------- */
+function openLeadHost() {
+  openSheet(sheetHead("Anmäl din plats") + `<div class="sheet-b stack">
+    <p class="dim">Vi öppnar område för område. Har du en plats hör vi av oss innan vi drar igång där du bor.</p>
+    <div class="field"><label>Adress</label><input class="inp" id="lh_ad" placeholder="Ringvägen 41, Stockholm"></div>
+    <div class="grid g2" style="gap:12px">
+      <div class="field"><label>Typ av plats</label><select class="inp" id="lh_type">
+        ${Object.keys(TYPE_MULT).map(k => `<option>${k}</option>`).join("")}</select></div>
+      <div class="field"><label>Önskat pris per månad (${sym()})</label>
+        <input class="inp mono" id="lh_pris" inputmode="numeric" placeholder="1500"></div>
+    </div>
+    <div class="field"><label>Ditt namn</label><input class="inp" id="lh_namn" placeholder="Förnamn Efternamn"></div>
+    <div class="field"><label>E-post</label><input class="inp" type="email" id="lh_mail" placeholder="du@exempel.se"></div>
+    <div class="field"><label>Telefon (frivilligt)</label><input class="inp" type="tel" id="lh_tel" placeholder="070-123 45 67"></div>
+    <div class="hint">${I("lock", 17)}<div>Vi använder uppgifterna bara för att kontakta dig om Parkla. Du kan när som helst be oss radera dem.</div></div>
+    <button class="btn btn-p btn-block btn-lg" onclick="saveLead('vard')">Skicka anmälan</button>
+  </div>`);
+}
+
+/* ---------- anmälan: jag söker parkering ---------- */
+function openLeadDriver() {
+  openSheet(sheetHead("Säg till när det finns platser") + `<div class="sheet-b stack">
+    <p class="dim">Skriv var du behöver parkera så hör vi av oss när vi öppnar där.</p>
+    <div class="field"><label>Var behöver du parkera?</label>
+      <input class="inp" id="ld_var" placeholder="Märsta, eller Södermalm"></div>
+    <div class="field"><label>Hur ofta?</label><select class="inp" id="ld_hur">
+      <option>Varje dag</option><option>Några gånger i veckan</option>
+      <option>Vid resor till Arlanda</option><option>Vid matcher och evenemang</option>
+      <option>Vinterförvar</option></select></div>
+    <div class="field"><label>E-post</label><input class="inp" type="email" id="ld_mail" placeholder="du@exempel.se"></div>
+    <div class="hint">${I("lock", 17)}<div>Bara för att säga till när vi öppnar. Inget nyhetsbrev.</div></div>
+    <button class="btn btn-p btn-block btn-lg" onclick="saveLead('forare')">Skicka</button>
+  </div>`);
+}
+
+function saveLead(typ) {
+  const v = id => ((document.getElementById(id) || {}).value || "").trim();
+  const rec = typ === "vard"
+    ? { typ, ad: v("lh_ad"), plats: v("lh_type"), pris: v("lh_pris"), namn: v("lh_namn"), mail: v("lh_mail"), tel: v("lh_tel") }
+    : { typ, omrade: v("ld_var"), hur: v("ld_hur"), mail: v("ld_mail") };
+  if (!rec.mail || rec.mail.indexOf("@") < 1) { toast("Fyll i din e-post", "info"); return; }
+  if (typ === "vard" && rec.ad.length < 4) { toast("Fyll i adressen", "info"); return; }
+  if (typ === "forare" && rec.omrade.length < 2) { toast("Skriv var du behöver parkera", "info"); return; }
+  rec.tid = new Date().toISOString();
+
+  LEADS.unshift(rec); LS.set("leads", LEADS);
+
+  const skicka = SET.formUrl
+    ? fetch(SET.formUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rec) })
+        .then(r => r.ok).catch(() => false)
+    : Promise.resolve(null);
+
+  skicka.then(ok => {
+    closeSheet();
+    openSheet(`<div class="sheet-b center" style="padding-top:36px">
+      <div class="tick">${I("check", 32)}</div>
+      <h3 style="font-family:var(--display);font-size:1.5rem">Tack!</h3>
+      <p class="dim" style="margin-top:10px;max-width:34ch;margin-inline:auto">
+        ${typ === "vard" ? "Vi hör av oss innan vi öppnar där du bor." : "Vi säger till så fort det finns platser nära dig."}</p>
+      ${ok === null ? `<div class="callout brass" style="margin-top:20px;text-align:left">
+        ${I("info", 16)} Anmälan är sparad på den här enheten. Koppla ett formulär i Inställningar så skickas den vidare automatiskt.
+        <button class="btn btn-sm" style="margin-top:10px" onclick="copyLeads()">Kopiera anmälningarna</button></div>`
+      : ok === false ? `<div class="callout clay" style="margin-top:20px;text-align:left">
+        ${I("info", 16)} Vi kunde inte nå formuläret just nu, men anmälan är sparad här och skickas när du kopierar den.</div>` : ""}
+      <button class="btn btn-p btn-block btn-lg" style="margin-top:22px" onclick="closeSheet()">Klart</button>
+    </div>`);
+    toast("Anmälan mottagen", "check");
+  });
+}
+function copyLeads() {
+  const txt = JSON.stringify(LEADS, null, 2);
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast(LEADS.length + " anmälningar kopierade", "copy"));
+  else openSheet(sheetHead("Anmälningar") + `<div class="sheet-b"><textarea class="inp mono dump" rows="16" readonly>${esc(txt)}</textarea></div>`);
 }
 
 /* ============================================================
