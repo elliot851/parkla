@@ -275,3 +275,20 @@ button.d.ledig:active{transform:scale(.94)}
 button.d.stangd:hover{border-color:var(--clay);transform:scale(1.06)}
 button.d.stangd:active{transform:scale(.94)}
 .cal2-l .l-upptagen{background:var(--paper-2);border:1.5px solid var(--rule-2)}
+
+
+/* ---------- kalender med priser ---------- */
+.calmode{margin-bottom:14px}
+.cal2-g .d.medpris{aspect-ratio:auto;min-height:52px;flex-direction:column;gap:1px;padding:5px 2px;
+  display:flex;align-items:center;justify-content:center}
+.cal2-g .d.medpris i{font-style:normal;font-size:.9rem;font-weight:600;line-height:1}
+.cal2-g .d.medpris u{text-decoration:none;font-size:.63rem;opacity:.7;font-variant-numeric:tabular-nums;
+  line-height:1}
+.cal2-g .d.special{background:var(--brass-wash);color:var(--brass);
+  border-color:color-mix(in srgb,var(--brass) 45%,transparent)}
+button.d.special:hover{border-color:var(--brass)}
+.cal2-l .l-special{background:var(--brass-wash);border:1.5px solid var(--brass)}
+.calquick{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
+
+/* "från" framför priset i listan */
+.spot .price .fran{display:block;font-style:normal;font-size:.7rem;color:var(--ink-45);margin-bottom:1px}

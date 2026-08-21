@@ -51,7 +51,7 @@ let S = {
   q: "", near: null, nearLabel: "", part: null, partZoom: null, maxPrice: 0,
   fCharge: false, fGarage: false, fSecure: false, fBig: false,
   sort: "pris", selSpot: null,
-  season: "kort", blockFor: null,
+  season: "kort", blockFor: null, calMode: "stang",
   calc: { city: "Stockholm innerstad", type: "Uppfart", walk: 5, charger: false, gated: false, dyn: true },
   wizard: null, bk: null
 };
@@ -334,7 +334,7 @@ function viewStart() {
       <h4>${esc(a.name)}</h4>
       <div class="sub">${esc(a.sub)}</div>
       <div class="ref">${esc(a.ref)}</div>
-      <div class="cnt">${SPOTS.filter(s => s.area === a.id).length} platser ${I("arrow", 14, "arw")}</div>
+      <div class="cnt">${allSpots().filter(s => s.area === a.id).length} platser ${I("arrow", 14, "arw")}</div>
     </button>`).join("")}
   </div>
 </div></section>
@@ -396,6 +396,31 @@ function listingToSpot(l) {
 function allSpots() {
   const mina = LISTINGS.filter(l => !l.paused).map(listingToSpot);
   return mina.concat(SPOTS);
+}
+
+/* Ordinarie dygnspris för en egen annons. */
+function baseDayPrice(l) { return Math.max(20, Math.round(l.pris / 22 * 1.6)); }
+/* Priset för en bestämd dag – värdens specialpris om det finns, annars ordinarie. */
+function dayPriceFor(l, iso) {
+  return (l.prices && l.prices[iso]) ? l.prices[iso] : baseDayPrice(l);
+}
+/* Vad kostar platsen den valda dagen, i det läge man tittar i? */
+function priceOnDate(sp, iso, mode) {
+  if (!sp || !sp.mine || !iso) return priceFor(sp, mode);
+  const l = LISTINGS.find(x => x.id === sp.id);
+  if (!l) return priceFor(sp, mode);
+  const dyg = dayPriceFor(l, iso);
+  if (mode === "dygn") return dyg;
+  if (mode === "timme") return Math.max(5, Math.round(dyg / 8));
+  if (mode === "evenemang") return Math.round(dyg * 1.9 / 10) * 10;
+  if (mode === "vecka") return Math.round(dyg * 4.6 / 10) * 10;
+  return priceFor(sp, mode);
+}
+/* Har värden satt olika priser? Då visar vi "från". */
+function hasVaryingPrice(sp) {
+  if (!sp || !sp.mine) return false;
+  const l = LISTINGS.find(x => x.id === sp.id);
+  return !!(l && l.prices && Object.keys(l.prices).length);
 }
 
 /* Är dagen upptagen? För egna annonser styrs det av vad värden stängt. */
@@ -572,7 +597,7 @@ function spotRow(s) {
         ${ratingHTML(s)}
       </span>
     </span>
-    <span class="price"><b>${num(p)} ${sym()}</b><span>${esc(unitShort(S.mode))}</span></span>
+    <span class="price">${hasVaryingPrice(s) ? '<i class="fran">från</i>' : ""}<b>${num(p)} ${sym()}</b><span>${esc(unitShort(S.mode))}</span></span>
     <span class="fav ${fav ? "on" : ""}" onclick="event.stopPropagation();toggleFav(${s.id})" role="button"
       aria-label="Spara">${fav ? IF("heart", 17) : I("heart", 17)}</span>
   </button>`;
@@ -668,7 +693,7 @@ function openPlacePicker() {
       <div class="pickrows">
         ${AREAS.map(x => `<button class="pickrow ${x.id === S.area ? "on" : ""}" onclick="pickCity('${x.id}')">
           <span class="mark">${I("check", 15)}</span>
-          <span class="t"><b>${esc(x.name)}</b><span>${SPOTS.filter(z => z.area === x.id).length} platser</span></span>
+          <span class="t"><b>${esc(x.name)}</b><span>${allSpots().filter(z => z.area === x.id).length} platser</span></span>
           ${x.id === S.area ? '<span class="tag green">Vald</span>' : ""}</button>`).join("")}
       </div></div>
 
@@ -731,7 +756,7 @@ function locateMe() {
 }
 function pickSpot(id) {
   S.selSpot = id;
-  const s = SPOTS.find(x => x.id === id); if (!s) return;
+  const s = allSpots().find(x => x.id === id); if (!s) return;
   const _l = baseList(); PMap.setSpots(_l, makeStateOf(_l), id);
   PMap.flyTo(s.ll, Math.max(15, 15));
   const box = document.getElementById("mcard");
@@ -755,7 +780,7 @@ function onMapSearch(v) {
   if (!v || v.length < 3) { box.innerHTML = ""; refreshResults(); return; }
   box.innerHTML = `<div style="padding:14px 15px" class="muted small">Söker …</div>`;
   PMap.geocode(v, rows => {
-    const inApp = SPOTS.filter(s => (s.nm + " " + s.ad).toLowerCase().includes(v.toLowerCase())).slice(0, 3);
+    const inApp = allSpots().filter(s => (s.nm + " " + s.ad).toLowerCase().includes(v.toLowerCase())).slice(0, 3);
     if (!rows.length && !inApp.length) { box.innerHTML = `<div style="padding:14px 15px" class="muted small">Inga träffar. Prova ett gatunamn eller en stad.</div>`; return; }
     box.innerHTML =
       inApp.map(s => `<button onclick="jumpSpot(${s.id})"><span class="ic">${I("pin", 17)}</span>
@@ -791,7 +816,7 @@ function clearSearch() {
 
 /* ---- filter-sheet med laggfritt reglage ---- */
 function openFilters() {
-  const all = SPOTS.filter(s => s.area === S.area && priceFor(s, S.mode) > 0);
+  const all = allSpots().filter(s => s.area === S.area && priceFor(s, S.mode) > 0);
   const prices = all.map(s => priceFor(s, S.mode));
   const lo = prices.length ? Math.min.apply(null, prices) : 0;
   const hi = prices.length ? Math.max.apply(null, prices) : 100;
@@ -831,12 +856,12 @@ function onPriceSlide(inp, lo, hi) {
    PLATSDETALJ + BOKNING
    ============================================================ */
 function openSpot(id) {
-  const s = SPOTS.find(x => x.id === id); if (!s) return;
+  const s = allSpots().find(x => x.id === id); if (!s) return;
   S.selSpot = id;
   const p = priceFor(s, S.mode) || s.d || s.m;
   const f = feeSplit(p, S.mode);
   const revs = (typeof reviewsWithMine === "function") ? reviewsWithMine(id) : reviewsFor(id);
-  const sim = SPOTS.filter(x => x.area === s.area && x.id !== s.id && priceFor(x, S.mode) > 0).slice(0, 3);
+  const sim = allSpots().filter(x => x.area === s.area && x.id !== s.id && priceFor(x, S.mode) > 0).slice(0, 3);
   openSheet(sheetHead(s.nm) + `<div class="sheet-b">
     <div class="gallery">${["driveway", "camera", "map", "moon"].map(g => `<div class="g">${I(g, 40)}</div>`).join("")}</div>
     <div class="row wrap" style="margin-top:14px">
@@ -909,12 +934,16 @@ function calendarHTML(s, opts) {
     const vald = opts.pick && S.bk && S.bk.date === iso;
     const kl = passerad ? "d passerad" : upptagen ? "d upptagen" : vald ? "d ledig vald" : "d ledig";
     if (opts.block) {
-      /* Värdläge: tryck för att stänga eller öppna dagen. */
-      const kl2 = passerad ? "d passerad" : upptagen ? "d stangd" : "d ledig";
+      const l = LISTINGS.find(x => x.id === opts.listingId);
+      const special = l && l.prices && l.prices[iso];
+      const dagpris = l ? dayPriceFor(l, iso) : 0;
+      const kl2 = (passerad ? "d passerad" : upptagen ? "d stangd" : "d ledig")
+        + (special && !upptagen && !passerad ? " special" : "") + " medpris";
+      const inne = `<i>${d}</i>${passerad ? "" : `<u>${num(dagpris)}</u>`}`;
       rutor += passerad
-        ? `<span class="${kl2}">${d}</span>`
-        : `<button class="${kl2}" onclick="toggleDay2(${opts.listingId},'${iso}')"
-             aria-label="${d} ${manad}, ${upptagen ? "stängd – tryck för att öppna" : "öppen – tryck för att stänga"}">${d}</button>`;
+        ? `<span class="${kl2}">${inne}</span>`
+        : `<button class="${kl2}" onclick="${S.calMode === "pris" ? `openDayPrice(${opts.listingId},'${iso}')` : `toggleDay2(${opts.listingId},'${iso}')`}"
+             aria-label="${d} ${manad}, ${upptagen ? "stängd" : dagpris + " kronor"}">${inne}</button>`;
     } else {
       const klickbar = opts.pick && !passerad && !upptagen;
       rutor += klickbar
@@ -926,6 +955,10 @@ function calendarHTML(s, opts) {
   const lediga = freeLeft(s, y, m, (y === idag.getFullYear() && m === idag.getMonth()) ? idag.getDate() : 1);
 
   return `<div class="cal2">
+    ${opts.block ? `<div class="seg calmode">
+      <button class="${S.calMode !== "pris" ? "on" : ""}" onclick="S.calMode='stang';redrawCal()">${I("lock", 15)} Stäng dagar</button>
+      <button class="${S.calMode === "pris" ? "on" : ""}" onclick="S.calMode='pris';redrawCal()">${I("wallet", 15)} Sätt pris</button>
+    </div>` : ""}
     <div class="cal2-h">
       <button class="nav" onclick="calStep(-1)" ${kanBaka ? "" : "disabled"} aria-label="Föregående månad">${I("chevron", 16)}</button>
       <b>${manad.charAt(0).toUpperCase() + manad.slice(1)}</b>
@@ -933,13 +966,21 @@ function calendarHTML(s, opts) {
     </div>
     <div class="cal2-w">${veckodagar.map(d => `<span>${d}</span>`).join("")}</div>
     <div class="cal2-g">${rutor}</div>
+    ${opts.block && S.calMode === "pris" ? `<div class="calquick">
+      <button class="btn btn-sm" onclick="setMonthPrice(${opts.listingId},'helg')">${I("spark", 14)} Höj helgpriset 25 %</button>
+      <button class="btn btn-sm" onclick="setMonthPrice(${opts.listingId},'alla')">Sätt pris för hela månaden</button>
+      <button class="btn btn-sm" onclick="setMonthPrice(${opts.listingId},'rensa')">Återställ</button>
+    </div>` : ""}
     <div class="cal2-sum">${opts.block
-      ? (lediga > 0 ? `Du har <b>${lediga} dagar öppna</b> den här månaden` : `Du har <b>stängt hela månaden</b>`)
+      ? (S.calMode === "pris"
+          ? `Ordinarie pris <b>${kr(baseDayPrice(LISTINGS.find(x => x.id === opts.listingId) || { pris: 0 }))}</b> per dygn. Tryck på en dag för att ändra.`
+          : (lediga > 0 ? `Du har <b>${lediga} dagar öppna</b> den här månaden` : `Du har <b>stängt hela månaden</b>`))
       : (lediga > 0 ? `<b>${lediga} lediga dagar</b> kvar den här månaden`
                     : `<b>Inga lediga dagar</b> kvar den här månaden – prova nästa`)}</div>
     <div class="cal2-l">
       <span><i class="l-ledig"></i>${opts.block ? "Öppen" : "Ledig"}</span>
       <span><i class="l-upptagen"></i>${opts.block ? "Du har stängt" : "Upptagen"}</span>
+      ${opts.block && S.calMode === "pris" ? '<span><i class="l-special"></i>Eget pris</span>' : ""}
       ${opts.pick ? '<span><i class="l-vald"></i>Vald</span>' : ""}
     </div>
   </div>`;
@@ -988,15 +1029,96 @@ function openBlockCal(listingId) {
   const l = LISTINGS.find(x => x.id === listingId); if (!l) return;
   S.blockFor = listingId; S.cal = null;
   const antal = (l.blocked || []).filter(d => new Date(d) >= new Date(new Date().toDateString())).length;
-  openSheet(sheetHead("Vilka dagar är platsen ledig?") + `<div class="sheet-b stack">
+  openSheet(sheetHead("Dina dagar och priser") + `<div class="sheet-b stack">
     <p class="dim">${esc(l.ad)}</p>
-    <div class="hint">${I("info", 17)}<div>Tryck på en dag för att stänga den. Stängda dagar går inte att boka och syns som upptagna för den som söker.</div></div>
+    <div class="hint" id="calhint">${I("info", 17)}<div>Välj läge ovanför kalendern: stäng dagar du behöver själv, eller sätt ett eget pris på enskilda dagar.</div></div>
     <div id="calbox">${calendarHTML(listingToSpot(l), { block: true, listingId: l.id })}</div>
     ${antal ? `<div class="callout">Du har stängt <b>${antal} dagar</b> framåt.
       <button class="btn btn-sm" style="margin-top:10px" onclick="clearBlocks(${l.id})">Öppna alla igen</button></div>` : ""}
     <button class="btn btn-p btn-block btn-lg" onclick="S.blockFor=null;closeSheet();render()">Klart</button>
   </div>`);
 }
+/* Sätt pris för en enskild dag. */
+function openDayPrice(listingId, iso) {
+  const l = LISTINGS.find(x => x.id === listingId); if (!l) return;
+  const bas = baseDayPrice(l), nu = dayPriceFor(l, iso);
+  const d = new Date(iso);
+  const namn = d.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
+  openSheet(sheetHead(namn.charAt(0).toUpperCase() + namn.slice(1)) + `<div class="sheet-b stack">
+    <div class="field"><label>Pris för den här dagen (${sym()})</label>
+      <input class="inp mono" id="dp" value="${nu}" inputmode="numeric" style="font-size:1.5rem;text-align:center"
+        oninput="dpHint(${bas})"></div>
+    <p class="muted small center" id="dphint">${nu === bas ? "Samma som ditt ordinarie pris" : nu > bas ? `${Math.round((nu / bas - 1) * 100)} % över ordinarie ${kr(bas)}` : `${Math.round((1 - nu / bas) * 100)} % under ordinarie ${kr(bas)}`}</p>
+    <div class="row wrap" style="justify-content:center">
+      ${[["Ordinarie", bas], ["+25 %", Math.round(bas * 1.25 / 5) * 5], ["+50 %", Math.round(bas * 1.5 / 5) * 5], ["Dubbelt", bas * 2]]
+        .map(([t2, v]) => `<button class="chip" onclick="document.getElementById('dp').value=${v};dpHint(${bas})">${t2}</button>`).join("")}
+    </div>
+    <div class="hint">${I("info", 17)}<div>Matchdagar och storhelger är värda mer. Höjer du priset de dagarna tjänar du mer utan att platsen står tom fler dagar.</div></div>
+    <button class="btn btn-p btn-block btn-lg" onclick="saveDayPrice(${listingId},'${iso}',${bas})">Spara priset</button>
+    ${(l.prices && l.prices[iso]) ? `<button class="btn btn-block" onclick="clearDayPrice(${listingId},'${iso}')">Ta bort specialpriset</button>` : ""}
+  </div>`);
+}
+function dpHint(bas) {
+  const v = +(document.getElementById("dp") || {}).value || 0;
+  const h = document.getElementById("dphint"); if (!h) return;
+  h.textContent = !v ? "Skriv ett pris"
+    : v === bas ? "Samma som ditt ordinarie pris"
+    : v > bas ? Math.round((v / bas - 1) * 100) + " % över ordinarie " + kr(bas)
+    : Math.round((1 - v / bas) * 100) + " % under ordinarie " + kr(bas);
+}
+function saveDayPrice(listingId, iso, bas) {
+  const l = LISTINGS.find(x => x.id === listingId); if (!l) return;
+  const v = +(document.getElementById("dp") || {}).value || 0;
+  if (v < 10) { toast("Sätt ett rimligt pris", "info"); return; }
+  l.prices = l.prices || {};
+  if (v === bas) delete l.prices[iso]; else l.prices[iso] = v;
+  persist(); openBlockCal(listingId);
+  toast("Priset är sparat: " + kr(v), "wallet");
+}
+function clearDayPrice(listingId, iso) {
+  const l = LISTINGS.find(x => x.id === listingId); if (!l) return;
+  if (l.prices) delete l.prices[iso];
+  persist(); openBlockCal(listingId); toast("Tillbaka till ordinarie pris", "check");
+}
+/* Snabbval för hela den månad man tittar på. */
+function setMonthPrice(listingId, vad) {
+  const l = LISTINGS.find(x => x.id === listingId); if (!l) return;
+  const y = S.cal.y, m = S.cal.m, dagar = new Date(y, m + 1, 0).getDate();
+  const bas = baseDayPrice(l);
+  l.prices = l.prices || {};
+  if (vad === "rensa") {
+    for (let d = 1; d <= dagar; d++) delete l.prices[isoOf(y, m, d)];
+    persist(); openBlockCal(listingId); toast("Månaden är återställd", "check"); return;
+  }
+  if (vad === "helg") {
+    let n = 0;
+    for (let d = 1; d <= dagar; d++) {
+      const wd = new Date(y, m, d).getDay();
+      if (wd === 0 || wd === 6) { l.prices[isoOf(y, m, d)] = Math.round(bas * 1.25 / 5) * 5; n++; }
+    }
+    persist(); openBlockCal(listingId); toast(n + " helgdagar höjda 25 %", "spark"); return;
+  }
+  openSheet(sheetHead("Pris för hela månaden") + `<div class="sheet-b stack">
+    <div class="field"><label>Pris per dygn (${sym()})</label>
+      <input class="inp mono" id="mp" value="${bas}" inputmode="numeric" style="font-size:1.5rem;text-align:center"></div>
+    <p class="muted small center">Gäller alla dagar i ${new Date(y, m, 1).toLocaleDateString("sv-SE", { month: "long", year: "numeric" })}.</p>
+    <button class="btn btn-p btn-block btn-lg" onclick="applyMonthPrice(${listingId})">Sätt priset</button>
+  </div>`);
+}
+function applyMonthPrice(listingId) {
+  const l = LISTINGS.find(x => x.id === listingId); if (!l) return;
+  const v = +(document.getElementById("mp") || {}).value || 0;
+  if (v < 10) { toast("Sätt ett rimligt pris", "info"); return; }
+  const y = S.cal.y, m = S.cal.m, dagar = new Date(y, m + 1, 0).getDate();
+  const bas = baseDayPrice(l);
+  l.prices = l.prices || {};
+  for (let d = 1; d <= dagar; d++) {
+    const iso = isoOf(y, m, d);
+    if (v === bas) delete l.prices[iso]; else l.prices[iso] = v;
+  }
+  persist(); openBlockCal(listingId); toast("Priset gäller hela månaden", "wallet");
+}
+
 function clearBlocks(id) {
   const l = LISTINGS.find(x => x.id === id); if (!l) return;
   l.blocked = []; persist(); openBlockCal(id); toast("Alla dagar är öppna igen", "check");
@@ -1009,8 +1131,8 @@ function startBooking(id) {
   renderBooking();
 }
 function bkTotals() {
-  const s = SPOTS.find(x => x.id === S.bk.id), b = S.bk;
-  const unit = priceFor(s, S.mode) || s.d || s.m;
+  const s = allSpots().find(x => x.id === S.bk.id), b = S.bk;
+  const unit = priceOnDate(s, b.date, S.mode) || priceFor(s, S.mode) || s.d || s.m;
   const base = S.mode === "sasong" ? unit : unit * b.qty;
   const chargeCost = b.charge ? (S.mode === "manad" ? 380 : 55) * b.qty : 0;
   const extraCost = b.extraCar ? Math.round(base * 0.6) : 0;
@@ -1023,7 +1145,7 @@ const QTY_WORD = { timme:"timmar", dygn:"dygn", vecka:"veckor", manad:"m\u00e5na
 const QTY_ONE  = { timme:"timme",  dygn:"dygn", vecka:"vecka",  manad:"m\u00e5nad",   evenemang:"plats" };
 
 function renderBooking() {
-  const s = SPOTS.find(x => x.id === S.bk.id), b = S.bk, T = bkTotals();
+  const s = allSpots().find(x => x.id === S.bk.id), b = S.bk, T = bkTotals();
   const word = QTY_WORD[S.mode] || "dygn", one = QTY_ONE[S.mode] || "dygn";
   const dots = n => `<div class="progress">${[1,2,3].map(k => `<i class="${k <= n ? "on" : ""}"></i>`).join("")}</div>`;
 
@@ -1246,7 +1368,7 @@ function confirmBooking() {
   setTimeout(() => finishBooking(reg.toUpperCase().trim(), date), 1700);
 }
 function finishBooking(reg, date) {
-  const s = SPOTS.find(x => x.id === S.bk.id), T = bkTotals();
+  const s = allSpots().find(x => x.id === S.bk.id), T = bkTotals();
   const code = String(Math.floor(1000 + Math.random() * 9000));
   const bk = { id: Date.now(), spotId: s.id, spot: s.nm, addr: s.ad, area: s.area, reg, mode: S.mode,
     qty: S.bk.qty, total: T.driverTotal, host: s.host, date: date || new Date().toISOString().slice(0, 10),
@@ -1517,7 +1639,7 @@ function viewMina() {
   const year = net * 12, pct = clamp(EARNED / FEES.schablon * 100, 0, 100);
   const hist = [.6, .72, .81, .79, .9, .95, 1, 1].map(x => Math.round(net * x));
   const months = ["jan", "mar", "maj", "jul", "aug", "sep", "okt", "nov"];
-  const favs = SPOTS.filter(s => FAVS.includes(s.id));
+  const favs = allSpots().filter(s => FAVS.includes(s.id));
   const mx = Math.max.apply(null, hist.concat([1]));
   return `
 <section class="tight"><div class="wrap">
@@ -1563,7 +1685,7 @@ function viewMina() {
       <div class="row wrap" style="margin-top:16px">
         <button class="btn btn-sm" onclick="togglePause(${l.id})">${I(l.paused ? "play" : "minus", 15)} ${l.paused ? "Aktivera" : "Pausa"}</button>
         <button class="btn btn-sm" onclick="openWizard(${l.id})">${I("sliders", 15)} Ändra</button>
-        <button class="btn btn-sm" onclick="openBlockCal(${l.id})">${I("calendar", 15)} Lediga dagar</button>
+        <button class="btn btn-sm" onclick="openBlockCal(${l.id})">${I("calendar", 15)} Dagar och priser</button>
         <button class="btn btn-sm" onclick="openSchedule(${l.id})">${I("clock", 15)} Veckotider</button>
         <button class="btn btn-sm btn-d" onclick="kickCar()">${I("door", 15)} Flytta bilen</button>
       </div>
@@ -1609,7 +1731,7 @@ function togglePause(id) { const l = LISTINGS.find(x => x.id === id); if (l) { l
 function cancelBooking(id) { BOOKINGS = BOOKINGS.filter(b => b.id !== id); persist(); toast("Avbokad – du får tillbaka alla pengar", "check"); render(); }
 function extendBooking(id) {
   const b = BOOKINGS.find(x => x.id === id); if (!b) return;
-  const spot = SPOTS.find(s => s.id === b.spotId);
+  const spot = allSpots().find(s => s.id === b.spotId);
   const unit = spot ? (priceFor(spot, b.mode) || spot.d) : Math.round(b.total / b.qty);
   openSheet(sheetHead("Förläng bokningen") + `<div class="sheet-b stack">
     <p class="dim">${esc(b.spot)} · ${esc(b.reg)}</p>
@@ -1711,7 +1833,7 @@ function viewEvenemang() {
 
   <div class="stack" style="margin-top:34px">
     ${EVENTS.map((e, k) => {
-      const near = SPOTS.filter(s => s.area === e.area && s.ev > 0);
+      const near = allSpots().filter(s => s.area === e.area && s.ev > 0);
       const from = near.length ? Math.min.apply(null, near.map(s => s.ev)) : 0;
       return `<div class="panel pad" data-reveal style="--d:${k * 50}ms">
         <div class="row top" style="gap:18px;flex-wrap:wrap">
@@ -2211,7 +2333,7 @@ ${footerHTML()}`;
 function withMode(m, fn) { const old = S.mode; S.mode = m; try { return fn(); } finally { S.mode = old; } }
 
 function viewVinter() {
-  const ex = SPOTS.filter(seasonOK).filter(x => x.m).sort((a, b) => seasonPrice(a, "kort") - seasonPrice(b, "kort")).slice(0, 4);
+  const ex = allSpots().filter(seasonOK).filter(x => x.m).sort((a, b) => seasonPrice(a, "kort") - seasonPrice(b, "kort")).slice(0, 4);
   return `
 <section class="tight"><div class="wrap">
   <span class="kicker" data-reveal>Vinterförvar</span>
