@@ -11,18 +11,22 @@ const LS = {
 };
 
 const DEFAULT_SETTINGS = {
-  theme: "system", lang: "sv", currency: "SEK",
-  city: "sthlm", mapMode: "karta",
+  theme: "system", lang: "sv", currency: "SEK", font: "instrument",
+  city: "sthlm", mapMode: "satellit",
   notis: { bokning: true, betalning: true, pris: true, evenemang: true, nyheter: false },
   bigText: false
 };
 let SET = Object.assign({}, DEFAULT_SETTINGS, LS.get("settings", {}));
 SET.notis = Object.assign({}, DEFAULT_SETTINGS.notis, SET.notis || {});
+/* Engångsflytt: satellit blev standard, och typsnittet är nu valbart. */
+if (!SET.v5) { SET.v5 = 1; SET.mapMode = "satellit"; SET.font = SET.font || "instrument"; LS.set("settings", SET); }
+function setFont(k) { SET.font = k; saveSettings(); render(); toast("Typsnitt: " + k, "eye"); }
 function saveSettings() { LS.set("settings", SET); applyTheme(); }
 function applyTheme() {
   const el = document.documentElement;
   if (SET.theme === "system") el.removeAttribute("data-theme");
   else el.setAttribute("data-theme", SET.theme);
+  el.setAttribute("data-font", SET.font || "instrument");
   document.body.style.fontSize = SET.bigText ? "18px" : "";
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue("--paper").trim() || "#F4F1E9";
@@ -671,7 +675,7 @@ function openSpot(id) {
   S.selSpot = id;
   const p = priceFor(s, S.mode) || s.d || s.m;
   const f = feeSplit(p, S.mode);
-  const revs = reviewsFor(id);
+  const revs = (typeof reviewsWithMine === "function") ? reviewsWithMine(id) : reviewsFor(id);
   const sim = SPOTS.filter(x => x.area === s.area && x.id !== s.id && priceFor(x, S.mode) > 0).slice(0, 3);
   openSheet(sheetHead(s.nm) + `<div class="sheet-b">
     <div class="gallery">${["driveway", "camera", "map", "moon"].map(g => `<div class="g">${I(g, 40)}</div>`).join("")}</div>
@@ -683,6 +687,7 @@ function openSpot(id) {
     </div>
     <p class="dim small" style="margin-top:11px">${esc(s.ad)} · Passar ${esc(s.size)}</p>
     <div class="row wrap" style="margin-top:9px">${s.feat.map(x => `<span class="tag">${esc(x)}</span>`).join("")}</div>
+    <button class="btn btn-sm" style="margin-top:14px" onclick="shareSpot(${s.id})">${I("share", 15)} Dela platsen</button>
 
     <div class="panel pad" style="margin-top:18px;background:var(--paper-2)">
       <div class="row"><span class="rev-av av" style="width:38px;height:38px;border-radius:50%;background:var(--pine);color:var(--on-dark);display:grid;place-items:center;font-weight:600">${esc(s.host[0])}</span>
@@ -1208,6 +1213,8 @@ function viewMina() {
     <button class="btn btn-p" style="margin-top:18px" data-go="hyrut">Räkna ut mitt pris${I("arrow", 16, "arw")}</button>
   </div>`}
 
+  ${typeof hostRequestsHTML === "function" ? hostRequestsHTML() : ""}
+
   <h3 style="margin:38px 0 4px">Mina bokningar</h3>
   ${BOOKINGS.length ? `<div class="stack" style="margin-top:14px">${BOOKINGS.map(b => `
     <div class="panel pad">
@@ -1218,6 +1225,8 @@ function viewMina() {
         <button class="btn btn-sm btn-p" onclick="openAccess(${b.id})">${I("key", 15)} Öppna</button>
         <button class="btn btn-sm" onclick="extendBooking(${b.id})">${I("clock", 15)} Förläng</button>
         <button class="btn btn-sm" onclick="receipt(${b.id})">${I("receipt", 15)} Kvitto</button>
+        ${b.rating ? `<span class="rate">${IF("star", 13)}${b.rating} av 5</span>`
+          : `<button class="btn btn-sm" onclick="rateBooking(${b.id})">${I("star", 15)} Betygsätt</button>`}
         <button class="btn btn-sm" onclick="cancelBooking(${b.id})">Avboka</button>
       </div>
     </div>`).join("")}</div>`
@@ -1263,6 +1272,7 @@ function openAccess(id) {
     <div class="code" style="margin-top:22px">${esc(b.code)}</div>
     <p class="muted small" style="margin-top:10px">Koden till grinden, porten eller nyckelskåpet</p>
     <div class="callout" style="margin-top:18px;text-align:left">${I("info", 16)} ${esc(b.instr || "")}</div>
+    ${typeof photoBlockHTML === "function" ? photoBlockHTML(b) : ""}
     <button class="btn btn-p btn-block btn-lg" style="margin-top:20px" onclick="toast('Grinden öppnas …','key')">${I("door", 18)} Öppna grinden</button>
     <button class="btn btn-block" style="margin-top:10px" onclick="closeSheet();go('meddelanden')">${I("message", 16)} Skriv till ${esc(b.host)}</button>
   </div>`);
@@ -1633,7 +1643,18 @@ function viewInstallningar() {
     <div class="field" style="margin-top:14px"><label>${esc(t("theme"))}</label>
       <div class="seg">${[["system", "monitor", "Automatiskt"], ["light", "sun", "Ljust"], ["dark", "moon", "Mörkt"]]
         .map(([k, ic, l]) => `<button class="${SET.theme === k ? "on" : ""}" onclick="SET.theme='${k}';saveSettings();render()">${I(ic, 15)} ${l}</button>`).join("")}</div></div>
-    <div class="setrow" style="margin-top:8px"><span style="color:var(--ink-45)">${I("eye", 20)}</span>
+    <div class="field" style="margin-top:18px"><label>Typsnitt</label>
+      <div class="fontpick">
+        ${[["instrument","Instrument Sans","Ren och samtida"],
+           ["onest","Onest","Mjukare, varmare"],
+           ["host","Host Grotesk","Stramare, teknisk"],
+           ["familjen","Familjen Grotesk","Svensk, karaktärsfull"]]
+          .map(([k,n,d]) => `<button class="fontcard ${SET.font === k ? "on" : ""}" onclick="setFont('${k}')"
+            style="font-family:'${n}',sans-serif"><b>${n}</b><span>${d}</span>
+            <i>Din uppfart står tom</i></button>`).join("")}
+      </div>
+      <p class="muted small" style="margin-top:10px">Byts direkt. Välj det som känns bäst.</p></div>
+    <div class="setrow" style="margin-top:12px"><span style="color:var(--ink-45)">${I("eye", 20)}</span>
       <div class="t"><b>Större text</b><span>Lättare att läsa i solen</span></div>
       <div class="switch ${SET.bigText ? "on" : ""}" role="switch" onclick="SET.bigText=!SET.bigText;saveSettings();render()"></div></div>
   </div>

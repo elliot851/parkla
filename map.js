@@ -5,7 +5,7 @@
 "use strict";
 
 const PMap = (function () {
-  let map = null, markers = {}, layers = {}, mode = "karta", meMarker = null, onPick = null;
+  let map = null, markers = {}, layers = {}, mode = "satellit", meMarker = null, onPick = null;
 
   const TILES = {
     karta: {
@@ -63,8 +63,14 @@ const PMap = (function () {
       tap: true,
       inertia: true,
       inertiaDeceleration: 2600,
-      zoomSnap: .25,
-      wheelPxPerZoomLevel: 110,
+      zoomSnap: 0,
+      zoomDelta: 0.9,
+      wheelDebounceTime: 20,
+      wheelPxPerZoomLevel: 45,
+      zoomAnimationThreshold: 8,
+      doubleClickZoom: true,
+      touchZoom: true,
+      bounceAtZoomLimits: false,
       worldCopyJump: true
     });
     layers.base = baseFor(mode).addTo(map);
@@ -97,10 +103,10 @@ const PMap = (function () {
 
   function fitSpots(list, pad) {
     if (!map || !list.length) return;
-    if (list.length === 1) { map.flyTo(list[0].ll, 15, { duration: .8 }); return; }
-    map.flyToBounds(L.latLngBounds(list.map(s => s.ll)), { padding: [pad || 56, pad || 56], duration: .85, maxZoom: 15 });
+    if (list.length === 1) { map.flyTo(list[0].ll, 15, { duration: .5 }); return; }
+    map.flyToBounds(L.latLngBounds(list.map(s => s.ll)), { padding: [pad || 56, pad || 56], duration: .55, maxZoom: 15 });
   }
-  function flyTo(ll, z) { if (map) map.flyTo(ll, z || 15, { duration: .9 }); }
+  function flyTo(ll, z) { if (map) map.flyTo(ll, z || 15, { duration: .55 }); }
   function invalidate() { if (map) setTimeout(() => map.invalidateSize(), 50); }
 
   function showMe(ll) {

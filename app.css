@@ -6,64 +6,70 @@
 
 /* ---------- 1. Tokens ---------- */
 :root{
-  /* bläck & papper */
-  --ink:#14191A;
-  --ink-70:#4A5654;
-  --ink-45:#77837F;
-  --ink-25:#A7B0AC;
-  --paper:#F4F1E9;
-  --paper-2:#EDE9DE;
-  --card:#FBFAF6;
-  --rule:#DED8C9;
-  --rule-2:#C9C2B0;
+  /* neutraler — kalla, inte beige */
+  --ink:#0A0F0E;
+  --ink-70:#3B4543;
+  --ink-45:#6B7674;
+  --ink-25:#A3ACAA;
+  --paper:#F5F7F6;
+  --paper-2:#ECEFEE;
+  --card:#FFFFFF;
+  --rule:#E2E7E5;
+  --rule-2:#CDD4D2;
 
-  /* varumärke */
-  --pine:#0A3A2C;
-  --green:#106B4F;
-  --green-lift:#17A377;
-  --green-wash:#E3EEE7;
-  --clay:#B9512B;
-  --clay-wash:#F6E7DF;
-  --brass:#9A7420;
-  --brass-wash:#F3ECD9;
-  --on-dark:#F4F1E9;
+  /* varumärke — en vivid accent, resten neutralt */
+  --pine:#07302A;
+  --green:#00875A;
+  --green-lift:#10B981;
+  --green-wash:#E6F4EE;
+  --clay:#D2492A;
+  --clay-wash:#FBECE7;
+  --brass:#8A6A12;
+  --brass-wash:#F7F1E2;
+  --on-dark:#F5F7F6;
 
   /* form */
-  --r-xs:3px; --r-sm:6px; --r-md:10px; --r-lg:18px;
-  --lift:0 1px 1px rgba(20,25,26,.04), 0 6px 18px -14px rgba(20,25,26,.5);
-  --lift-2:0 2px 4px rgba(20,25,26,.06), 0 30px 60px -34px rgba(20,25,26,.55);
+  --r-xs:4px; --r-sm:8px; --r-md:12px; --r-lg:20px;
+  --lift:0 1px 2px rgba(10,15,14,.05), 0 4px 12px -6px rgba(10,15,14,.14);
+  --lift-2:0 1px 3px rgba(10,15,14,.07), 0 20px 44px -24px rgba(10,15,14,.4);
 
-  /* typsnitt — Familjen Grotesk (Letters from Sweden) i display, Schibsted i brödtext */
-  --display:"Familjen Grotesk","Schibsted Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
-  --sans:"Schibsted Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  /* typsnitt — bytbart live via data-font på <html> */
+  --ui:"Instrument Sans";
+  --display:var(--ui),-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --sans:var(--ui),-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
   --mono:"DM Mono",ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
-  --serif:var(--display); /* bakåtkompatibelt alias */
+  --serif:var(--display);
 
   --maxw:1180px;
   --ease:cubic-bezier(.16,1,.3,1);
   --ease-2:cubic-bezier(.4,0,.2,1);
 }
+:root[data-font="onest"]{--ui:"Onest"}
+:root[data-font="familjen"]{--ui:"Familjen Grotesk"}
+:root[data-font="host"]{--ui:"Host Grotesk"}
+:root[data-font="instrument"]{--ui:"Instrument Sans"}
+
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --ink:#EDEADF; --ink-70:#B3BCB6; --ink-45:#87918B; --ink-25:#5C6763;
-    --paper:#0B100E; --paper-2:#121917; --card:#141C19;
-    --rule:#26302C; --rule-2:#38443F;
-    --pine:#08241C; --green:#17A377; --green-lift:#3ED09E; --green-wash:#102C23;
-    --clay:#E08154; --clay-wash:#2A1710; --brass:#D9AE55; --brass-wash:#241C0C;
-    --on-dark:#EDEADF;
-    --lift:0 1px 1px rgba(0,0,0,.4), 0 6px 18px -14px rgba(0,0,0,.9);
-    --lift-2:0 2px 4px rgba(0,0,0,.4), 0 30px 60px -34px rgba(0,0,0,.95);
+    --ink:#EDF0EF; --ink-70:#AFB8B6; --ink-45:#7F8A88; --ink-25:#576260;
+    --paper:#0A0D0C; --paper-2:#121716; --card:#161B1A;
+    --rule:#232A29; --rule-2:#333C3A;
+    --pine:#06231E; --green:#10B981; --green-lift:#34D399; --green-wash:#0D2C23;
+    --clay:#F0764F; --clay-wash:#2A1611; --brass:#D6AC55; --brass-wash:#241D0D;
+    --on-dark:#EDF0EF;
+    --lift:0 1px 2px rgba(0,0,0,.5), 0 4px 12px -6px rgba(0,0,0,.7);
+    --lift-2:0 1px 3px rgba(0,0,0,.5), 0 20px 44px -24px rgba(0,0,0,.9);
   }
 }
 :root[data-theme="dark"]{
-  --ink:#EDEADF; --ink-70:#B3BCB6; --ink-45:#87918B; --ink-25:#5C6763;
-  --paper:#0B100E; --paper-2:#121917; --card:#141C19;
-  --rule:#26302C; --rule-2:#38443F;
-  --pine:#08241C; --green:#17A377; --green-lift:#3ED09E; --green-wash:#102C23;
-  --clay:#E08154; --clay-wash:#2A1710; --brass:#D9AE55; --brass-wash:#241C0C;
-  --on-dark:#EDEADF;
-  --lift:0 1px 1px rgba(0,0,0,.4), 0 6px 18px -14px rgba(0,0,0,.9);
-  --lift-2:0 2px 4px rgba(0,0,0,.4), 0 30px 60px -34px rgba(0,0,0,.95);
+  --ink:#EDF0EF; --ink-70:#AFB8B6; --ink-45:#7F8A88; --ink-25:#576260;
+  --paper:#0A0D0C; --paper-2:#121716; --card:#161B1A;
+  --rule:#232A29; --rule-2:#333C3A;
+  --pine:#06231E; --green:#10B981; --green-lift:#34D399; --green-wash:#0D2C23;
+  --clay:#F0764F; --clay-wash:#2A1611; --brass:#D6AC55; --brass-wash:#241D0D;
+  --on-dark:#EDF0EF;
+  --lift:0 1px 2px rgba(0,0,0,.5), 0 4px 12px -6px rgba(0,0,0,.7);
+  --lift-2:0 1px 3px rgba(0,0,0,.5), 0 20px 44px -24px rgba(0,0,0,.9);
 }
 
 /* ---------- 2. Grund ---------- */
@@ -71,18 +77,12 @@
 html,body{margin:0;padding:0}
 body{
   font-family:var(--sans);background:var(--paper);color:var(--ink);
-  font-size:16.5px;line-height:1.55;letter-spacing:-.005em;
+  font-size:16px;line-height:1.58;letter-spacing:-.002em;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
   font-variant-numeric:lining-nums;
   touch-action:manipulation;overflow-x:hidden;overflow-wrap:break-word;
 }
-/* papperskorn – ger ytan textur i stället för platt fyllning */
-body::after{
-  content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.028;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) body::after{opacity:.05}}
-:root[data-theme="dark"] body::after{opacity:.05}
+
 
 img,svg{max-width:100%}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -94,19 +94,18 @@ p{margin:0}
 
 /* ---------- 3. Typografi ---------- */
 h1,h2,h3,h4,h5{margin:0;font-weight:600}
-.d1,.d2,h1,h2{font-family:var(--display);font-weight:600;letter-spacing:-.045em;line-height:1.0}
-.d1,h1{font-size:clamp(2.35rem,5.6vw,4.6rem)}
-.d2,h2{font-size:clamp(1.75rem,3.4vw,2.7rem);line-height:1.04;letter-spacing:-.038em}
-h3{font-family:var(--sans);font-size:1.1rem;font-weight:600;letter-spacing:-.018em;line-height:1.28}
-h4{font-family:var(--sans);font-size:.97rem;font-weight:600;letter-spacing:-.012em}
-.serif,.display{font-family:var(--display);font-weight:600;letter-spacing:-.035em}
+.d1,.d2,h1,h2{font-family:var(--display);font-weight:600;letter-spacing:-.028em;line-height:1.08}
+.d1,h1{font-size:clamp(2.05rem,4.4vw,3.35rem)}
+.d2,h2{font-size:clamp(1.55rem,2.7vw,2.15rem);line-height:1.12;letter-spacing:-.024em}
+h3{font-size:1.05rem;font-weight:600;letter-spacing:-.014em;line-height:1.35}
+h4{font-size:.95rem;font-weight:600;letter-spacing:-.01em}
+.serif,.display{font-family:var(--display);font-weight:600;letter-spacing:-.024em}
 em,.it{font-style:normal;font-family:inherit;color:var(--green)}
 h1 em,h2 em{color:var(--green)}
-.figure,.figures b,.receipt-h .v,.spot .price b,.tot span:last-child{font-weight:600}
 
 .kicker{
   font-family:var(--mono);font-size:.66rem;font-weight:500;text-transform:uppercase;
-  letter-spacing:.17em;color:var(--green);display:inline-flex;align-items:center;gap:.6em;
+  letter-spacing:.13em;color:var(--green);display:inline-flex;align-items:center;gap:.6em;
 }
 .kicker::before{content:"";width:20px;height:1px;background:currentColor;opacity:.55}
 .kicker.plain::before{display:none}
@@ -118,8 +117,8 @@ h1 em,h2 em{color:var(--green)}
 .mono{font-family:var(--mono);letter-spacing:-.02em}
 .muted{color:var(--ink-45)} .dim{color:var(--ink-70)} .center{text-align:center}
 .hide{display:none!important}
-.figure{font-family:var(--display);font-size:clamp(2.15rem,4.4vw,3.4rem);line-height:.96;letter-spacing:-.045em;
-  font-variant-numeric:tabular-nums}
+.figure{font-family:var(--display);font-weight:600;font-size:clamp(1.9rem,3.6vw,2.7rem);line-height:1.02;
+  letter-spacing:-.032em;font-variant-numeric:tabular-nums}
 
 /* ---------- 4. Layout ---------- */
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px;position:relative;z-index:2}
@@ -171,7 +170,7 @@ section.snug{padding:30px 0}
 @media(max-width:560px){.top-in{padding:11px 18px}}
 .logo{display:flex;align-items:center;gap:10px}
 .logomark{width:30px;height:30px;flex:0 0 auto;border-radius:8px}
-.logotype{font-family:var(--display);font-weight:600;font-size:1.3rem;letter-spacing:-.05em;line-height:1}
+.logotype{font-family:var(--display);font-weight:600;font-size:1.22rem;letter-spacing:-.032em;line-height:1}
 .nav{margin-left:auto;display:flex;gap:26px;align-items:center}
 .nav a{position:relative;font-size:.895rem;font-weight:500;color:var(--ink-70);padding:5px 0;letter-spacing:-.005em}
 .nav a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:currentColor;
@@ -286,8 +285,8 @@ input[type=range]{width:100%;accent-color:var(--green);height:30px}
 .figures>div{padding:20px 26px 0 0;border-right:1px solid var(--rule)}
 .figures>div:last-child{border-right:0;padding-right:0}
 .figures>div:not(:first-child){padding-left:26px}
-.figures b{display:block;font-family:var(--display);font-size:clamp(1.45rem,2.3vw,1.95rem);line-height:1;
-  letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.figures b{display:block;font-family:var(--display);font-weight:600;font-size:clamp(1.35rem,2vw,1.7rem);
+  line-height:1.1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .figures span{display:block;margin-top:7px;font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;
   text-transform:uppercase;color:var(--ink-45);line-height:1.5}
 @media(max-width:600px){
@@ -303,8 +302,8 @@ input[type=range]{width:100%;accent-color:var(--green);height:30px}
 @media(max-width:940px){.receipt{margin:0 auto}}
 .receipt-h{background:var(--pine);color:var(--on-dark);padding:20px 22px 22px}
 .receipt-h .k{font-family:var(--mono);font-size:.63rem;letter-spacing:.15em;text-transform:uppercase;opacity:.62}
-.receipt-h .v{font-family:var(--display);font-size:2.15rem;line-height:1;margin-top:9px;letter-spacing:-.05em;
-  font-variant-numeric:tabular-nums}
+.receipt-h .v{font-family:var(--display);font-weight:600;font-size:1.95rem;line-height:1.1;margin-top:9px;
+  letter-spacing:-.032em;font-variant-numeric:tabular-nums}
 .receipt-h .s{font-size:.8rem;opacity:.68;margin-top:7px}
 .receipt-b{padding:4px 22px 18px}
 .rrow{display:flex;align-items:center;gap:13px;padding:14px 0;border-bottom:1px solid var(--rule)}
@@ -359,8 +358,8 @@ ul.numlist{padding:0;margin:0}
 .spot .ad{font-size:.82rem;color:var(--ink-45);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .spot .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
 .spot .price{text-align:right;white-space:nowrap}
-.spot .price b{display:block;font-family:var(--display);font-size:1.22rem;letter-spacing:-.04em;line-height:1;
-  font-variant-numeric:tabular-nums}
+.spot .price b{display:block;font-family:var(--display);font-weight:600;font-size:1.15rem;letter-spacing:-.026em;
+  line-height:1.15;font-variant-numeric:tabular-nums}
 .spot .price span{display:block;margin-top:4px;font-family:var(--mono);font-size:.62rem;letter-spacing:.09em;
   text-transform:uppercase;color:var(--ink-45)}
 .fav{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
@@ -417,7 +416,7 @@ ul.numlist{padding:0;margin:0}
 .tot{display:flex;justify-content:space-between;gap:16px;align-items:baseline;
   padding-top:15px;margin-top:6px;border-top:1.5px solid var(--ink)}
 .tot span:first-child{font-weight:600}
-.tot span:last-child{font-family:var(--display);font-size:1.42rem;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.tot span:last-child{font-family:var(--display);font-weight:600;font-size:1.3rem;letter-spacing:-.028em;font-variant-numeric:tabular-nums}
 .tbl{width:100%;border-collapse:collapse;font-size:.9rem}
 .tbl th,.tbl td{padding:13px 12px;text-align:left;border-bottom:1px solid var(--rule)}
 .tbl th{font-family:var(--mono);font-size:.63rem;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-45);font-weight:500}
