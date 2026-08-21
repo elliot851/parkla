@@ -3,7 +3,7 @@
    ============================================================ */
 "use strict";
 
-const VERSION = "2026-08-21.14";
+const VERSION = "2026-08-21.15";
 
 /* ---------- Avgiftsmodell ---------- */
 const FEES = {
@@ -94,6 +94,23 @@ const SPOTS = [
   {id:70, area:"vasteras", kind:"uppfart", nm:"Uppfart, Centrum", ad:"500 m från Stora torget",       type:"Uppfart", h:14,d:69,w:280,m:790,ev:0, rate:4.7,n:19, host:"Rolf",     hostSince:2025, charge:false, feat:["Egen infart"],                        size:"Personbil + SUV",   walk:6,  ll:[59.6100,16.5450], instr:"Kör in från Kopparbergsvägen."},
   {id:71, area:"vasteras", kind:"carport", nm:"Carport, Hamnen",  ad:"1,3 km från centrum · gästhamnen",type:"Carport", h:12,d:59,w:250,m:690,ev:0, rate:4.5,n:14, host:"Susanne", hostSince:2025, charge:true,  feat:["Tak","Laddbox 7,4 kW","Båtplats intill"], size:"Personbil, husvagn", walk:15, ll:[59.5980,16.5560], instr:"Carport längst bort mot vattnet."}
 ];
+
+/* ---------- Beläggning ----------
+   Samma plats ska visa samma lediga dagar varje gång man öppnar den.
+   Därför en fröad pseudoslump i stället för Math.random(). */
+function seedRand(n) { const x = Math.sin(n) * 10000; return x - Math.floor(x); }
+function dayBooked(spotId, y, m, d) {
+  const k = spotId * 10007 + y * 373 + (m + 1) * 31 + d;
+  const täthet = (typeof BUSY_IDS !== "undefined" && BUSY_IDS.indexOf(spotId) > -1) ? 0.55 : 0.18;
+  return seedRand(k) < täthet;
+}
+/* Hur många lediga dagar som är kvar den här månaden */
+function freeDaysLeft(spotId, y, m, fromDay) {
+  const dagar = new Date(y, m + 1, 0).getDate();
+  let n = 0;
+  for (let d = Math.max(1, fromDay); d <= dagar; d++) if (!dayBooked(spotId, y, m, d)) n++;
+  return n;
+}
 
 /* ---------- Direktbokning kontra godkännande ----------
    Regel: korttid bokas DIREKT, annars är produkten död. Ingen som behöver en plats

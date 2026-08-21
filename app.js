@@ -823,8 +823,8 @@ function openSpot(id) {
       <p class="muted small" style="margin-top:11px">Avboka gratis fram till 24 timmar innan. Ingen p-bot kan utfärdas – det är privat mark.</p>
     </div>
 
-    <h4 style="margin:22px 0 8px">Lediga dagar</h4>
-    ${calendarHTML(s)}
+    <h4 style="margin:22px 0 8px">Vilka dagar är lediga?</h4>
+    <div id="calbox">${(S.cal = null, calendarHTML(s))}</div>
 
     <h4 style="margin:22px 0 2px">Vad andra säger</h4>
     <div>${revs.map(r => `<div class="rev">
@@ -841,20 +841,77 @@ function openSpot(id) {
     </div>
   </div>`);
 }
-function calendarHTML(s) {
-  const today = new Date(), days = ["M","T","O","T","F","L","S"];
-  const start = new Date(today); start.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-  let cells = "";
-  for (let i = 0; i < 28; i++) {
-    const d = new Date(start); d.setDate(start.getDate() + i);
-    const busy = (s.id * 7 + i * 3) % 11 === 0;
-    cells += `<div class="d ${busy ? "busy" : "free"}">${d.getDate()}</div>`;
+function calendarHTML(s, opts) {
+  opts = opts || {};
+  const idag = new Date(); idag.setHours(0, 0, 0, 0);
+  if (!S.cal) S.cal = { y: idag.getFullYear(), m: idag.getMonth() };
+  const y = S.cal.y, m = S.cal.m;
+
+  const forsta = new Date(y, m, 1);
+  const antalDagar = new Date(y, m + 1, 0).getDate();
+  const start = (forsta.getDay() + 6) % 7;              /* måndag först */
+  const manad = forsta.toLocaleDateString("sv-SE", { month: "long", year: "numeric" });
+  const veckodagar = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
+
+  /* Går det att backa? Aldrig till en månad som redan passerat. */
+  const kanBaka = new Date(y, m, 1) > new Date(idag.getFullYear(), idag.getMonth(), 1);
+
+  let rutor = "";
+  for (let i = 0; i < start; i++) rutor += '<span class="d tom"></span>';
+  for (let d = 1; d <= antalDagar; d++) {
+    const datum = new Date(y, m, d);
+    const passerad = datum < idag;
+    const upptagen = !passerad && dayBooked(s.id, y, m, d);
+    const iso = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const vald = opts.pick && S.bk && S.bk.date === iso;
+    const kl = passerad ? "d passerad" : upptagen ? "d upptagen" : vald ? "d ledig vald" : "d ledig";
+    const klickbar = opts.pick && !passerad && !upptagen;
+    rutor += klickbar
+      ? `<button class="${kl}" onclick="pickDay('${iso}')" aria-label="${d} ${manad}, ledig">${d}</button>`
+      : `<span class="${kl}" aria-label="${d} ${manad}, ${passerad ? "passerad" : upptagen ? "upptagen" : "ledig"}">${d}</span>`;
   }
-  return `<div class="panel pad">
-    <div class="cal">${days.map(d => `<div class="h">${d}</div>`).join("")}</div>
-    <div class="cal" style="margin-top:5px">${cells}</div>
-    <div class="row" style="margin-top:14px"><span class="tag green">Ledigt</span><span class="tag">Upptaget</span></div>
+
+  const lediga = freeDaysLeft(s.id, y, m, (y === idag.getFullYear() && m === idag.getMonth()) ? idag.getDate() : 1);
+
+  return `<div class="cal2">
+    <div class="cal2-h">
+      <button class="nav" onclick="calStep(-1)" ${kanBaka ? "" : "disabled"} aria-label="Föregående månad">${I("chevron", 16)}</button>
+      <b>${manad.charAt(0).toUpperCase() + manad.slice(1)}</b>
+      <button class="nav next" onclick="calStep(1)" aria-label="Nästa månad">${I("chevron", 16)}</button>
+    </div>
+    <div class="cal2-w">${veckodagar.map(d => `<span>${d}</span>`).join("")}</div>
+    <div class="cal2-g">${rutor}</div>
+    <div class="cal2-sum">${lediga > 0
+      ? `<b>${lediga} lediga dagar</b> kvar den här månaden`
+      : `<b>Inga lediga dagar</b> kvar den här månaden – prova nästa`}</div>
+    <div class="cal2-l">
+      <span><i class="l-ledig"></i>Ledig</span>
+      <span><i class="l-upptagen"></i>Upptagen</span>
+      ${opts.pick ? '<span><i class="l-vald"></i>Vald</span>' : ""}
+    </div>
   </div>`;
+}
+function calStep(d) {
+  if (!S.cal) return;
+  let m = S.cal.m + d, y = S.cal.y;
+  if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; }
+  S.cal = { y, m };
+  redrawCal();
+}
+function pickDay(iso) {
+  if (!S.bk) return;
+  S.bk.date = iso;
+  redrawCal();
+  patchBkSum();
+  const d = new Date(iso);
+  toast("Vald dag: " + d.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" }), "calendar");
+}
+function redrawCal() {
+  const box = document.getElementById("calbox");
+  if (!box) return;
+  const id = S.bk ? S.bk.id : S.selSpot;
+  const sp = SPOTS.find(x => x.id === id);
+  if (sp) box.innerHTML = calendarHTML(sp, { pick: !!S.bk });
 }
 
 /* ---- bokning ---- */
@@ -892,7 +949,8 @@ function renderBooking() {
       </div>
 
       <div class="field"><label>Fr\u00e5n vilken dag?</label>
-        <input class="inp" type="date" id="bkdate" value="${esc(b.date)}" onchange="S.bk.date=this.value"></div>
+        <div id="calbox">${(S.cal = null, calendarHTML(s, { pick: true }))}</div>
+        <input type="hidden" id="bkdate" value="${esc(b.date)}"></div>
 
       ${S.mode === "timme" ? `
       <div class="field"><label>Från vilken tid?</label>

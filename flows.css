@@ -230,3 +230,39 @@
 .updbar.on{opacity:1;transform:translate(-50%,0)}
 .updbar b{font-weight:600;text-decoration:underline;text-underline-offset:3px}
 @media(min-width:981px){.updbar{bottom:90px}}
+
+
+/* ---------- kalender man kan läsa och klicka i ---------- */
+.cal2{border:1px solid var(--rule);border-radius:var(--r-md);padding:16px;background:var(--card)}
+.cal2-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.cal2-h b{font-size:1.02rem;font-weight:600;letter-spacing:-.014em}
+.cal2-h .nav{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid var(--rule);color:var(--ink-70);transition:all .2s}
+.cal2-h .nav svg{transform:rotate(180deg)}
+.cal2-h .nav.next svg{transform:none}
+.cal2-h .nav:hover:not(:disabled){border-color:var(--ink);color:var(--ink)}
+.cal2-h .nav:disabled{opacity:.28;pointer-events:none}
+.cal2-w{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px}
+.cal2-w span{text-align:center;font-size:.74rem;color:var(--ink-45);font-weight:500;padding:2px 0}
+.cal2-g{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal2-g .d{aspect-ratio:1;display:grid;place-items:center;border-radius:var(--r-sm);
+  font-size:.92rem;font-weight:500;font-variant-numeric:tabular-nums;border:1.5px solid transparent}
+.cal2-g .d.tom{visibility:hidden}
+.cal2-g .d.ledig{background:var(--green-wash);color:var(--green);cursor:pointer;
+  transition:transform .14s var(--ease),background .18s,border-color .18s}
+button.d.ledig:hover{border-color:var(--green);transform:scale(1.06)}
+button.d.ledig:active{transform:scale(.94)}
+.cal2-g .d.vald{background:var(--green);color:#fff;border-color:var(--green);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 22%,transparent)}
+.cal2-g .d.upptagen{background:var(--paper-2);color:var(--ink-25);text-decoration:line-through;
+  text-decoration-thickness:1.5px}
+.cal2-g .d.passerad{color:var(--ink-25);opacity:.4}
+.cal2-sum{margin-top:14px;padding-top:12px;border-top:1px solid var(--rule);
+  font-size:.88rem;color:var(--ink-70)}
+.cal2-sum b{color:var(--ink);font-weight:600}
+.cal2-l{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:.8rem;color:var(--ink-45)}
+.cal2-l i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.cal2-l .l-ledig{background:var(--green-wash);border:1.5px solid var(--green)}
+.cal2-l .l-upptagen{background:var(--paper-2);border:1.5px solid var(--rule-2)}
+.cal2-l .l-vald{background:var(--green)}
+@media (pointer: coarse){.cal2-g .d{font-size:1rem}.cal2-h .nav{width:44px;height:44px}}
