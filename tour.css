@@ -1,0 +1,97 @@
+/* ============================================================
+   Parkla — rundtur, tryckrespons och finmotorik
+   ============================================================ */
+
+/* ---------- rundtur ---------- */
+.tour{position:fixed;inset:0;z-index:200;opacity:0;pointer-events:none;transition:opacity .35s var(--ease)}
+.tour.on{opacity:1;pointer-events:auto}
+.tour-veil{position:absolute;inset:0}
+.tour-hole{position:absolute;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(8,14,12,.66);
+  border:2px solid var(--green-lift);
+  transition:all .5s var(--ease);opacity:0}
+.tour-hole::after{content:"";position:absolute;inset:-6px;border-radius:inherit;
+  border:2px solid var(--green-lift);opacity:.35;animation:tourPulse 2s var(--ease) infinite}
+@keyframes tourPulse{0%{transform:scale(1);opacity:.4}70%,100%{transform:scale(1.09);opacity:0}}
+.tour-pop{position:absolute;background:var(--card);border:1px solid var(--rule);border-radius:var(--r-md);
+  padding:20px;box-shadow:var(--lift-2);transition:left .45s var(--ease),top .45s var(--ease)}
+.tour-arrow{position:absolute;width:14px;height:14px;background:var(--card);border:1px solid var(--rule);
+  transform:rotate(45deg)}
+.tour-arrow.up{top:-8px;border-right:0;border-bottom:0}
+.tour-arrow.down{bottom:-8px;border-left:0;border-top:0}
+.tour-count{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--green)}
+.tour-title{margin:9px 0 6px;font-size:1.06rem;font-weight:600;letter-spacing:-.015em}
+.tour-body{font-size:.9rem;color:var(--ink-70);line-height:1.5}
+.tour-dots{display:flex;gap:5px;margin:16px 0 14px}
+.tour-dots i{width:16px;height:3px;border-radius:99px;background:var(--rule);transition:background .3s}
+.tour-dots i.on{background:var(--green)}
+.tour-btns{display:flex;gap:8px;align-items:center}
+
+/* ---------- tryckrespons: allt klickbart svarar ---------- */
+button,.chip,.spot,.linkrow,.railcard,.notif,.mbtn,.pin,.tag[role="button"]{
+  -webkit-user-select:none;user-select:none}
+button:active,.chip:active,.linkrow:active,.railcard:active,.notif:active{transform:scale(.985)}
+.spot:active{transform:scale(.995)}
+.ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.16;pointer-events:none;
+  transform:scale(0);animation:rip .62s var(--ease) forwards}
+@keyframes rip{to{transform:scale(2.6);opacity:0}}
+.has-rip{position:relative;overflow:hidden}
+
+/* ---------- reglage som inte hackar ---------- */
+.slider{display:flex;flex-direction:column;gap:9px}
+.slider .top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.slider .val{font-family:var(--serif);font-size:1.5rem;letter-spacing:-.02em;line-height:1;
+  font-variant-numeric:tabular-nums}
+.slider input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;height:28px;margin:0;cursor:grab}
+.slider input[type=range]:active{cursor:grabbing}
+.slider input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:99px;
+  background:linear-gradient(90deg,var(--green) var(--pct,50%),var(--rule) var(--pct,50%))}
+.slider input[type=range]::-moz-range-track{height:4px;border-radius:99px;background:var(--rule)}
+.slider input[type=range]::-moz-range-progress{height:4px;border-radius:99px;background:var(--green)}
+.slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;
+  background:var(--card);border:1.5px solid var(--ink);margin-top:-10px;
+  box-shadow:0 1px 3px rgba(0,0,0,.2),0 6px 16px -8px rgba(0,0,0,.5);
+  transition:transform .16s var(--ease),border-color .2s}
+.slider input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.1)}
+.slider input[type=range]:active::-webkit-slider-thumb{transform:scale(1.22);border-color:var(--green)}
+.slider input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--card);
+  border:1.5px solid var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.slider .scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.62rem;
+  letter-spacing:.08em;color:var(--ink-25);margin-top:-2px}
+
+/* stegare (antal) */
+.stepper{display:flex;align-items:center;border:1px solid var(--rule-2);border-radius:999px;overflow:hidden;
+  width:max-content}
+.stepper button{width:46px;height:46px;display:grid;place-items:center;color:var(--ink-70);
+  transition:background .2s,color .2s}
+.stepper button:hover{background:var(--paper-2);color:var(--ink)}
+.stepper button:disabled{opacity:.3;pointer-events:none}
+.stepper .v{min-width:56px;text-align:center;font-family:var(--mono);font-size:1rem;font-variant-numeric:tabular-nums}
+
+/* ---------- laddskelett ---------- */
+.skel{background:linear-gradient(90deg,var(--paper-2) 25%,var(--rule) 50%,var(--paper-2) 75%);
+  background-size:200% 100%;animation:sk 1.4s var(--ease-2) infinite;border-radius:var(--r-sm)}
+@keyframes sk{to{background-position:-200% 0}}
+
+/* ---------- prisändring blinkar till ---------- */
+.flash{animation:flash .55s var(--ease)}
+@keyframes flash{0%{background:var(--green-wash)}100%{background:transparent}}
+
+/* ---------- siffror som räknas upp ---------- */
+.countup{font-variant-numeric:tabular-nums}
+
+/* ---------- stor tryckyta i botten av sheeten ---------- */
+.sticky-cta{position:sticky;bottom:0;background:linear-gradient(to bottom,transparent,var(--paper) 26%);
+  padding:22px 0 0;margin-top:20px;z-index:2}
+
+/* ---------- hjälpsam tomhet ---------- */
+.hint{display:flex;gap:11px;align-items:flex-start;background:var(--brass-wash);border-radius:var(--r-sm);
+  padding:13px 15px;font-size:.87rem;color:var(--ink-70)}
+.hint .ic{color:var(--brass);flex:0 0 auto;margin-top:1px}
+
+/* ---------- bekräftelse ---------- */
+.tick{width:64px;height:64px;border-radius:50%;background:var(--green);display:grid;place-items:center;
+  margin:0 auto 18px;color:#fff;animation:pop .55s var(--ease) both}
+@keyframes pop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+.tick svg{stroke-dasharray:26;stroke-dashoffset:26;animation:draw .5s var(--ease) .25s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
