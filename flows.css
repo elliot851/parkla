@@ -109,3 +109,88 @@
   .star{padding:7px}
   .stepper button{width:52px;height:52px}
 }
+
+
+/* ---------- fält måste vara 16 px, annars zoomar iOS in vid fokus ---------- */
+.inp.sortsel{font-size:16px}
+.inp.dump{font-size:13px}
+@media (pointer: coarse){
+  .inp,.inp.sortsel,input,select,textarea{font-size:16px}
+  .inp.dump{font-size:16px}
+  .inp.plate{font-size:1.35rem}
+}
+@media(min-width:760px){.inp.sortsel{font-size:.86rem}}
+
+/* ---------- trygghetsraden i hero ---------- */
+.trustrow{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:30px;padding-top:26px;
+  border-top:1px solid var(--rule)}
+.trustrow>span,.trustrow>.asbtn{display:inline-flex;align-items:center;gap:8px;
+  font-size:.88rem;color:var(--ink-70);line-height:1.4}
+.trustrow svg{color:var(--green);flex:0 0 auto}
+.trustrow .asbtn{border:0;background:none;padding:0;text-align:left;transition:color .2s}
+.trustrow .asbtn:hover{color:var(--ink)}
+.trustrow .asbtn b{font-weight:600;color:var(--ink)}
+.trustrow .asbtn svg:last-child{color:var(--ink-25);transition:transform .3s var(--ease)}
+.trustrow .asbtn:hover svg:last-child{transform:translateX(3px)}
+@media(max-width:560px){.trustrow{gap:12px;flex-direction:column;margin-top:26px}}
+
+/* hero-siffrorna behöver luft under trygghetsraden */
+.hero .figures{margin-top:34px}
+
+/* kronor som liten efterställd enhet, inte i displaystorlek */
+.figures b .u{font-style:normal;font-size:.5em;font-weight:500;color:var(--ink-45);
+  margin-left:.22em;letter-spacing:0;vertical-align:baseline}
+
+
+/* ---------- två tydliga dörrar ---------- */
+.doors{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:760px){.doors{grid-template-columns:1fr}}
+.door{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;
+  padding:26px 24px;border:1.5px solid var(--rule);border-radius:var(--r-lg);background:var(--card);
+  transition:border-color .25s var(--ease),transform .15s var(--ease),box-shadow .25s}
+.door:hover{border-color:var(--green);box-shadow:var(--lift)}
+.door:active{transform:scale(.99)}
+.door .ic{color:var(--green);margin-bottom:6px}
+.door b{font-size:1.25rem;font-weight:600;letter-spacing:-.022em;line-height:1.25}
+.door .d{font-size:.95rem;color:var(--ink-70);line-height:1.5}
+.door .go{margin-top:14px;display:inline-flex;align-items:center;gap:8px;font-size:.95rem;
+  font-weight:600;color:var(--green)}
+.door .arw{transition:transform .3s var(--ease)}
+.door:hover .arw{transform:translateX(4px)}
+.door.alt{background:var(--pine);color:var(--on-dark);border-color:transparent}
+.door.alt .ic,.door.alt .go{color:var(--green-lift)}
+.door.alt .d{color:rgba(244,241,233,.7)}
+@media(max-width:560px){.door{padding:22px 20px}.door b{font-size:1.15rem}}
+
+/* ---------- fråga ovanför tidsvalen ---------- */
+.askrow{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+  margin-top:16px;flex-wrap:wrap}
+.askrow b{font-size:1rem;font-weight:600;letter-spacing:-.014em}
+.helplink{display:inline-flex;align-items:center;gap:6px;font-size:.88rem;color:var(--green);font-weight:500}
+.helplink:hover{text-decoration:underline}
+
+/* ---------- hjälpknappen ---------- */
+.helpfab{position:fixed;right:16px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:66;
+  display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;
+  background:var(--ink);color:var(--paper);font-size:.9rem;font-weight:600;
+  box-shadow:var(--lift-2);transition:transform .18s var(--ease)}
+.helpfab:hover{transform:translateY(-2px)}
+.helpfab:active{transform:scale(.96)}
+@media(min-width:981px){.helpfab{bottom:24px}}
+@media(max-width:420px){.helpfab span{display:none}.helpfab{padding:14px;border-radius:50%}}
+
+.helpcard{display:flex;align-items:center;gap:16px;width:100%;text-align:left;padding:18px;
+  border:1.5px solid var(--rule);border-radius:var(--r-md);background:var(--card);
+  transition:border-color .2s,background .2s}
+.helpcard:hover{border-color:var(--green);background:var(--green-wash)}
+.helpcard .ic{color:var(--green);flex:0 0 auto}
+.helpcard .t{flex:1;min-width:0}
+.helpcard .t b{display:block;font-size:1.02rem;font-weight:600}
+.helpcard .t span{display:block;font-size:.86rem;color:var(--ink-45);margin-top:2px}
+
+/* ---------- lite större text på pekskärm ---------- */
+@media (pointer: coarse){
+  body{font-size:17px}
+  .lede{font-size:1.06rem}
+  .door .d{font-size:1rem}
+}

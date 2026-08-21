@@ -199,11 +199,12 @@ function viewStart() {
     <div class="trustrow" data-reveal style="--d:150ms">
       <span>${I("shield", 16)} Alla legitimerar sig med BankID</span>
       <span>${I("swish", 16)} Betala med Swish</span>
-      <span>${I("lock", 16)} Skador ersätts upp till ${num(FEES.garantiBelopp)} ${sym()}</span>
+      <button class="asbtn" data-go="trygg">${I("lock", 16)} Vi ersätter skador på din plats
+        <b>upp till ${num(FEES.garantiBelopp)} ${sym()}</b> ${I("chevron", 13)}</button>
     </div>
     <div class="figures" data-reveal style="--d:210ms">
-      <div><b><span class="countup" data-count="${Math.round(sug.month * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(sug.month)}</span> ${sym()}</b><span>i snitt per månad i Stockholm</span></div>
-      <div><b><span class="countup" data-count="${Math.round(FEES.schablon * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(FEES.schablon)}</span> ${sym()}</b><span>får du tjäna skattefritt varje år</span></div>
+      <div><b><span class="countup" data-count="${Math.round(sug.month * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(sug.month)}</span><i class="u">${sym()}</i></b><span>i snitt per månad i Stockholm</span></div>
+      <div><b><span class="countup" data-count="${Math.round(FEES.schablon * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(FEES.schablon)}</span><i class="u">${sym()}</i></b><span>får du tjäna skattefritt varje år</span></div>
       <div><b class="countup" data-count="${SPOTS.length}">${SPOTS.length}</b><span>platser i ${AREAS.length} områden</span></div>
     </div>
   </div>
@@ -224,6 +225,23 @@ function viewStart() {
     </div>
   </div>
 </div></div></div>
+
+<section class="snug"><div class="wrap">
+  <div class="doors">
+    <button class="door" onclick="document.getElementById('kartan').scrollIntoView({behavior:'smooth',block:'start'})">
+      <span class="ic">${I("search", 30)}</span>
+      <b>Jag behöver parkera</b>
+      <span class="d">Hitta en plats nära dig. Från ${kr(12)} i timmen.</span>
+      <span class="go">Visa lediga platser ${I("arrow", 17, "arw")}</span>
+    </button>
+    <button class="door alt" data-go="hyrut">
+      <span class="ic">${I("wallet", 30)}</span>
+      <b>Jag har en plats att hyra ut</b>
+      <span class="d">Se vad din uppfart eller ditt garage kan ge dig.</span>
+      <span class="go">Räkna ut mitt pris ${I("arrow", 17, "arw")}</span>
+    </button>
+  </div>
+</div></section>
 
 <div class="marquee"><div class="marquee-in">
   ${[...cities, ...cities].map(c => `<span>${esc(c)}</span>`).join("")}
@@ -400,7 +418,7 @@ function viewSok() {
     </div>
     <div class="row" style="gap:8px">
       <button class="btn btn-sm" onclick="openFilters()">${I("filter", 15)} ${esc(t("filters"))}${nf ? ` <b class="mono">${nf}</b>` : ""}</button>
-      <select class="inp" style="min-height:38px;padding:6px 30px 6px 12px;font-size:.84rem;width:auto"
+      <select class="inp sortsel" style="min-height:38px;padding:6px 30px 6px 12px;width:auto"
         onchange="S.sort=this.value;refreshResults()">
         <option value="pris" ${S.sort === "pris" ? "selected" : ""}>${esc(t("sort_price"))}</option>
         <option value="betyg" ${S.sort === "betyg" ? "selected" : ""}>${esc(t("sort_rating"))}</option>
@@ -409,7 +427,9 @@ function viewSok() {
     </div>
   </div>
 
-  <div class="seg" style="margin-top:12px" id="modeSeg">
+  <div class="askrow"><b>Hur länge behöver du plats?</b>
+    <button class="helplink" onclick="startTour()">${I("info", 15)} Visa hur appen funkar</button></div>
+  <div class="seg" style="margin-top:10px" id="modeSeg">
     ${[["timme", t("hour")], ["dygn", t("day")], ["vecka", t("week")], ["manad", t("month")], ["evenemang", t("event")], ["sasong", "Vinterförvar"]]
       .map(([k, l]) => `<button class="${S.mode === k ? "on" : ""}" onclick="setMode('${k}')">${esc(l)}</button>`).join("")}
   </div>
@@ -1574,6 +1594,20 @@ function viewTrygg() {
     ["message", "All kontakt sker i appen", "Vi lämnar aldrig ut ditt telefonnummer. Samtal kopplas via ett växelnummer och chatten sparas."],
     ["building", "Bor du i bostadsrätt?", "Då måste styrelsen säga ja – en utomhusplats är juridiskt ett lägenhetsarrende. Vi skickar en färdig fråga åt dig. Säger de ja en gång gäller det för alla i föreningen, och föreningen kan ta 10 % av intäkterna till kassan."]
   ])}</div>
+  <div class="panel pad-lg" style="margin-top:34px;border-color:var(--brass)" data-reveal>
+    <div class="row"><span style="color:var(--brass)">${I("bank", 24)}</span><h3>Vem betalar egentligen?</h3></div>
+    <p class="dim" style="margin-top:12px;max-width:64ch">Rimlig fråga, och svaret är i tre steg.</p>
+    <ul class="numlist" style="margin-top:14px">
+      <li><span class="n">01</span><div><b>Föraren är ansvarig enligt lag</b>
+        <p>Kör någon sönder din grind är det hen som är skadeståndsskyldig. Det gäller oavsett Parkla.</p></div></li>
+      <li><span class="n">02</span><div><b>Vi betalar dig direkt – du slipper jaga någon</b>
+        <p>Du anmäler i appen, vi bedömer på foton och betalar ut inom fem arbetsdagar. Upp till ${kr(FEES.garantiBelopp)} per händelse, ingen självrisk för dig.</p></div></li>
+      <li><span class="n">03</span><div><b>Sedan kräver vi föraren</b>
+        <p>Vi tar över kravet. Kan föraren inte betala är det <b>vår förlust, inte din</b>. Det är precis det du betalar trygghetsavgiften för: ${kr(FEES.tryggShort)} per bokning eller ${kr(FEES.tryggMonthly)} i månaden.</p></div></li>
+    </ul>
+    <div class="callout brass" style="margin-top:16px"><b>Viktigt att vara korrekt med:</b> det här är en <b>garanti från Parkla</b>, inte en försäkring. Att kalla något försäkring kräver tillstånd från Finansinspektionen. Innan skarp lansering ska garantin backas av en riktig försäkringspartner – tills dess bär Parkla risken själv, med tak per händelse.</div>
+  </div>
+
   <button class="btn" style="margin-top:26px" data-go="brf">Läs mer för bostadsrättsföreningar${I("arrow", 16, "arw")}</button>
 </div></section>
 ${footerHTML()}`;
@@ -1800,7 +1834,7 @@ function viewInstallningar() {
     <p class="dim small" style="margin-top:8px">Utan nyckel använder vi Esris öppna flygbilder. De räcker till zoom 18 – i svenska bostadsområden är de ungefär en meter per bildpunkt, så vi stannar där i stället för att visa uppskalad gröt.</p>
     <p class="dim small" style="margin-top:8px">Med en egen <b>Mapbox-nyckel</b> blir bilderna skarpa hela vägen till zoom 22 och du kan se enskilda uppfarter. Mapbox har 50 000 kartvisningar i månaden gratis. Skapa ett konto på mapbox.com, kopiera din <i>public access token</i> och klistra in den här.</p>
     <div class="field" style="margin-top:14px"><label>Mapbox access token (frivilligt)</label>
-      <input class="inp mono" style="font-size:.85rem" id="satkey" placeholder="pk.eyJ1Ijoi…"
+      <input class="inp mono" id="satkey" placeholder="pk.eyJ1Ijoi…"
         value="${esc(SET.satKey || "")}"></div>
     <div class="row" style="margin-top:12px">
       <button class="btn btn-p btn-sm" onclick="saveSatKey()">Spara nyckel</button>
@@ -1878,7 +1912,7 @@ function exportData() {
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     toast("Filen är hämtad", "download");
   } catch (e) {
-    openSheet(sheetHead("Dina uppgifter") + `<div class="sheet-b"><textarea class="inp mono" rows="14" readonly style="font-size:12px">${esc(json)}</textarea></div>`);
+    openSheet(sheetHead("Dina uppgifter") + `<div class="sheet-b"><textarea class="inp mono dump" rows="14" readonly>${esc(json)}</textarea></div>`);
   }
 }
 function resetAll() {
@@ -2130,6 +2164,30 @@ function rip(el, e) {
 }
 document.getElementById("scrim").addEventListener("click", closeSheet);
 document.getElementById("btnNotis").addEventListener("click", openNotis);
+
+/* Alltid en väg till hjälpen, oavsett var man är. */
+(function helpFab() {
+  const b = document.createElement("button");
+  b.className = "helpfab";
+  b.setAttribute("aria-label", "Hjälp – visa hur appen funkar");
+  b.innerHTML = I("info", 20) + "<span>Hjälp</span>";
+  b.onclick = () => openSheet(sheetHead("Behöver du hjälp?") + `<div class="sheet-b stack">
+    <button class="helpcard" onclick="closeSheet();startTour()">
+      <span class="ic">${I("play", 22)}</span>
+      <span class="t"><b>Visa mig hur appen funkar</b><span>En snabb rundtur, 30 sekunder</span></span></button>
+    <button class="helpcard" onclick="closeSheet();go('sok')">
+      <span class="ic">${I("search", 22)}</span>
+      <span class="t"><b>Jag vill hitta en parkering</b><span>Sök på karta eller adress</span></span></button>
+    <button class="helpcard" onclick="closeSheet();go('hyrut')">
+      <span class="ic">${I("wallet", 22)}</span>
+      <span class="t"><b>Jag vill hyra ut min plats</b><span>Räkna ut vad den är värd</span></span></button>
+    <button class="helpcard" onclick="closeSheet();go('mer')">
+      <span class="ic">${I("message", 22)}</span>
+      <span class="t"><b>Vanliga frågor</b><span>Svar på det folk brukar undra</span></span></button>
+    <div class="hint">${I("info", 17)}<div>Texten kan göras större under Inställningar om den känns liten.</div></div>
+  </div>`);
+  document.body.appendChild(b);
+})();
 document.addEventListener("keydown", e => { if (e.key === "Escape") { closeSheet(); if (Tour.active()) Tour.stop(); } });
 window.addEventListener("hashchange", () => {
   const r = location.hash.replace("#", "") || "start";

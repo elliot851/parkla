@@ -194,3 +194,19 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
 if (!openDeepLink()) {
   window.addEventListener("hashchange", () => { openDeepLink(); });
 }
+
+
+/* ============================================================
+   Sidan ska inte gå att nypa i – den ska bete sig som en app.
+   iOS Safari struntar i user-scalable=no sedan iOS 10, så det
+   måste göras här. Kartan är undantagen: där SKA man kunna nypa.
+   ============================================================ */
+(function lockPageZoom() {
+  const inMap = el => !!(el && el.closest && el.closest(".mapwrap, .leaflet-container"));
+  ["gesturestart", "gesturechange", "gestureend"].forEach(type =>
+    document.addEventListener(type, e => { if (!inMap(e.target)) e.preventDefault(); }, { passive: false }));
+  document.addEventListener("touchmove", e => {
+    if (e.touches && e.touches.length > 1 && !inMap(e.target)) e.preventDefault();
+  }, { passive: false });
+  /* Dubbeltryck-zoom sköts av touch-action:manipulation i app.css. */
+})();
