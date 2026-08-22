@@ -136,18 +136,34 @@ const PMap = (function () {
 
   function setSpots(list, stateOf, selectedId) {
     if (!map) return;
-    Object.keys(markers).forEach(k => map.removeLayer(markers[k]));
-    markers = {};
+    /* Diffa i stallet for att riva: att ta bort och aterskapa 34 nalar
+       vid varje filtertryck far hela kartan att "regna" om. Behall det
+       som star kvar, byt bara ikon nar tillstandet andrats. */
+    const kvar = {};
     list.forEach(s => {
       const st = stateOf(s);
       st.selected = s.id === selectedId;
       st.charge = s.charge;
-      const mk = L.marker(s.ll, { icon: priceIcon(st), riseOnHover: true,
-        zIndexOffset: st.selected ? 900 : st.best ? 500 : st.free ? 200 : 0 });
-      mk.on("click", () => { if (onPick) onPick(s.id); });
-      mk.addTo(map);
-      markers[s.id] = mk;
+      const nyckel = [st.label, st.free, st.best, st.selected, st.charge].join("|");
+      const zi = st.selected ? 900 : st.best ? 500 : st.free ? 200 : 0;
+
+      let mk = markers[s.id];
+      if (mk) {
+        if (mk._pKey !== nyckel) {
+          mk.setIcon(priceIcon(st));
+          mk.setZIndexOffset(zi);
+          mk._pKey = nyckel;
+        }
+      } else {
+        mk = L.marker(s.ll, { icon: priceIcon(st), riseOnHover: true, zIndexOffset: zi });
+        mk._pKey = nyckel;
+        mk.on("click", () => { if (onPick) onPick(s.id); });
+        mk.addTo(map);
+      }
+      kvar[s.id] = mk;
     });
+    Object.keys(markers).forEach(k => { if (!kvar[k]) map.removeLayer(markers[k]); });
+    markers = kvar;
   }
 
   function fitSpots(list, pad) {

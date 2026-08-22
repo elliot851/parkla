@@ -7,7 +7,7 @@
 const NS = "parkla.v3.";
 const LS = {
   get(k, d) { try { const v = localStorage.getItem(NS + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem(NS + k, JSON.stringify(v)); } catch (e) {} }
+  set(k, v) { try { localStorage.setItem(NS + k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 };
 
 const DEFAULT_SETTINGS = {
@@ -85,6 +85,13 @@ const unitLong  = m => m === "sasong" ? "för hela säsongen" : m === "evenemang
 const unitShort = m => m === "sasong" ? "/säsong" : m === "evenemang" ? t("u_event") : m === "timme" ? t("u_hour") : m === "dygn" ? t("u_day") : m === "vecka" ? t("u_week") : t("u_month");
 const reviewsFor = id => REVIEWS[id] || DEFAULT_REVIEWS;
 
+/* Ett id i ett onclick-attribut: tal skrivs rakt av, strangar (UUID i skarpt
+   lage) maste citeras — annars blir onclick="openSpot(3f2a-...)" ett syntaxfel
+   och VARJE platsknapp dor. */
+function idArg(id) {
+  return typeof id === "number" ? id : "'" + String(id).replace(/'/g, "\\'") + "'";
+}
+
 function feeSplit(base, m) {
   const monthly = m === "manad";
   const service = Math.round(base * (monthly ? FEES.driverPctMonthly : FEES.driverPct));
@@ -124,6 +131,10 @@ function openSheet(html) {
 function closeSheet() {
   document.getElementById("sheet").classList.remove("on");
   document.getElementById("scrim").classList.remove("on");
+  /* Stanger man BankID-rutan ska bokningen INTE ga igenom tva sekunder senare. */
+  if (S.bk && S.bk._t) { clearTimeout(S.bk._t); S.bk._t = null; }
+  /* Blockera-kalenderns tillstand far inte lacka in i nasta kalender. */
+  S.blockFor = null;
 }
 function sheetHead(title) {
   return `<div class="sheet-h"><h3>${esc(title)}</h3><button class="x" onclick="closeSheet()" aria-label="${t("close")}">${I("close", 16)}</button></div>`;
@@ -131,7 +142,9 @@ function sheetHead(title) {
 function go(r) {
   if (r === S.route) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   PMap.destroy();
-  S.route = r; history.replaceState(null, "", "#" + r);
+  S.route = r;
+  /* pushState via hash — annars lamnar bakatknappen hela appen direkt */
+  location.hash = r;
   window.scrollTo(0, 0); render();
 }
 
@@ -408,6 +421,8 @@ function allSpots() {
    ingen annan står där. */
 function nowFree(sp) {
   if (!sp) return false;
+  /* Upptagna demoplatser (roda pa kartan) ar inte "lediga nu" i listan. */
+  if (!sp.mine && !spotFree(sp)) return false;
   if (SESSION && SESSION.spotId === sp.id) return false;
   /* Kräver värden godkännande är det per definition inte kör-in. */
   if (!sp.mine && APPROVAL_IDS.indexOf(sp.id) > -1) return false;
@@ -524,11 +539,13 @@ function baseList() {
 }
 /* Vilken nål som ska lysa grönt, vilken som är billigast av de lediga. */
 function makeStateOf(list) {
-  const free = list.filter(spotFree);
+  /* Samma regel som listans "Ledig nu"-tagg — annars sager kartan
+     Upptagen dar listan sager Ledig, om exakt samma plats. */
+  const free = list.filter(nowFree);
   const pool = free.length ? free : list;
   let best = null, min = Infinity;
   pool.forEach(x => { const p = priceFor(x, S.mode); if (p && p < min) { min = p; best = x.id; } });
-  return s => ({ label: num(priceFor(s, S.mode)) + " " + sym(), free: spotFree(s), best: s.id === best });
+  return s => ({ label: num(priceFor(s, S.mode)) + " " + sym(), free: nowFree(s), best: s.id === best });
 }
 
 function activeFilterCount() { return [S.fNu, S.fCharge, S.fGarage, S.fSecure, S.fBig, !!S.maxPrice].filter(Boolean).length; }
@@ -582,7 +599,7 @@ ${S.mode === "sasong" ? `<div class="wrap" style="margin-top:14px"><div class="s
     <span>${SEASON[S.season].months} månader. Bara garage, carport, inhägnad tomt och låst innergård – öppna uppfarter visas inte.</span></div>
   <div class="seg" style="max-width:190px">
     ${Object.values(SEASON).map(x => `<button class="${S.season === x.id ? "on" : ""}"
-      onclick="S.season='${x.id}';render()">${x.months} mån</button>`).join("")}
+      onclick="S.season='${x.id}';if(S.route==='sok'){refreshResults()}else{render()}">${x.months} mån</button>`).join("")}
   </div>
   <button class="btn btn-sm" data-go="vinterforvar">Så funkar det</button>
 </div></div>` : ""}
@@ -619,12 +636,6 @@ function sokBodyHTML(list, area) {
       </div>
       <div id="mcard"></div>
     </div>
-    <div class="maplegend">
-      <span class="l-free"><i></i>Ledig nu</span>
-      <span class="l-busy"><i></i>Upptagen</span>
-      <span class="l-best"><i></i>Billigast</span>
-    </div>
-    </div>
     <p class="muted small center" style="margin-top:12px">Dra i kartan för att flytta den. Nyp med två fingrar för att zooma. Tryck på ett pris för att se platsen.</p>`;
   }
   return `
@@ -646,10 +657,12 @@ function sokBodyHTML(list, area) {
   </div>`;
 }
 
-function spotRow(s) {
+function spotRow(s, mode) {
+  /* map(spotRow) skickar index som andra argument — bara strangar raknas */
+  const lage = typeof mode === "string" ? mode : null;
   const p = priceFor(s, S.mode);
   const fav = FAVS.includes(s.id);
-  return `<button class="spot ${S.selSpot === s.id ? "sel" : ""}" onclick="openSpot(${s.id})">
+  return `<button class="spot ${S.selSpot === s.id ? "sel" : ""}" onclick="${lage ? `S.mode='${lage}';` : ""}openSpot(${idArg(s.id)})">
     <span class="thumb">${kindIcon(s.kind, 28)}</span>
     <span class="body">
       <span class="nm">${s.mine ? '<span class="tag green" style="margin-right:6px">Din plats</span>' : demoBadge()}${esc(s.nm)}</span>
@@ -665,14 +678,14 @@ function spotRow(s) {
       </span>
     </span>
     <span class="price">${hasVaryingPrice(s) ? '<i class="fran">från</i>' : ""}<b>${num(p)} ${sym()}</b><span>${esc(unitShort(S.mode))}</span></span>
-    <span class="fav ${fav ? "on" : ""}" onclick="event.stopPropagation();toggleFav(${s.id})" role="button"
+    <span class="fav ${fav ? "on" : ""}" onclick="event.stopPropagation();toggleFav(${idArg(s.id)},this)" role="button"
       aria-label="Spara">${fav ? IF("heart", 17) : I("heart", 17)}</span>
   </button>`;
 }
 function emptyHTML() {
   /* Står användaren där Parkla inte finns är det inte filtren som är fel.
      Då ska appen säga var vi faktiskt finns – inte "inga platser matchar". */
-  if (S.utanfor && S.utanfor.omrade) {
+  if (S.utanfor && S.utanfor.omrade && S.near) {
     const a = S.utanfor.omrade, bevakad = WATCH.includes(a.id);
     return `<div class="empty"><div class="ic">${I("pin", 34)}</div>
       <h3>Parkla finns inte här än</h3>
@@ -748,11 +761,12 @@ function refreshResults() {
     const note = document.querySelector(".mapui.bl .mapnote");
     if (note) note.textContent = list.length + " " + t("free_spots");
     const card = document.getElementById("mcard"); if (card) card.innerHTML = "";
+    const mw2 = document.querySelector(".mapwrap"); if (mw2) mw2.classList.remove("has-card");
     S.selSpot = null;
   }
   if (PMap.alive()) PMap.setSpots(list, makeStateOf(list), S.selSpot);
 }
-function toggleFav(id) {
+function toggleFav(id, btn) {
   const i = FAVS.indexOf(id);
   if (i < 0) { FAVS.push(id); toast("Sparad", "heart"); } else { FAVS.splice(i, 1); toast("Borttagen", "heart"); }
   persist(); refreshResults();
@@ -783,8 +797,9 @@ function brfBrevText(namn, adress) {
     "Med vänlig hälsning\n" + n;
 }
 
-function openBrfBrev() {
+function openBrfBrev(franWizard) {
   openSheet(sheetHead("Frågan till styrelsen") + `<div class="sheet-b stack">
+    ${franWizard ? `<button class="btn btn-sm" style="align-self:flex-start" onclick="closeSheet();renderWizard()">${I("arrow", 14)} Tillbaka till annonsen</button>` : ""}
     <p class="dim">Bor du i bostadsrätt behöver du styrelsens ja. Här är en färdig
       fråga – fyll i namn och adress, så skriver vi resten.</p>
     <div class="field"><label>Ditt namn</label>
@@ -955,7 +970,8 @@ function pickSpot(id) {
   PMap.flyTo(s.ll, Math.max(15, 15));
   const box = document.getElementById("mcard");
   if (!box) return;
-  box.innerHTML = `<div class="mcard" onclick="openSpot(${s.id})">
+  const mw = document.querySelector(".mapwrap"); if (mw) mw.classList.add("has-card");
+  box.innerHTML = `<div class="mcard" onclick="openSpot(${idArg(s.id)})">
     <span class="thumb">${kindIcon(s.kind, 26)}</span>
     <div style="min-width:0">
       <div class="nm">${esc(s.nm)}</div>
@@ -986,7 +1002,7 @@ function onMapSearch(v) {
 }
 function jumpGeo(k) {
   const r = (window._geo || [])[k]; if (!r) return;
-  S.near = r.ll; S.nearLabel = r.label; S.q = ""; S.sort = "avstand";
+  satPosition(r.ll, r.label); S.q = "";
   document.getElementById("mres").innerHTML = "";
   const box = document.getElementById("mapq"); if (box) { box.value = r.label; box.blur(); }
   PMap.showMe(r.ll); PMap.flyTo(r.ll, 15);
@@ -999,10 +1015,10 @@ function jumpSpot(id) {
   S.q = ""; refreshResults(); pickSpot(id);
 }
 function clearSearch() {
-  S.q = ""; S.near = null; S.nearLabel = ""; S.sort = "pris";
+  S.q = ""; S.near = null; S.nearLabel = ""; S.sort = "pris"; S.utanfor = null;
   const box = document.getElementById("mapq"); if (box) box.value = "";
   const r = document.getElementById("mres"); if (r) r.innerHTML = "";
-  document.querySelector(".msearch").classList.remove("filled");
+  const ms = document.querySelector(".msearch"); if (ms) ms.classList.remove("filled");
   const area = AREAS.find(a => a.id === S.area) || AREAS[0];
   PMap.flyTo(area.c, area.z);
   refreshResults();
@@ -1050,6 +1066,7 @@ function onPriceSlide(inp, lo, hi) {
    PLATSDETALJ + BOKNING
    ============================================================ */
 function openSpot(id) {
+  S.bk = null; S.blockFor = null;
   const s = allSpots().find(x => x.id === id); if (!s) return;
   S.selSpot = id;
   const p = priceFor(s, S.mode) || s.d || s.m;
@@ -1066,7 +1083,7 @@ function openSpot(id) {
     </div>
     <p class="dim small" style="margin-top:11px">${esc(s.ad)} · Passar ${esc(s.size)}</p>
     <div class="row wrap" style="margin-top:9px">${s.feat.map(x => `<span class="tag">${esc(x)}</span>`).join("")}</div>
-    <button class="btn btn-sm" style="margin-top:14px" onclick="shareSpot(${s.id})">${I("share", 15)} Dela platsen</button>
+    <button class="btn btn-sm" style="margin-top:14px" onclick="shareSpot(${idArg(s.id)})">${I("share", 15)} Dela platsen</button>
 
     <div class="panel pad" style="margin-top:18px;background:var(--paper-2)">
       <div class="row"><span class="rev-av av" style="width:38px;height:38px;border-radius:50%;background:var(--pine);color:var(--on-dark);display:grid;place-items:center;font-weight:600">${esc(s.host[0])}</span>
@@ -1099,7 +1116,7 @@ function openSpot(id) {
 
     <div class="sticky-cta">
       ${nowFree(s) && !isLive() ? `
-        <button class="btn btn-g btn-block btn-lg" onclick="startNow(${s.id})">
+        <button class="btn btn-g btn-block btn-lg" onclick="startNow(${idArg(s.id)})">
           ${I("car", 19)} Parkera här nu · ${kr(timPris(s))}/tim</button>
         <p class="muted small center" style="margin-top:8px">Ingen bokning, ingen väntan. Vi håller platsen i ${HALL_MINUTER} minuter medan du kör dit.</p>
         <div class="rule" style="margin:16px 0"></div>` : ""}
@@ -1107,7 +1124,7 @@ function openSpot(id) {
         ? `<button class="btn btn-p btn-block btn-lg" onclick="openLeadDriver()">
              ${I("bell", 17)} Säg till när det finns platser här</button>
            <p class="muted small center" style="margin-top:10px">Den här platsen är ett exempel på hur en annons ser ut. Vi öppnar för bokning när utbudet finns på plats.</p>`
-        : `<button class="btn btn-p btn-block btn-lg" onclick="startBooking(${s.id})">
+        : `<button class="btn btn-p btn-block btn-lg" onclick="startBooking(${idArg(s.id)})">
              Boka – ${kr(f.driverTotal)}${I("arrow", 17, "arw")}</button>`}
     </div>
   </div>`);
@@ -1314,7 +1331,7 @@ function openDayPrice(listingId, iso) {
       <span>${esc(ev.venue)}, ${kmText(ev.km)} härifrån · ${ev.crowd.toLocaleString("sv-SE")} personer kl ${esc(ev.time)}</span></div>
       <button class="btn btn-sm btn-g" onclick="document.getElementById('dp').value=${evPris};dpHint(${bas})">${kr(evPris)}</button>
     </div>` : ""}
-    <div class="field"><label>Pris för den här dagen (${sym()})</label>
+    <div class="field"><label>Pris för den här dagen (kr)</label>
       <input class="inp mono" id="dp" value="${nu}" inputmode="numeric" style="font-size:1.5rem;text-align:center"
         oninput="dpHint(${bas})"></div>
     <p class="muted small center" id="dphint">${nu === bas ? "Samma som ditt ordinarie pris" : nu > bas ? `${Math.round((nu / bas - 1) * 100)} % över ordinarie ${kr(bas)}` : `${Math.round((1 - nu / bas) * 100)} % under ordinarie ${kr(bas)}`}</p>
@@ -1369,7 +1386,7 @@ function setMonthPrice(listingId, vad) {
     persist(); openBlockCal(listingId); toast(n + " helgdagar höjda 25 %", "spark"); return;
   }
   openSheet(sheetHead("Pris för hela månaden") + `<div class="sheet-b stack">
-    <div class="field"><label>Pris per dygn (${sym()})</label>
+    <div class="field"><label>Pris per dygn (kr)</label>
       <input class="inp mono" id="mp" value="${bas}" inputmode="numeric" style="font-size:1.5rem;text-align:center"></div>
     <p class="muted small center">Gäller alla dagar i ${new Date(y, m, 1).toLocaleDateString("sv-SE", { month: "long", year: "numeric" })}.</p>
     <button class="btn btn-p btn-block btn-lg" onclick="applyMonthPrice(${listingId})">Sätt priset</button>
@@ -1396,6 +1413,7 @@ function clearBlocks(id) {
 
 /* ---- bokning ---- */
 function startBooking(id) {
+  S.blockFor = null;
   S.bk = { id, step: 1, qty: 1, start: "09:00", attest: false, charge: false, extraCar: false, code: "", pay: "swish",
            reg: LS.get("lastreg", ""), date: new Date(Date.now() + 864e5).toISOString().slice(0, 10) };
   renderBooking();
@@ -1407,7 +1425,8 @@ function bkTotals() {
   const chargeCost = b.charge ? (S.mode === "manad" ? 380 : 55) * b.qty : 0;
   const extraCost = b.extraCar ? Math.round(base * 0.6) : 0;
   const sub = base + chargeCost + extraCost;
-  const disc = b.code.toUpperCase() === "PARKLA50" ? Math.round(sub * .5) : b.code.toUpperCase() === "GRANNE" ? 100 : 0;
+  const råDisc = b.code.toUpperCase() === "PARKLA50" ? Math.round(sub * .5) : b.code.toUpperCase() === "GRANNE" ? 100 : 0;
+  const disc = Math.min(sub, råDisc);   /* aldrig under noll — en 23-kronorsparkering med GRANNE gav -77 kr */
   return Object.assign({ unit, base, chargeCost, extraCost, disc }, feeSplit(sub - disc, S.mode));
 }
 const PRESETS  = { timme:[1,2,4,8], dygn:[1,2,3,7], vecka:[1,2,4], manad:[1,3,6,12], evenemang:[1,2,3] };
@@ -1436,7 +1455,7 @@ function renderBooking() {
 
       <div class="field"><label>Fr\u00e5n vilken dag?</label>
         <div id="calbox">${(S.cal = null, calendarHTML(s, { pick: true }))}</div>
-        <input type="hidden" id="bkdate" value="${esc(b.date)}"></div>
+        </div>
 
       ${S.mode === "timme" ? `
       <div class="field"><label>Från vilken tid?</label>
@@ -1557,7 +1576,7 @@ function bigPriceHTML(T) {
     <span class="muted small">${num(T.unit)} ${sym()} ${esc(unitLong(S.mode))}, avgifter inr\u00e4knade</span>`;
 }
 function bkStep(n) {
-  const d = document.getElementById("bkdate"); if (d && d.value) S.bk.date = d.value;
+  /* S.bk.date ar enda sanningen — hidden-inputen som skrev over den ar borta. */
   const r = document.getElementById("regnr");  if (r) S.bk.reg = r.value;
   S.bk.step = n; renderBooking();
 }
@@ -1630,6 +1649,17 @@ function bkPay(k) {
 }
 
 function confirmBooking() {
+  /* Forvalet ar "imorgon" — men imorgon kan vara upptagen. Spärra fore betalning. */
+  {
+    const sp = allSpots().find(x => x.id === S.bk.id);
+    if (sp && S.bk.date) {
+      const [y, m, d] = S.bk.date.split("-").map(Number);
+      if (dayIsBooked(sp, y, m - 1, d)) {
+        toast("Den dagen \u00e4r upptagen \u2013 v\u00e4lj en annan i kalendern", "info");
+        return bkStep(1);
+      }
+    }
+  }
   const el = document.getElementById("regnr");
   const reg = (el ? el.value : S.bk.reg) || "";
   if (reg.trim().length < 5) { toast("Fyll i registreringsnumret", "info"); if (el) el.focus(); return; }
@@ -1641,7 +1671,7 @@ function confirmBooking() {
     <p class="dim small" style="margin-top:10px;max-width:34ch;margin-inline:auto">Legitimera dig i BankID-appen så är bokningen klar.</p>
     <p class="muted small" style="margin-top:18px">Det här är en demo – ingen riktig legitimering sker.</p>
   </div>`);
-  setTimeout(() => finishBooking(reg.toUpperCase().trim(), date), 1700);
+  S.bk._t = setTimeout(() => { S.bk._t = null; finishBooking(reg.toUpperCase().trim(), date); }, 1700);
 }
 function finishBooking(reg, date) {
   const s = allSpots().find(x => x.id === S.bk.id), T = bkTotals();
@@ -1649,12 +1679,18 @@ function finishBooking(reg, date) {
   const bk = { id: Date.now(), spotId: s.id, spot: s.nm, addr: s.ad, area: s.area, reg, mode: S.mode,
     qty: S.bk.qty, total: T.driverTotal, host: s.host, date: date || new Date().toISOString().slice(0, 10),
     code, charge: S.bk.charge, pay: S.bk.pay, instr: s.instr,
+    /* Spara delbeloppen — kvittot ska visa det som faktiskt betalades,
+       inte en baklangesrakning som inte gar ihop. */
+    base: T.base, service: T.service, trygg: T.trygg, disc: T.disc,
+    chargeCost: T.chargeCost, extraCost: T.extraCost,
     /* Kraver varden godkannande ar bokningen INTE bekraftad an. */
     status: needsApproval(s, S.mode) ? "vantar" : "kommande" };
   BOOKINGS.unshift(bk);
-  NOTIS.unshift({ id: "n" + Date.now(), ic: "check", t: "Bokningen är klar", s: `${s.nm} · ${bk.date} · ${kr(T.driverTotal)}`, unread: true });
-  persist();
   const vantar = needsApproval(s, S.mode);
+  NOTIS.unshift(vantar
+    ? { id: "n" + Date.now(), ic: "clock", t: "Förfrågan skickad", s: `${s.nm} · ${bk.date} · inga pengar dras än`, unread: true }
+    : { id: "n" + Date.now(), ic: "check", t: "Bokningen är klar", s: `${s.nm} · ${bk.date} · ${kr(T.driverTotal)}`, unread: true });
+  persist();
   openSheet(`<div class="sheet-b center" style="padding-top:36px">
     <div class="tick"${vantar ? ' style="background:var(--brass)"' : ""}>${I(vantar ? "clock" : "check", 32)}</div>
     <h3 style="font-family:var(--display);font-size:1.6rem">${vantar ? "Förfrågan skickad" : "Platsen är din"}</h3>
@@ -1838,7 +1874,7 @@ function renderWizard() {
      <div class="hint" style="margin-top:12px">${I("info", 17)}<div>Månadsuthyrning och vinterförvar går alltid via ditt godkännande, oavsett den här inställningen.</div></div>
      <div class="field" style="margin-top:14px"><label>Vad behöver föraren veta?</label>
        <textarea class="inp" id="w_info" rows="3" placeholder="Kör in från gatan, plats närmast garaget. Vänd bilen så nosen pekar ut.">${esc(w.info)}</textarea></div>`,
-    `<div class="field"><label>Pris per månad (${sym()})</label>
+    `<div class="field"><label>Pris per månad (kr)</label>
        <input class="inp mono" id="w_pris" value="${w.pris}" inputmode="numeric" style="font-size:1.4rem" oninput="wizPrice(this)"></div>
      <div class="setrow"><span style="color:var(--green)">${I("chart", 20)}</span>
        <div class="t"><b>Höj priset automatiskt</b><span>Vid matcher och högsäsong. Aldrig under ditt pris.</span></div>
@@ -1847,7 +1883,7 @@ function renderWizard() {
     `<div class="center"><div class="tick">${I("check", 30)}</div>
        <h3 style="font-family:var(--serif);font-size:1.5rem">Redo att lägga upp</h3>
        <p class="dim small" style="margin-top:8px">${esc(w.ad || "Din adress")} · ${esc(w.type)} · ${num(w.pris)} ${sym()}/mån</p></div>
-     <div class="hint" style="margin-top:18px">${I("info", 17)}<div>I skarpt läge kommer här: BankID, foto på platsen, ditt kontonummer och – om du bor i bostadsrätt – styrelsens ja. <button class="lnk" onclick="openBrfBrev()">Hämta den färdiga frågan</button></div></div>`
+     <div class="hint" style="margin-top:18px">${I("info", 17)}<div>I skarpt läge kommer här: BankID, foto på platsen, ditt kontonummer och – om du bor i bostadsrätt – styrelsens ja. <button class="lnk" onclick="openBrfBrev(1)">Hämta den färdiga frågan</button></div></div>`
   ];
   openSheet(sheetHead(titles[w.step]) + `<div class="sheet-b stack">
     <div class="progress">${titles.map((_, k) => `<i class="${k <= w.step ? "on" : ""}"></i>`).join("")}</div>
@@ -1883,6 +1919,7 @@ function saveListing() {
   const w = S.wizard;
   const rec = { id: w.editId || Date.now(), ad: w.ad.trim(), type: w.type, size: w.size, pris: w.pris,
     tid: w.tid, info: w.info, charger: w.charger, gated: w.gated, cam: w.cam, vinter: w.vinter, dyn: w.dyn,
+    instant: w.instant !== false,   /* vardens "boka direkt"-val ska foljas, inte bara lagras */
     paused: false, since: new Date().toISOString().slice(0, 10) };
   rec.area = (LISTINGS.find(x => x.id === rec.id) || {}).area || SET.city;
   rec.blocked = (LISTINGS.find(x => x.id === rec.id) || {}).blocked || [];
@@ -2038,6 +2075,15 @@ function cancelBooking(id) {
   if (b.status === "klar")    return toast("Den h\u00e4r parkeringen \u00e4r redan avslutad", "info");
   if (b.status === "avbokad") return toast("Redan avbokad", "info");
 
+  /* En obesvarad forfragan har inga dragna pengar — sag det, inte "aterbetalning". */
+  if (b.status === "vantar") {
+    return bekrafta({
+      titel: "Dra tillbaka förfrågan?",
+      text: "Värden har inte svarat än och inga pengar har dragits.",
+      jaText: "Ja, dra tillbaka", farlig: true,
+      ja: function () { b.status = "avbokad"; persist(); toast("Förfrågan är tillbakadragen", "check"); render(); }
+    });
+  }
   const tim = (new Date(b.date + "T12:00") - Date.now()) / 3600000;
   bekrafta({
     titel: "Avboka " + b.spot + "?",
@@ -2097,13 +2143,19 @@ function openAccess(id) {
 }
 function receipt(id) {
   const b = BOOKINGS.find(x => x.id === id); if (!b) return;
-  const f = feeSplit(Math.round(b.total / 1.13), b.mode);
+  /* Sparade delbelopp om de finns; annars visas bara totalen —
+     hellre en rad som stammer an fyra som inte summerar. */
+  const harDelar = b.base != null;
   openSheet(sheetHead("Kvitto") + `<div class="sheet-b">
     <p class="dim small">${esc(b.spot)} · ${esc(b.date)} · ${esc(b.reg)}</p>
     <div style="margin-top:16px">
-      <div class="kv"><span>Hyra (${b.qty} ${esc(b.mode)})</span><b>${kr(f.base)}</b></div>
-      <div class="kv"><span>Serviceavgift</span><b>${kr(f.service)}</b></div>
-      <div class="kv"><span>Trygghetsgaranti</span><b>${kr(f.trygg)}</b></div>
+      ${harDelar ? `
+      <div class="kv"><span>Hyra (${qtyText(b)})</span><b>${kr(b.base)}</b></div>
+      ${b.chargeCost ? `<div class="kv"><span>Laddning</span><b>${kr(b.chargeCost)}</b></div>` : ""}
+      ${b.extraCost ? `<div class="kv"><span>Extra fordon</span><b>${kr(b.extraCost)}</b></div>` : ""}
+      ${b.disc ? `<div class="kv"><span>Rabatt</span><b>−${kr(b.disc)}</b></div>` : ""}
+      <div class="kv"><span>Serviceavgift</span><b>${kr(b.service)}</b></div>
+      <div class="kv"><span>Trygghetsgaranti</span><b>${kr(b.trygg)}</b></div>` : ""}
       <div class="tot"><span>Betalt med ${esc(b.pay || "Swish")}</span><span>${kr(b.total)}</span></div>
     </div>
     <p class="muted small" style="margin-top:14px">Kvittonummer PK-${b.id}. Uthyrning av parkeringsplats av privatperson – ingen moms redovisas.</p>
@@ -2144,7 +2196,7 @@ function kickCar() {
     <p class="dim">Tryck på knappen så tar vi över. Du behöver inte prata med någon.</p>
     <ul class="numlist">
       ${[["Vi ringer föraren", "Inom 60 sekunder, dygnet runt."],
-         ["Föraren får betala extra", `${kr(FEES.overtidPerTimme)} för varje påbörjad timme. Alla pengarna går till dig.`],
+         ["Parkeringen avslutas direkt", "Tiden stoppas på sekunden – du väntar inte på någon."],
          ["Efter fyrtiofem minuter börjar övertid löpa", `${kr(FEES.overtidPerTimme)} per påbörjad timme, hela beloppet till dig.`]]
         .map(([a, b], k) => `<li><span class="n">0${k + 1}</span><div><b>${a}</b><p>${b}</p></div></li>`).join("")}
     </ul>
@@ -2228,7 +2280,8 @@ function sendMsg() {
   const box = document.getElementById("msgbox");
   box.innerHTML = msgHTML(); box.scrollTop = box.scrollHeight;
   setTimeout(() => {
-    MSGS.push({ me: false, t: "Absolut, det löser vi!", tm: hh + ":" + String(now.getMinutes() + 1).padStart(2, "0") });
+    const d2 = new Date();   /* rakna om — minut 59 + 1 far inte bli ":60" */
+    MSGS.push({ me: false, t: "Absolut, det löser vi!", tm: String(d2.getHours()).padStart(2, "0") + ":" + String(d2.getMinutes()).padStart(2, "0") });
     persist();
     const b2 = document.getElementById("msgbox");
     if (b2) { b2.innerHTML = msgHTML(); b2.scrollTop = b2.scrollHeight; }
@@ -2303,10 +2356,11 @@ function viewTrygg() {
     ${[["shield", "Legitimering med BankID",
         "I dag loggar man in med en kod till mejlen. Innan vi tar emot en enda riktig krona ska varje " +
         "konto vara knutet till en person via BankID."],
-       ["shield", `Skadegarantin på ${num(FEES.garantiBelopp)} ${sym()}`,
-        `Modellen är klar och avgiften är räknad (${kr(FEES.tryggShort)} per bokning, ` +
-        `${kr(FEES.tryggMonthly)} i månaden vid månadshyra). Men det finns ännu ingen process för att ` +
-        `betala ut en skada, och därför gäller garantin inte förrän vi öppnar.`],
+       ["shield", `Trygghetsgarantin – tre delar för ${kr(FEES.tryggShort)}`,
+        `Skadegaranti till värden upp till ${num(FEES.garantiBelopp)} ${sym()} utan självrisk. ` +
+        `Betalningsgaranti: kan föraren inte betala är det vår förlust, inte värdens. ` +
+        `Platsgaranti till föraren: är platsen blockerad när du kommer får du alla pengar tillbaka. ` +
+        `Processen för att betala ut en skada är inte byggd än – därför gäller garantin först när vi öppnar.`],
        ["camera", "Foto före och efter, sparat hos oss",
         "I dag ligger bilderna bara i din egen telefon. De ska ligga på vår server med tidsstämpel, " +
         "annars är de inget bevis i en tvist."],
@@ -2315,7 +2369,7 @@ function viewTrygg() {
         `${kr(FEES.overtidPerTimme)} per påbörjad timme – hela beloppet till värden, ingenting till Parkla. ` +
         `Knappen finns i gränssnittet men gör ännu ingenting.`],
        ["star", "Betyg åt båda håll",
-        "Alla platser visar 5,0 i dag för att det inte finns några riktiga omdömen än."],
+        "Betygen och omdömena du ser i dag är påhittade exempel, så att du ser hur det kommer att se ut. Riktiga betyg – åt båda håll och omöjliga att radera – byggs innan vi öppnar."],
        ["message", "Samtal via växelnummer",
         "Ditt telefonnummer ska aldrig lämnas ut. Tills den kopplingen finns visar vi inga nummer alls."]
       ].map(([ic, t, p], k) => `<div class="setrow" style="align-items:flex-start">
@@ -2333,7 +2387,9 @@ function viewTrygg() {
     tjänster lovar det ändå. Vi gör det inte.</div></div>
   <div class="panel pad-lg" style="margin-top:34px;border-color:var(--brass)" data-reveal>
     <div class="row"><span style="color:var(--brass)">${I("bank", 24)}</span><h3>Vem betalar egentligen?</h3></div>
-    <p class="dim" style="margin-top:12px;max-width:64ch">Rimlig fråga, och svaret är i tre steg.</p>
+    <p class="dim" style="margin-top:12px;max-width:64ch">De ${kr(FEES.tryggShort)} per bokning köper
+      tre saker: skadegaranti till värden, betalningsgaranti till värden och platsgaranti till
+      föraren. Så här hänger de ihop.</p>
     <ul class="numlist" style="margin-top:14px">
       <li><span class="n">01</span><div><b>Föraren är ansvarig enligt lag</b>
         <p>Kör någon sönder din grind är det hen som är skadeståndsskyldig. Det gäller oavsett Parkla.</p></div></li>
@@ -2343,6 +2399,13 @@ function viewTrygg() {
       <li><span class="n">03</span><div><b>Sedan kräver vi föraren</b>
         <p>Vi tar över kravet. Kan föraren inte betala är det <b>vår förlust, inte din</b>. Det är precis det du betalar trygghetsavgiften för: ${kr(FEES.tryggShort)} per bokning eller ${kr(FEES.tryggMonthly)} i månaden.</p></div></li>
     </ul>
+    <div style="margin-top:18px;border-top:1px solid var(--rule);padding-top:16px">
+      <b>Det här ingår inte</b>
+      <p class="dim small" style="margin-top:8px;max-width:64ch">Din egen bil – den täcks av din
+        bilförsäkring, precis som på gatan. Stöld ur bilen. Bärgning. Snö och halka. Skador som
+        fanns före bokningen – det är därför förefotot finns. Vi skriver hellre listan här än i
+        det finstilta.</p>
+    </div>
     <div class="callout brass" style="margin-top:16px"><b>Viktigt att vara korrekt med:</b> det här är en <b>garanti från Parkla</b>, inte en försäkring. Att kalla något försäkring kräver tillstånd från Finansinspektionen. Garantin ska backas av en riktig försäkringspartner innan vi öppnar.</div>
   </div>
 
@@ -2558,9 +2621,9 @@ function viewInstallningar() {
     <div class="grid g2" style="margin-top:14px">
       <div class="field"><label>${esc(t("language"))}</label>
         <select class="inp" onchange="SET.lang=this.value;saveSettings();render()">
-          <option value="sv" ${SET.lang === "sv" ? "selected" : ""}>Svenska</option>
-          <option value="en" ${SET.lang === "en" ? "selected" : ""}>English</option>
+          <option value="sv" selected>Svenska</option>
         </select></div>
+      <p class="muted small" style="margin-top:6px">Fler spr\u00e5k kommer n\u00e4r hela appen \u00e4r \u00f6versatt \u2013 inte halvvägs.</p>
       <div class="field"><label>${esc(t("currency"))}</label>
         <select class="inp" onchange="SET.currency=this.value;saveSettings();render()">
           ${Object.keys(CURRENCIES).map(k => `<option value="${k}" ${SET.currency === k ? "selected" : ""}>${k} · ${CURRENCIES[k].name}</option>`).join("")}
@@ -2572,7 +2635,7 @@ function viewInstallningar() {
   <div class="panel pad-lg" style="margin-top:18px">
     <h3>Lansering</h3>
     <div class="setrow" style="margin-top:8px"><span style="color:var(--green)">${I("spark", 20)}</span>
-      <div class="t"><b>Skarpt läge</b><span>Döljer bokning av exempelplatserna och visar intresseanmälan i stället. Slå på det här innan du delar länken publikt.</span></div>
+      <div class="t"><b>Lanseringsläge</b><span>Döljer bokning av exempelplatserna och visar intresseanmälan i stället – påverkar inte betalningar. Slå på innan du delar länken publikt.</span></div>
       <div class="switch ${SET.live ? "on" : ""}" role="switch" onclick="SET.live=!SET.live;saveSettings();render()"></div></div>
     <div class="field" style="margin-top:14px"><label>Formulärlänk för anmälningar (frivilligt)</label>
       <input class="inp mono" id="formurl" placeholder="https://formspree.io/f/xxxx" value="${esc(SET.formUrl || "")}"></div>
@@ -2669,10 +2732,17 @@ function exportData() {
     openSheet(sheetHead("Dina uppgifter") + `<div class="sheet-b"><textarea class="inp mono dump" rows="14" readonly>${esc(json)}</textarea></div>`);
   }
 }
+/* Rensa BARA parkla.v3.* — ALDRIG hela localStorage (andra appar delar origin). */
+function doResetAll() {
+  Object.keys(localStorage)
+    .filter(k => k.indexOf("parkla.v3.") === 0 && k !== "parkla.v3.cfg")
+    .forEach(k => localStorage.removeItem(k));
+  location.hash = ""; location.reload();
+}
 function resetAll() {
   openSheet(sheetHead("Börja om?") + `<div class="sheet-b stack">
     <p class="dim">Det här raderar dina bokningar, platser och sparade favoriter i den här webbläsaren. Det går inte att ångra.</p>
-    <button class="btn btn-c btn-block btn-lg" onclick="localStorage.clear();location.hash='';location.reload()">Ja, nollställ</button>
+    <button class="btn btn-c btn-block btn-lg" onclick="doResetAll()">Ja, nollställ</button>
     <button class="btn btn-block" onclick="closeSheet()">${esc(t("cancel"))}</button></div>`);
 }
 
@@ -2786,7 +2856,7 @@ function viewVinter() {
 
   <h2 style="margin:44px 0 18px" data-reveal>Så går det till</h2>
   <ul class="numlist" data-reveal>
-    ${[["Välj säsong och plats", "Fem eller sju månader. Du ser hela priset direkt, inga avgifter tillkommer."],
+    ${[["Välj säsong och plats", "Fem eller sju månader. S\u00e4songspriset visas direkt \u2013 serviceavgift och trygghetsgaranti l\u00e4ggs till i kassan innan du bekr\u00e4ftar."],
        ["Intyga att fordonet är försäkrat", "En ruta att kryssa i. Vi sparar intyget tillsammans med avtalet."],
        ["Kör dit och lås", "Du parkerar själv och behåller nyckeln. Värden öppnar bara grinden eller porten."],
        ["Hämta när säsongen är slut", "Vi påminner två veckor innan. Vill du förlänga gör du det i appen."]]
@@ -2794,7 +2864,7 @@ function viewVinter() {
   </ul>
 
   ${ex.length ? `<h2 style="margin:44px 0 18px" data-reveal>Billigast just nu</h2>
-    <div class="spotlist" data-reveal>${withMode("sasong", () => ex.map(spotRow).join(""))}</div>
+    <div class="spotlist" data-reveal>${withMode("sasong", () => ex.map(x => spotRow(x, "sasong")).join(""))}</div>
     <button class="btn btn-p" style="margin-top:20px" onclick="S.mode='sasong';go('sok')">Se alla platser${I("arrow", 16, "arw")}</button>` : ""}
 
   <div class="panel pad-lg" style="margin-top:34px;background:var(--green-wash);border-color:transparent" data-reveal>
@@ -2834,7 +2904,7 @@ function openLeadHost() {
     <div class="grid g2" style="gap:12px">
       <div class="field"><label>Typ av plats</label><select class="inp" id="lh_type">
         ${Object.keys(TYPE_MULT).map(k => `<option>${k}</option>`).join("")}</select></div>
-      <div class="field"><label>Önskat pris per månad (${sym()})</label>
+      <div class="field"><label>Önskat pris per månad (kr)</label>
         <input class="inp mono" id="lh_pris" inputmode="numeric" placeholder="1500"></div>
     </div>
     <div class="field"><label>Ditt namn</label><input class="inp" id="lh_namn" placeholder="Förnamn Efternamn"></div>
@@ -2942,6 +3012,7 @@ function endNow() {
   const f = feeSplit(pris, "timme");
   BOOKINGS.unshift({ id: Date.now(), spotId: sp.id, spot: sp.nm, addr: sp.ad, area: sp.area,
     reg: LS.get("lastreg", "—"), mode: "timme", qty: Math.max(1, Math.ceil(min / 60)),
+    base: f.base, service: f.service, trygg: f.trygg, disc: 0, chargeCost: 0, extraCost: 0,
     total: f.driverTotal, host: sp.host, date: new Date().toISOString().slice(0, 10),
     code: String(1000 + (sp.id % 9000)), pay: "swish", instr: sp.instr, status: "klar" });
   SESSION = null; saveSession(); persist();
@@ -3079,7 +3150,7 @@ function skarptPanelHTML() {
       ${u ? `<div class="setrow"><span style="color:var(--green)">${I("check", 20)}</span>
           <div class="t"><b>Inloggad</b><span>${esc(u.email || "")}</span></div>
           <button class="btn btn-sm" onclick="PAPI.loggaUt();render()">Logga ut</button></div>`
-        : `<div class="setrow"><span style="color:var(--ink-45)">${I("user", 20)}</span>
+        : `<div class="setrow"><span style="color:var(--ink-45)">${I("users", 20)}</span>
           <div class="t"><b>Inte inloggad</b><span>Krävs för att boka och hyra ut</span></div>
           <button class="btn btn-p btn-sm" onclick="openLogin()">Logga in</button></div>`}
     </div>` : ""}
@@ -3091,7 +3162,7 @@ function sparaSkarpt() {
   const anon = (document.getElementById("cfg-anon").value || "").trim();
   const pk   = (document.getElementById("cfg-pk").value   || "").trim();
   const fel  = document.getElementById("cfg-fel");
-  const visa = m => { fel.textContent = m; fel.hidden = false; };
+  const visa = m => { fel.textContent = m; fel.hidden = false; return false; };
 
   /* Skydd mot det farligaste misstaget: hemlig nyckel i webbläsaren. */
   if (/^(sk|rk)_/.test(pk) || /^(sk|rk)_/.test(anon)) {
@@ -3105,6 +3176,7 @@ function sparaSkarpt() {
   PAPI.setCfg({ url: url, anon: anon, pk: pk });
   toast(/^pk_live_/.test(pk) ? "Skarpt läge – riktiga pengar" : "Skarpt läge – testkort", "check");
   render();
+  return true;
 }
 
 function stangSkarpt() {

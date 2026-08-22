@@ -82,7 +82,12 @@
 /* ---------- överlägg på kartan ---------- */
 .mapui{position:absolute;z-index:600;pointer-events:none}
 .mapui>*{pointer-events:auto}
-.mapui.tl{top:12px;left:12px;right:12px;display:flex;gap:9px;align-items:flex-start}
+.mapui.tl{top:12px;left:12px;right:12px;display:flex;gap:9px;align-items:flex-start;z-index:610}
+.msearch{max-width:420px}
+/* Pa smala skarmar hamnar lagervaljara annars OVANPA sokfaltet */
+@media(max-width:760px){ .mapui.tr{top:70px} }
+/* Platskortet ska inte tacka zoomknapparna */
+.mapwrap.has-card .leaflet-bottom.leaflet-right{bottom:110px}
 .mapui.bl{left:12px;bottom:12px}
 .mapui.tr{top:12px;right:12px;display:flex;flex-direction:column;gap:9px}
 

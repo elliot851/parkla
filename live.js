@@ -232,7 +232,11 @@
 
     switch (S.mode) {
       case "manad":     slut.setMonth(slut.getMonth() + n); break;
-      case "sasong":    slut.setMonth(slut.getMonth() + 6 * n); break;
+      case "sasong": {
+        /* Vintersasong = 5 man (nov-mar), lang = 7 (okt-apr). Aldrig 6. */
+        var man = (typeof SEASON !== "undefined" && S.season === "lang") ? 7 : 5;
+        slut.setMonth(slut.getMonth() + man * n); break;
+      }
       case "vecka":     slut.setDate(slut.getDate() + 7 * n); break;
       case "dygn":      slut.setDate(slut.getDate() + n); break;
       case "evenemang": slut.setHours(slut.getHours() + 6); break;
@@ -282,7 +286,8 @@
   /* Byter man nycklar i inställningarna ska allt laddas om. */
   var demoSpara = window.sparaSkarpt;
   window.sparaSkarpt = function () {
-    demoSpara();
+    /* Sparades inget (valideringsfel) far sessionen inte rakas. */
+    if (demoSpara() === false) return;
     SESSION = null; saveSession();
     setTimeout(boot, 60);
   };

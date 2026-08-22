@@ -3,7 +3,7 @@
    ============================================================ */
 "use strict";
 
-const VERSION = "2026-08-22.28";
+const VERSION = "2026-08-22.29";
 
 /* ---------- Avgiftsmodell ---------- */
 const FEES = {
@@ -119,6 +119,12 @@ function freeDaysLeft(spotId, y, m, fromDay) {
 const APPROVAL_IDS = [5, 8, 14, 30, 31, 32];   /* värdar som vill godkänna även korttid */
 const LONG_MODES = ["manad", "sasong"];
 function needsApproval(s, mode) {
+  /* Vardens egen "lat folk boka direkt"-switch (instant:false) maste
+     respekteras — den lagrades men ingen laste den vid bokning. */
+  if (s && s.mine && typeof LISTINGS !== "undefined") {
+    const l = LISTINGS.find(x => x.id === s.id);
+    if (l && l.instant === false) return true;
+  }
   return LONG_MODES.indexOf(mode) > -1 || APPROVAL_IDS.indexOf(s.id) > -1;
 }
 

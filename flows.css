@@ -170,7 +170,10 @@
 .helplink:hover{text-decoration:underline}
 
 /* ---------- hjälpknappen ---------- */
+/* Med aktiv parkering ligger sessionsraden dar hjalpknappen bor — lyft den. */
+body.harsession .helpfab{bottom:calc(148px + env(safe-area-inset-bottom))}
 .helpfab{position:fixed;right:16px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:66;
+  transition:bottom .18s var(--ease),transform .18s var(--ease);
   display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;
   background:var(--ink);color:var(--paper);font-size:.9rem;font-weight:600;
   box-shadow:var(--lift-2);transition:transform .18s var(--ease)}

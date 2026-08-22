@@ -101,6 +101,8 @@ function addPhoto(bid, input) {
       const c = document.createElement("canvas");
       c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
       c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      /* obs: persist() nedan returnerar false om localStorage ar fullt */
+      /* obs: persist() nedan returnerar false om localStorage ar fullt */
       b.photos = b.photos || [];
       b.photos.push({ url: c.toDataURL("image/jpeg", .7), kind: b.photos.length ? "ut" : "in",
         when: new Date().toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) });
@@ -159,12 +161,17 @@ function saveRating(id) {
 /* Egna omdömen visas överst på platsen */
 function reviewsWithMine(id) {
   const mine = RATINGS[id] || [];
-  return mine.concat(REVIEWS[id] || DEFAULT_REVIEWS);
+  /* Demoexemplen (Emma/Daniel/Hanna) hor BARA hemma pa demoplatserna.
+     En riktig plats utan omdomen ska visa det — inte pahittade roster. */
+  const demo = SPOTS.some(x => x.id === id);
+  return mine.concat(REVIEWS[id] || (demo ? DEFAULT_REVIEWS : []));
 }
 
 /* ---------------- Delbar länk per plats ---------------- */
 function shareSpot(id) {
-  const s = SPOTS.find(x => x.id === id);
+  /* allSpots, inte SPOTS — egna annonser och riktiga platser finns inte i demolistan */
+  const s = allSpots().find(x => String(x.id) === String(id));
+  if (!s) return;
   const url = location.origin + location.pathname + "#spot/" + id;
   const txt = `${s.nm} – ${num(priceFor(s, S.mode) || s.d || s.m)} ${sym()} ${unitLong(S.mode)} på Parkla`;
   if (navigator.share) navigator.share({ title: s.nm, text: txt, url }).catch(() => {});
@@ -172,10 +179,12 @@ function shareSpot(id) {
   else toast(url);
 }
 function openDeepLink() {
-  const m = (location.hash || "").match(/^#spot\/(\d+)/);
+  const m = (location.hash || "").match(/^#spot\/([\w-]+)/);
   if (!m) return false;
-  const id = +m[1];
-  if (!SPOTS.some(s => s.id === id)) return false;
+  const rå = m[1];
+  const sp = allSpots().find(s => String(s.id) === rå);
+  if (!sp) return false;
+  const id = sp.id;
   S.route = "sok"; render();
   setTimeout(() => openSpot(id), 260);
   return true;
@@ -191,9 +200,9 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
 }
 
 /* Kör igång djuplänk om sidan öppnades med #spot/… */
-if (!openDeepLink()) {
-  window.addEventListener("hashchange", () => { openDeepLink(); });
-}
+/* Lyssnaren ska ALLTID sta pa — annars dor djuplankar efter den forsta. */
+openDeepLink();
+window.addEventListener("hashchange", () => { openDeepLink(); });
 
 
 /* ============================================================
@@ -241,7 +250,11 @@ if (!openDeepLink()) {
   }
 
   function busy() {
-    return document.getElementById("sheet").classList.contains("on")
+    return document.getElementById("sheet").classList.contains("on") ||
+      (typeof SESSION !== "undefined" && !!SESSION) ||
+      (typeof S !== "undefined" && !!S.wizard) ||
+      (typeof SESSION !== "undefined" && !!SESSION) ||
+      (typeof S !== "undefined" && !!S.wizard)
       || (typeof Tour !== "undefined" && Tour.active());
   }
 

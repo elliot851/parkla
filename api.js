@@ -13,7 +13,9 @@
   "use strict";
 
   var NYCKLAR = "parkla.v3.cfg";
-  var SESSION = "parkla.v3.session";
+  /* OBS: appens parkeringssession ligger pa parkla.v3.session —
+   inloggningen MASTE ha en egen nyckel, annars skriver de over varandra. */
+  var SESSION = "parkla.v3.auth";
 
   /* Sätts via inställningar i appen — inget behöver deployas om. */
   function cfg() {
@@ -224,7 +226,7 @@
         el.className = "paysheet";
         el.innerHTML =
           '<div class="paysheet-in">' +
-          '<button class="paysheet-x" aria-label="Stäng">' + (window.I ? I("x", 20) : "×") + '</button>' +
+          '<button class="paysheet-x" aria-label="Stäng">' + (window.I ? I("close", 20) : "×") + '</button>' +
           '<h2>' + (rubrik || "Betala") + '</h2>' +
           (undertext ? '<p class="paysheet-sub">' + undertext + '</p>' : "") +
           '<div id="pay-el"></div>' +
