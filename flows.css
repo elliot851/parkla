@@ -112,11 +112,11 @@
 
 
 /* ---------- fält måste vara 16 px, annars zoomar iOS in vid fokus ---------- */
-.inp.sortsel{font-size:16px}
+.inp.sortsel{font-size:max(16px,1rem)}
 .inp.dump{font-size:13px}
 @media (pointer: coarse){
-  .inp,.inp.sortsel,input,select,textarea{font-size:16px}
-  .inp.dump{font-size:16px}
+  .inp,.inp.sortsel,input,select,textarea{font-size:max(16px,1rem)}
+  .inp.dump{font-size:max(16px,1rem)}
   .inp.plate{font-size:1.35rem}
 }
 @media(min-width:760px){.inp.sortsel{font-size:.86rem}}
@@ -190,7 +190,7 @@
 
 /* ---------- lite större text på pekskärm ---------- */
 @media (pointer: coarse){
-  body{font-size:17px}
+  html{font-size:17px}
   .lede{font-size:1.06rem}
   .door .d{font-size:1rem}
 }

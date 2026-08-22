@@ -74,10 +74,11 @@
 
 /* ---------- 2. Grund ---------- */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}          /* rem-basen. Större text höjer den till 18px. */
 html,body{margin:0;padding:0}
 body{
   font-family:var(--sans);background:var(--paper);color:var(--ink);
-  font-size:16px;line-height:1.58;letter-spacing:-.002em;
+  font-size:1rem;line-height:1.58;letter-spacing:-.002em;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
   font-variant-numeric:lining-nums;
   touch-action:manipulation;overflow-x:hidden;overflow-wrap:break-word;
@@ -145,9 +146,10 @@ section.snug{padding:30px 0}
 @media(max-width:600px){.g2,.g3,.g4{grid-template-columns:1fr}.g2.keep,.g3.keep,.g4.keep{grid-template-columns:repeat(2,1fr)}}
 
 /* ---------- 5. Rörelse ---------- */
-[data-reveal]{opacity:0;transform:translateY(16px);filter:blur(3px)}
-[data-reveal].seen{opacity:1;transform:none;filter:none;
-  transition:opacity .85s var(--ease) var(--d,0ms),transform .85s var(--ease) var(--d,0ms),filter .85s var(--ease) var(--d,0ms)}
+/* Ingen oskarpa. Text ska ga att lasa medan den kommer in. */
+[data-reveal]{opacity:0;transform:translateY(10px)}
+[data-reveal].seen{opacity:1;transform:none;
+  transition:opacity .42s var(--ease) var(--d,0ms),transform .42s var(--ease) var(--d,0ms)}
 #app{animation:pageIn .5s var(--ease) both}
 @keyframes pageIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){
@@ -237,7 +239,7 @@ section.snug{padding:30px 0}
 .field{display:flex;flex-direction:column;gap:7px}
 .field>label,.lbl{font-size:.855rem;font-weight:500;color:var(--ink-70);letter-spacing:-.004em}
 .inp{width:100%;padding:12px 14px;border-radius:var(--r-sm);border:1px solid var(--rule-2);
-  background:var(--card);font-size:16px;min-height:48px;transition:border-color .2s,box-shadow .2s}
+  background:var(--card);font-size:1rem;min-height:48px;transition:border-color .2s,box-shadow .2s}
 .inp:hover{border-color:var(--ink-25)}
 .inp:focus{outline:0;border-color:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 16%,transparent)}
 textarea.inp{min-height:88px;resize:vertical;line-height:1.55}

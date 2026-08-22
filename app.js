@@ -30,7 +30,8 @@ function applyTheme() {
   if (SET.theme === "system") el.removeAttribute("data-theme");
   else el.setAttribute("data-theme", SET.theme);
   el.setAttribute("data-font", SET.font || "instrument");
-  document.body.style.fontSize = SET.bigText ? "18px" : "";
+  /* rem räknas mot <html>, inte <body> — skalan måste sitta på roten. */
+  el.style.fontSize = SET.bigText ? "18px" : "";
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue("--paper").trim() || "#F4F1E9";
 }
@@ -1282,8 +1283,14 @@ function bkTotals() {
   return Object.assign({ unit, base, chargeCost, extraCost, disc }, feeSplit(sub - disc, S.mode));
 }
 const PRESETS  = { timme:[1,2,4,8], dygn:[1,2,3,7], vecka:[1,2,4], manad:[1,3,6,12], evenemang:[1,2,3] };
-const QTY_WORD = { timme:"timmar", dygn:"dygn", vecka:"veckor", manad:"m\u00e5nader", evenemang:"platser" };
-const QTY_ONE  = { timme:"timme",  dygn:"dygn", vecka:"vecka",  manad:"m\u00e5nad",   evenemang:"plats" };
+const QTY_WORD = { timme:"timmar", dygn:"dygn", vecka:"veckor", manad:"m\u00e5nader", sasong:"s\u00e4songer", evenemang:"platser" };
+const QTY_ONE  = { timme:"timme",  dygn:"dygn", vecka:"vecka",  manad:"m\u00e5nad", sasong:"s\u00e4song", evenemang:"plats" };
+
+/* "3 manad" i bokningskortet var lagesnamnet, inte ett ord. */
+function qtyText(b) {
+  const n = b.qty || 1;
+  return n + " " + (n === 1 ? (QTY_ONE[b.mode] || "dygn") : (QTY_WORD[b.mode] || "dygn"));
+}
 
 function renderBooking() {
   const s = allSpots().find(x => x.id === S.bk.id), b = S.bk, T = bkTotals();
@@ -1513,7 +1520,9 @@ function finishBooking(reg, date) {
   const code = String(Math.floor(1000 + Math.random() * 9000));
   const bk = { id: Date.now(), spotId: s.id, spot: s.nm, addr: s.ad, area: s.area, reg, mode: S.mode,
     qty: S.bk.qty, total: T.driverTotal, host: s.host, date: date || new Date().toISOString().slice(0, 10),
-    code, charge: S.bk.charge, pay: S.bk.pay, instr: s.instr, status: "kommande" };
+    code, charge: S.bk.charge, pay: S.bk.pay, instr: s.instr,
+    /* Kraver varden godkannande ar bokningen INTE bekraftad an. */
+    status: needsApproval(s, S.mode) ? "vantar" : "kommande" };
   BOOKINGS.unshift(bk);
   NOTIS.unshift({ id: "n" + Date.now(), ic: "check", t: "Bokningen är klar", s: `${s.nm} · ${bk.date} · ${kr(T.driverTotal)}`, unread: true });
   persist();
@@ -1846,17 +1855,25 @@ function viewMina() {
   <h3 style="margin:38px 0 4px">Mina bokningar</h3>
   ${BOOKINGS.length ? `<div class="stack" style="margin-top:14px">${BOOKINGS.map(b => `
     <div class="panel pad">
-      <div class="spread"><b style="font-size:1.02rem">${esc(b.spot)}</b><span class="tag green">Bekräftad</span></div>
-      <p class="muted small" style="margin-top:5px">${esc(b.reg)} · ${b.qty} ${esc(b.mode)} · ${esc(b.date)} · värd ${esc(b.host)}</p>
+      ${(() => { const st = BK_STATUS[b.status] || BK_STATUS.kommande;
+        const aktiv  = b.status !== "klar" && b.status !== "avbokad";
+        const vantar = b.status === "vantar";
+        return `
+      <div class="spread"><b style="font-size:1.02rem">${esc(b.spot)}</b>
+        <span class="tag ${st.cls}">${st.txt}</span></div>
+      <p class="muted small" style="margin-top:5px">${esc(b.reg)} \u00b7 ${qtyText(b)} \u00b7 ${esc(b.date)} \u00b7 v\u00e4rd ${esc(b.host)}</p>
       <div class="row wrap" style="margin-top:14px">
         <span style="font-family:var(--serif);font-size:1.35rem;margin-right:auto;font-variant-numeric:tabular-nums">${kr(b.total)}</span>
-        <button class="btn btn-sm btn-p" onclick="openAccess(${b.id})">${I("key", 15)} Öppna</button>
-        <button class="btn btn-sm" onclick="extendBooking(${b.id})">${I("clock", 15)} Förläng</button>
+        ${vantar ? `<span class="dim small">V\u00e4rden svarar oftast inom en timme</span>`
+          : aktiv ? `<button class="btn btn-sm btn-p" onclick="openAccess(${b.id})">${I("key", 15)} \u00d6ppna</button>
+        <button class="btn btn-sm" onclick="extendBooking(${b.id})">${I("clock", 15)} F\u00f6rl\u00e4ng</button>` : ""}
         <button class="btn btn-sm" onclick="receipt(${b.id})">${I("receipt", 15)} Kvitto</button>
         ${b.rating ? `<span class="rate">${IF("star", 13)}${b.rating} av 5</span>`
-          : `<button class="btn btn-sm" onclick="rateBooking(${b.id})">${I("star", 15)} Betygsätt</button>`}
-        <button class="btn btn-sm" onclick="cancelBooking(${b.id})">Avboka</button>
+          : b.status === "klar" ? `<button class="btn btn-sm" onclick="rateBooking(${b.id})">${I("star", 15)} Betygs\u00e4tt</button>` : ""}
       </div>
+      ${aktiv ? `<div style="margin-top:12px;border-top:1px solid var(--rule);padding-top:12px">
+        <button class="btn btn-sm" style="min-height:44px" onclick="cancelBooking(${b.id})">Avboka bokningen</button></div>` : ""}`;
+      })()}
     </div>`).join("")}</div>`
     : `<div class="empty" style="margin-top:14px"><div class="ic">${I("pin", 34)}</div>
        <h3>Inga bokningar än</h3>
@@ -1876,7 +1893,46 @@ function toggleNu(id) {
   toast(l.nu === false ? "Ingen kan svänga in just nu" : "Nu kan folk svänga in", l.nu === false ? "lock" : "car");
 }
 function togglePause(id) { const l = LISTINGS.find(x => x.id === id); if (l) { l.paused = !l.paused; persist(); toast(l.paused ? "Pausad" : "Aktiv igen", "check"); render(); } }
-function cancelBooking(id) { BOOKINGS = BOOKINGS.filter(b => b.id !== id); persist(); toast("Avbokad – du får tillbaka alla pengar", "check"); render(); }
+/* Fraga alltid innan nagot inte gar att angra. */
+let BEKRAFTA_JA = null;
+function bekrafta(o) {
+  BEKRAFTA_JA = o.ja;
+  openSheet(sheetHead(o.titel) + `<div class="sheet-b stack">
+    <p class="dim">${o.text}</p>
+    <button class="btn btn-block btn-lg ${o.farlig ? "btn-c" : "btn-p"}"
+      onclick="closeSheet();if(BEKRAFTA_JA)BEKRAFTA_JA();BEKRAFTA_JA=null">${esc(o.jaText)}</button>
+    <button class="btn btn-block" onclick="closeSheet();BEKRAFTA_JA=null">Nej, beh\u00e5ll</button>
+  </div>`);
+}
+
+function cancelBooking(id) {
+  const b = BOOKINGS.find(x => x.id === id); if (!b) return;
+  if (b.status === "klar")    return toast("Den h\u00e4r parkeringen \u00e4r redan avslutad", "info");
+  if (b.status === "avbokad") return toast("Redan avbokad", "info");
+
+  const tim = (new Date(b.date + "T12:00") - Date.now()) / 3600000;
+  bekrafta({
+    titel: "Avboka " + b.spot + "?",
+    text: tim < 24
+      ? "Det \u00e4r mindre \u00e4n ett dygn kvar. Du f\u00e5r tillbaka halva beloppet, " +
+        kr(Math.round(b.total / 2)) + "."
+      : "Du f\u00e5r tillbaka hela beloppet, " + kr(b.total) + ". Koden slutar fungera direkt.",
+    jaText: "Ja, avboka", farlig: true,
+    ja: function () {
+      b.status = "avbokad"; persist();
+      toast(tim < 24 ? "Avbokad \u2013 halva beloppet tillbaka" : "Avbokad \u2013 alla pengar tillbaka", "check");
+      render();
+    }
+  });
+}
+
+/* Etiketten maste folja bokningens verkliga tillstand. */
+const BK_STATUS = {
+  vantar:   { txt: "V\u00e4ntar p\u00e5 svar", cls: "brass" },
+  kommande: { txt: "Bekr\u00e4ftad",           cls: "green" },
+  klar:     { txt: "Avslutad",                  cls: "" },
+  avbokad:  { txt: "Avbokad",                   cls: "" }
+};
 function extendBooking(id) {
   const b = BOOKINGS.find(x => x.id === id); if (!b) return;
   const spot = allSpots().find(s => s.id === b.spotId);
@@ -2664,7 +2720,10 @@ function copyLeads() {
 function startNow(id) {
   const sp = allSpots().find(x => x.id === id); if (!sp) return;
   if (SESSION) { toast("Du står redan på en plats", "info"); return; }
-  SESSION = { spotId: id, state: "pahagg", hold: Date.now() + HALL_MINUTER * 60000, start: null };
+  /* Koden MASTE ligga i sessionen. Lag den bara i arket forsvann den
+     sa fort man stangde det - och da star foraren vid en last grind. */
+  SESSION = { spotId: id, state: "pahagg", hold: Date.now() + HALL_MINUTER * 60000, start: null,
+              code: String(1000 + (sp.id % 9000)), instr: sp.instr, nm: sp.nm };
   saveSession(); closeSheet(); render();
   openSheet(`<div class="sheet-b center" style="padding-top:34px">
     <div class="tick" style="background:var(--green)">${I("car", 30)}</div>
@@ -2742,8 +2801,10 @@ function tickSession() {
   sessionTimer = setInterval(() => {
     const bar = document.getElementById("sessbox");
     if (!bar) return clearInterval(sessionTimer);
+    /* SESSION kan bli null mellan tva tick - kolla FORE, inte efter. */
+    if (!SESSION) return clearInterval(sessionTimer);
     const sp = allSpots().find(x => x.id === SESSION.spotId);
-    if (!sp || !SESSION) return clearInterval(sessionTimer);
+    if (!sp) return clearInterval(sessionTimer);
     if (SESSION.state === "star") {
       const el = document.getElementById("sesstid");
       const min = minuterSedan(SESSION.start);

@@ -187,7 +187,7 @@
 
     kravInlogg(function () {
       var iv = bokningsIntervall();
-      PAPI.boka(id, iv.borjar, iv.slutar, S.mode).then(function (r) {
+      PAPI.boka(id, iv.borjar, iv.slutar, iv.lage).then(function (r) {
         if (r.godkannande) {
           openSheet('<div class="sheet-b center" style="padding-top:36px">' +
             '<div class="tick" style="background:var(--brass)">' + I("clock", 32) + '</div>' +
@@ -210,18 +210,32 @@
     });
   };
 
-  /* Bokningsvyns val → två tidpunkter servern kan räkna på. */
+  /* Appens sex lagen -> de tre servern prissatter. */
+  var SERVERLAGE = { timme: "timme", evenemang: "timme",
+                     dygn: "dag", vecka: "dag",
+                     manad: "manad", sasong: "manad" };
+
+  /* Bokningsvyns val -> tva tidpunkter servern kan rakna pa.
+     Faltet heter S.bk.start, inte .tid. Lagena heter timme/dygn/vecka/
+     manad/sasong/evenemang - inte "dag". Fel har blir fel pris. */
   function bokningsIntervall() {
     var d = S.bk.date || new Date().toISOString().slice(0, 10);
-    var start = new Date(d + "T" + (S.bk.tid || "08:00") + ":00");
+    var start = new Date(d + "T" + (S.bk.start || "09:00") + ":00");
     if (isNaN(+start)) start = new Date();
+
     var slut = new Date(start);
+    var n = Math.max(1, S.bk.qty || 1);
 
-    if (S.mode === "manad") slut.setMonth(slut.getMonth() + (S.bk.qty || 1));
-    else if (S.mode === "dag") slut.setDate(slut.getDate() + (S.bk.qty || 1));
-    else slut.setMinutes(slut.getMinutes() + (S.bk.minuter || (S.bk.qty || 1) * 60));
-
-    return { borjar: start.toISOString(), slutar: slut.toISOString() };
+    switch (S.mode) {
+      case "manad":     slut.setMonth(slut.getMonth() + n); break;
+      case "sasong":    slut.setMonth(slut.getMonth() + 6 * n); break;
+      case "vecka":     slut.setDate(slut.getDate() + 7 * n); break;
+      case "dygn":      slut.setDate(slut.getDate() + n); break;
+      case "evenemang": slut.setHours(slut.getHours() + 6); break;
+      default:          slut.setMinutes(slut.getMinutes() + (S.bk.minuter || n * 60));
+    }
+    return { borjar: start.toISOString(), slutar: slut.toISOString(),
+             lage: SERVERLAGE[S.mode] || "timme" };
   }
 
   /* ── Värdens utbetalning ──────────────────────────────── */
