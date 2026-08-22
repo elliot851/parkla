@@ -49,7 +49,11 @@
       size: f.storlek || "Personbil",
       walk: 0,
       ll: [r.lat, r.lng],
-      instr: f.instruktion || "Värden skickar instruktioner när du bokat.",
+      /* Kartan visar ett ungefärligt läge. Exakt adress och portkod
+         lämnas ut först när man faktiskt bokat — de finns inte ens
+         i det svar servern skickar hit. */
+      ungefarligt: r.ungefarligt !== false,
+      instr: "Exakt adress och kod visas när du bokat.",
       paused: r.pausad,
       direkt: r.direktbokning !== false,
       korin: r.korin !== false,

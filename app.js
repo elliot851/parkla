@@ -203,7 +203,7 @@ ${liveBanner()}
       <button class="btn btn-lg" onclick="document.getElementById('kartan').scrollIntoView({behavior:'smooth',block:'start'})">${I("search", 18)}Se lediga platser</button>
     </div>
     <div class="trustrow" data-reveal style="--d:150ms">
-      <span>${I("shield", 16)} Alla legitimerar sig med BankID</span>
+      <span>${I("shield", 16)} BankID vid lansering</span>
       <span>${I("swish", 16)} Betala med Swish</span>
       <button class="asbtn" data-go="trygg">${I("lock", 16)} Vi ersätter skador på din plats
         <b>upp till ${num(FEES.garantiBelopp)} ${sym()}</b> ${I("chevron", 13)}</button>
@@ -319,7 +319,7 @@ ${liveBanner()}
     <ul class="numlist" data-reveal>
       ${[["Lägg upp platsen", "Skriv adressen och välj vad det är för plats. Vi föreslår ett pris."],
          ["Välj när den är ledig", "Alltid, bara vardagar, eller bara när det är match. Du bestämmer."],
-         ["Säg ja till föraren", "Alla har legitimerat sig med BankID och bokar med sitt registreringsnummer."],
+         ["Säg ja till föraren", "Du ser registreringsnumret innan du svarar. Vid lansering har alla dessutom legitimerat sig med BankID."],
          ["Få pengarna", "De landar på ditt konto den 25:e varje månad. Vi sköter Skatteverket åt dig."]]
         .map(([a, b], k) => `<li style="--d:${k * 70}ms"><span class="n">0${k + 1}</span><div><b>${a}</b><p>${b}</p></div></li>`).join("")}
     </ul>
@@ -354,7 +354,7 @@ ${liveBanner()}
     </div>
     <div data-reveal>
       ${[["shield", `Vi ersätter upp till ${num(FEES.garantiBelopp)} ${sym()}`, "Går något sönder på din uppfart betalar vi. Du betalar ingen självrisk."],
-         ["door", "Flyttar inte bilen?", `Tryck på en knapp. Vi ringer föraren, tar ${num(FEES.overtidPerTimme)} ${sym()} i timmen som går till dig, och bekostar bärgning.`],
+         ["door", "Flyttar inte bilen?", `Tryck på en knapp. Vi kontaktar föraren, och övertid kostar ${num(FEES.overtidPerTimme)} ${sym()} i timmen – hela beloppet till dig.`],
          ["shield", "Alla är legitimerade", "Ingen kan boka anonymt. Vi vet vem det är och vilken bil det är."],
          ["camera", "Foto före och efter", "Båda tar ett kort. Blir det tvist tittar vi på bilderna."]]
         .map(([ic, h, p], k) => `<div style="display:grid;grid-template-columns:34px 1fr;gap:16px;padding:18px 0;border-bottom:1px solid rgba(244,241,233,.14)">
@@ -1728,7 +1728,7 @@ function viewHyrut() {
           <div class="kv"><span>Vi tar av månadshyran</span><b>${Math.round(FEES.hostPctMonthly * 100)} %</b></div>
           <div class="kv"><span>Vi tar av korttidshyran</span><b>${Math.round(FEES.hostPct * 100)} %</b></div>
         </div>
-        <p class="dim small" style="margin-top:12px">Vi tjänar pengar först när du gör det. Trygghetsgaranti, BankID, betalning och bärgning ingår.</p>
+        <p class="dim small" style="margin-top:12px">Vi tjänar pengar först när du gör det. Betalning, kvitton och utbetalning ingår.</p>
       </div>
     </div>
 
@@ -2145,7 +2145,7 @@ function kickCar() {
     <ul class="numlist">
       ${[["Vi ringer föraren", "Inom 60 sekunder, dygnet runt."],
          ["Föraren får betala extra", `${kr(FEES.overtidPerTimme)} för varje påbörjad timme. Alla pengarna går till dig.`],
-         ["Efter tre timmar bärgar vi bilen", "Vi betalar och sköter kontakten med bärgare och polis."]]
+         ["Efter fyrtiofem minuter börjar övertid löpa", `${kr(FEES.overtidPerTimme)} per påbörjad timme, hela beloppet till dig.`]]
         .map(([a, b], k) => `<li><span class="n">0${k + 1}</span><div><b>${a}</b><p>${b}</p></div></li>`).join("")}
     </ul>
     <button class="btn btn-c btn-block btn-lg" onclick="closeSheet();toast('Vi ringer föraren nu','door')">${I("door", 18)} Kontakta föraren nu</button>
@@ -2260,18 +2260,77 @@ function viewTrygg() {
   return `
 <section class="tight"><div class="wrap">
   <span class="kicker" data-reveal>Trygghet</span>
-  <h1 style="margin:14px 0 0;font-size:clamp(2.1rem,5vw,3.6rem)" data-reveal>Vi tog bort varje<br><em>anledning att tveka.</em></h1>
-  <p class="lede" style="margin-top:18px" data-reveal>Det svåra är inte pengarna. Det är tanken på en främmande bil på tomten. Så här löser vi det.</p>
-  <div style="margin-top:34px">${entriesHTML([
-    ["shield", "Alla legitimerar sig med BankID", "Ingen kan boka anonymt. Vi kontrollerar också att registreringsnumret finns i fordonsregistret. Missköter sig någon stängs kontot av för alltid – vi matchar på personnummer, inte e-post."],
-    ["shield", `Vi ersätter upp till ${num(FEES.garantiBelopp)} ${sym()}`, `Det ingår i varje bokning (${kr(FEES.tryggShort)} vid korttid, ${kr(FEES.tryggMonthly)} i månaden vid månadshyra). Går uppfarten, grinden, garageporten, fasaden eller belysningen sönder betalar vi. Du betalar ingen självrisk.`,
-     "Bra att veta: förarens egen bil täcks av förarens bilförsäkring. Din hemförsäkring gäller bara om <b>du</b> orsakat skadan. Det är precis den luckan vi fyller."],
-    ["door", "Flyttar inte bilen? Tryck på knappen.", `Vi ringer föraren inom 60 sekunder, tar ${kr(FEES.overtidPerTimme)} för varje påbörjad timme – alla pengarna går till dig – och bekostar bärgning efter tre timmar. Du behöver aldrig bråka med någon.`],
-    ["camera", "Foto före och efter", "Båda tar ett kort på platsen. Bilderna får en tidsstämpel och sparas i 90 dagar. Blir det tvist tittar vi på bevis, inte påståenden."],
-    ["star", "Betyg åt båda håll", "Förare betygsätts också. Under 4,3 i snitt och man förlorar tillgång till de bästa platserna. Du kan kräva minst 4,5 för att någon ska få boka direkt."],
-    ["message", "All kontakt sker i appen", "Vi lämnar aldrig ut ditt telefonnummer. Samtal kopplas via ett växelnummer och chatten sparas."],
-    ["building", "Bor du i bostadsrätt?", "Då måste styrelsen säga ja – en utomhusplats är juridiskt ett lägenhetsarrende. <button class=\"lnk\" onclick=\"openBrfBrev()\">Hämta en färdig fråga att skicka</button>. Säger de ja en gång gäller det för alla i föreningen, och föreningen kan ta 10 % av intäkterna till kassan."]
+  <h1 style="margin:14px 0 0;font-size:clamp(2.1rem,5vw,3.6rem)" data-reveal>Vad som skyddar dig –<br><em>och vad som inte gör det än.</em></h1>
+  <p class="lede" style="margin-top:18px" data-reveal>Det svåra är inte pengarna. Det är tanken på en främmande bil på tomten. Här står båda listorna, utan att vi snyggar till den andra.</p>
+  <div class="panel pad-lg" style="margin-top:30px;border-color:var(--brass)" data-reveal>
+    <div class="row"><span style="color:var(--brass)">${I("info", 22)}</span>
+      <h3 style="margin:0">Parkla har inte öppnat än</h3></div>
+    <p class="dim" style="margin-top:10px;max-width:64ch">Det du ser nu är en förhandsvisning med påhittade
+      platser. Inga pengar rör sig. På den här sidan står bara sådant som faktiskt är byggt –
+      och, längre ner, exakt vad som byggs innan vi öppnar. Vi tycker det är rimligt att du
+      får veta skillnaden.</p>
+  </div>
+
+  <h2 style="margin:38px 0 4px" data-reveal>Det här finns i dag</h2>
+  <div style="margin-top:22px">${entriesHTML([
+    ["shield", "Din adress syns inte förrän någon bokat",
+      "Kartan visar ett ungefärligt läge, ungefär hundrafemtio meter fel. Exakt adress och portkod " +
+      "lämnas ut först till den som har en aktiv bokning på just din plats, och bara under den tiden. " +
+      "Ingen kan bläddra fram var du bor."],
+    ["lock", "Priset räknas på vår server, aldrig i telefonen",
+      "Beloppet bestäms av öppettider, ditt pris och den tid som faktiskt gått. Ingen kan ändra siffran " +
+      "i sin egen telefon och parkera för en krona."],
+    ["car", "Två personer kan aldrig hamna på samma plats",
+      "Regeln ligger i databasen, inte i appen. Trycker två personer i exakt samma sekund förlorar den ena, " +
+      "varje gång."],
+    ["wallet", "Vi reserverar, vi drar inte i efterhand",
+      `Som en bensinmack: ett takbelopp spärras när du svänger in, och när du åker dras bara den tid du ` +
+      `faktiskt stod. Resten släpps direkt. Kortuppgifterna går till Stripe – Parkla ser dem aldrig.`],
+    ["receipt", "Kvitto på varje parkering",
+      "Uppdelat på parkering, serviceavgift och trygghetsavgift. Samma summa som du fick se innan du " +
+      "tryckte. Värden ser sin utbetalning i samma rad."],
+    ["building", "Bor du i bostadsrätt?",
+      "Då måste styrelsen säga ja – en utomhusplats är juridiskt ett lägenhetsarrende. " +
+      "<button class=\"lnk\" onclick=\"openBrfBrev()\">Hämta en färdig fråga att skicka</button>. " +
+      "Säger de ja en gång gäller det för alla i föreningen, och föreningen kan ta en andel av " +
+      "intäkterna till kassan."]
   ])}</div>
+
+  <h2 style="margin:44px 0 4px" data-reveal>Det här byggs innan vi öppnar</h2>
+  <p class="dim small" style="margin-top:8px;max-width:60ch" data-reveal>Ingenting av detta finns än.
+    Vi skriver ut det hellre än att låta dig tro att det redan gäller.</p>
+  <div class="panel pad-lg" style="margin-top:20px" data-reveal>
+    ${[["shield", "Legitimering med BankID",
+        "I dag loggar man in med en kod till mejlen. Innan vi tar emot en enda riktig krona ska varje " +
+        "konto vara knutet till en person via BankID."],
+       ["shield", `Skadegarantin på ${num(FEES.garantiBelopp)} ${sym()}`,
+        `Modellen är klar och avgiften är räknad (${kr(FEES.tryggShort)} per bokning, ` +
+        `${kr(FEES.tryggMonthly)} i månaden vid månadshyra). Men det finns ännu ingen process för att ` +
+        `betala ut en skada, och därför gäller garantin inte förrän vi öppnar.`],
+       ["camera", "Foto före och efter, sparat hos oss",
+        "I dag ligger bilderna bara i din egen telefon. De ska ligga på vår server med tidsstämpel, " +
+        "annars är de inget bevis i en tvist."],
+       ["door", "Knappen ”jag behöver platsen nu”",
+        `Värden ska kunna avsluta en parkering på sekunden, och övertid ska kosta ` +
+        `${kr(FEES.overtidPerTimme)} per påbörjad timme – hela beloppet till värden, ingenting till Parkla. ` +
+        `Knappen finns i gränssnittet men gör ännu ingenting.`],
+       ["star", "Betyg åt båda håll",
+        "Alla platser visar 5,0 i dag för att det inte finns några riktiga omdömen än."],
+       ["message", "Samtal via växelnummer",
+        "Ditt telefonnummer ska aldrig lämnas ut. Tills den kopplingen finns visar vi inga nummer alls."]
+      ].map(([ic, t, p], k) => `<div class="setrow" style="align-items:flex-start">
+        <span style="color:var(--ink-45);margin-top:2px">${I(ic, 20)}</span>
+        <div class="t" style="flex:1"><b>${t}</b>
+          <span style="display:block;margin-top:4px;line-height:1.5">${p}</span></div>
+        <span class="tag" style="flex:none">Byggs</span>
+      </div>`).join("")}
+  </div>
+
+  <div class="callout" style="margin-top:20px" data-reveal>${I("info", 16)}
+    <div><b>En sak vi inte tänker lova:</b> att bärga bilen åt dig. Att flytta ett fordon från
+    privat tomtmark är enligt lagen om flyttning av fordon en fråga för kommunen eller Polisen,
+    på markägarens begäran. Parkla är inte markägare och kan inte beställa det åt dig. Andra
+    tjänster lovar det ändå. Vi gör det inte.</div></div>
   <div class="panel pad-lg" style="margin-top:34px;border-color:var(--brass)" data-reveal>
     <div class="row"><span style="color:var(--brass)">${I("bank", 24)}</span><h3>Vem betalar egentligen?</h3></div>
     <p class="dim" style="margin-top:12px;max-width:64ch">Rimlig fråga, och svaret är i tre steg.</p>
@@ -2279,11 +2338,12 @@ function viewTrygg() {
       <li><span class="n">01</span><div><b>Föraren är ansvarig enligt lag</b>
         <p>Kör någon sönder din grind är det hen som är skadeståndsskyldig. Det gäller oavsett Parkla.</p></div></li>
       <li><span class="n">02</span><div><b>Vi betalar dig direkt – du slipper jaga någon</b>
-        <p>Du anmäler i appen, vi bedömer på foton och betalar ut inom fem arbetsdagar. Upp till ${kr(FEES.garantiBelopp)} per händelse, ingen självrisk för dig.</p></div></li>
+        <p>Du anmäler i appen, vi bedömer på foton och betalar ut inom fem arbetsdagar. Upp till ${kr(FEES.garantiBelopp)} per händelse, ingen självrisk för dig.
+        <b>Så här är det tänkt att fungera – steg två är inte byggt än och gäller först när vi öppnar.</b></p></div></li>
       <li><span class="n">03</span><div><b>Sedan kräver vi föraren</b>
         <p>Vi tar över kravet. Kan föraren inte betala är det <b>vår förlust, inte din</b>. Det är precis det du betalar trygghetsavgiften för: ${kr(FEES.tryggShort)} per bokning eller ${kr(FEES.tryggMonthly)} i månaden.</p></div></li>
     </ul>
-    <div class="callout brass" style="margin-top:16px"><b>Viktigt att vara korrekt med:</b> det här är en <b>garanti från Parkla</b>, inte en försäkring. Att kalla något försäkring kräver tillstånd från Finansinspektionen. Innan skarp lansering ska garantin backas av en riktig försäkringspartner – tills dess bär Parkla risken själv, med tak per händelse.</div>
+    <div class="callout brass" style="margin-top:16px"><b>Viktigt att vara korrekt med:</b> det här är en <b>garanti från Parkla</b>, inte en försäkring. Att kalla något försäkring kräver tillstånd från Finansinspektionen. Garantin ska backas av en riktig försäkringspartner innan vi öppnar. Är den inte det då, tar vi bort avgiften – vi tänker inte ta betalt för ett skydd som inte finns.</div>
   </div>
 
   <button class="btn" style="margin-top:26px" data-go="brf">Läs mer för bostadsrättsföreningar${I("arrow", 16, "arw")}</button>
@@ -2396,7 +2456,7 @@ function viewAffar() {
   <p class="lede" style="margin-top:18px" data-reveal>De svenska försöken hittills säger alla samma sak: ”helt gratis”. Därför har ingen råd att lösa problemet, och därför är de tomma. Vi tar betalt från dag ett – men bara när någon tjänar pengar.</p>
   <div style="margin-top:34px">${entriesHTML([
     ["chart", "1 · Transaktionen", `${Math.round(FEES.driverPct * 100)} % från föraren plus ${Math.round(FEES.hostPct * 100)} % från värden = ${Math.round((FEES.driverPct + FEES.hostPct) * 100)} % på korttid, ${Math.round((FEES.driverPctMonthly + FEES.hostPctMonthly) * 100)} % på månadshyra. Jämför: Airbnb tar ungefär 15–17 %, Getaround 25–40 %, JustPark 3 % av värden plus bokningsavgift av föraren.`],
-    ["shield", "2 · Trygghetsgarantin", `${kr(FEES.tryggShort)} per bokning eller ${kr(FEES.tryggMonthly)} i månaden för skadegaranti upp till ${kr(FEES.garantiBelopp)} och bärgning. Hög marginal – men framför allt: <b>det är detta som får folk att våga.</b> Ingen svensk konkurrent har det.`],
+    ["shield", "2 · Trygghetsgarantin", `${kr(FEES.tryggShort)} per bokning eller ${kr(FEES.tryggMonthly)} i månaden för skadegaranti upp till ${kr(FEES.garantiBelopp)}. Hög marginal – men framför allt: <b>det är detta som får folk att våga.</b> Ingen svensk konkurrent har det.`],
     ["building", "3 · Föreningar och fastighetsägare", "990–4 900 kr i månaden. Löser samtidigt utbudsproblemet: en enda förening kan ge 40 platser på en dag. Det är här de riktiga pengarna finns – och här konkurrenterna inte ens försöker."],
     ["bolt", "4 · Laddning", `${FEES.laddOrePerKwh} öre per kWh ovanpå när platsen har laddbox, plus provision på laddboxförsäljning. Sverige har extremt många elbilar och hundratusentals lägenhetsboende som inte kan ladda hemma.`]
   ])}</div>
@@ -2634,7 +2694,7 @@ function viewMer() {
     ["affar", "chart", "Affärsmodell", "Hur Parkla tjänar pengar"]
   ];
   const faq = [
-    ["Vad händer om någon inte flyttar bilen?", `Du trycker på ”Flytta bilen”. Vi ringer föraren inom 60 sekunder, tar ${kr(FEES.overtidPerTimme)} för varje påbörjad timme – alla pengarna går till dig – och bekostar bärgning efter tre timmar.`],
+    ["Vad händer om någon inte flyttar bilen?", `Du trycker på ”Flytta bilen”. Vi kontaktar föraren, parkeringen avslutas på sekunden, och står bilen kvar efter fyrtiofem minuter kostar det ${kr(FEES.overtidPerTimme)} per påbörjad timme – hela beloppet till dig. Bärgning kan vi inte lova: att flytta ett fordon från tomtmark är kommunens eller Polisens sak, på markägarens begäran.`],
     ["Kan jag få p-bot på en Parkla-plats?", "Nej. Platsen är privat mark och du har ett giltigt avtal. Skulle du ändå få en kontrollavgift bestrider vi den åt dig och betalar om vi förlorar."],
     ["Måste jag vara hemma när någon parkerar?", "Nej. De flesta uthyrningar sker utan att ni ens träffas. Kod, karta och instruktioner finns i appen."],
     ["Hur mycket kan jag tjäna?", "En uppfart i Stockholms innerstad: 1 800–2 500 kr i månaden. Märsta nära Arlanda: 1 200–1 700 kr. Förort: 400–900 kr. Med laddbox ungefär 28 % mer."],
@@ -2717,7 +2777,7 @@ function viewVinter() {
       <tbody>
         <tr><td>Brand, stöld eller skadegörelse på fordonet</td><td><b>Fordonsägarens egen försäkring</b></td></tr>
         <tr><td>Fordonet skadar garaget, porten eller staketet</td><td><b>Parkla Trygg</b>, upp till ${kr(FEES.garantiBelopp)}</td></tr>
-        <tr><td>Fordonet står kvar efter säsongens slut</td><td>Övertidsavgift ${kr(FEES.overtidPerTimme)}/timme till värden, vi ordnar bärgning</td></tr>
+        <tr><td>Fordonet står kvar efter säsongens slut</td><td>Övertidsavgift ${kr(FEES.overtidPerTimme)}/timme, hela beloppet till värden</td></tr>
         <tr><td>Vattenläcka eller takras i värdens byggnad</td><td>Värdens fastighetsförsäkring</td></tr>
         <tr><td>Nycklar och tillsyn</td><td>Ingen – värden rör aldrig fordonet</td></tr>
       </tbody></table></div>
