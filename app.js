@@ -637,6 +637,7 @@ function sokBodyHTML(list, area) {
     <h3>${list.length} ${esc(t("free_spots"))}</h3>
     <span class="tag brass">${esc(area.ref)}</span>
   </div>
+  ${list.length ? prisnotisHTML() : ""}
   <div class="spotlist">${list.length ? list.map(spotRow).join("") : emptyHTML()}</div>
   ${savingsHTML(list, area)}
   <div class="hint" style="margin-top:18px">${I("info", 17)}
@@ -669,10 +670,46 @@ function spotRow(s) {
   </button>`;
 }
 function emptyHTML() {
+  /* Står användaren där Parkla inte finns är det inte filtren som är fel.
+     Då ska appen säga var vi faktiskt finns – inte "inga platser matchar". */
+  if (S.utanfor && S.utanfor.omrade) {
+    const a = S.utanfor.omrade, bevakad = WATCH.includes(a.id);
+    return `<div class="empty"><div class="ic">${I("pin", 34)}</div>
+      <h3>Parkla finns inte här än</h3>
+      <p class="dim small" style="margin-top:8px">Närmaste område är <b>${esc(a.name)}</b>,
+        ungefär ${S.utanfor.km} km bort. Vi öppnar en stad i taget, och börjar där
+        flest står i kö.</p>
+      <div class="row wrap" style="margin-top:18px;justify-content:center">
+        <button class="btn btn-sm ${bevakad ? "" : "btn-p"}" onclick="bevakaHar()">
+          ${I("bell", 15)} ${bevakad ? "Du bevakar redan" : "Säg till när ni öppnar här"}</button>
+        <button class="btn btn-sm" onclick="S.utanfor=null;S.near=null;S.nearLabel='';render()">
+          Visa ${esc(a.name)} ändå</button>
+      </div>
+      <p class="muted small" style="margin-top:16px">Har du själv en uppfart här?
+        <button class="lnk" onclick="go('hyrut')">Lägg ut den</button> – den första på orten
+        får alla förare som redan väntar.</p></div>`;
+  }
   return `<div class="empty"><div class="ic">${I("search", 34)}</div>
     <h3>Inga platser matchar</h3>
     <p class="dim small" style="margin-top:8px">Ta bort ett filter eller byt tidsläge.</p>
     <button class="btn btn-sm btn-p" style="margin-top:16px" onclick="clearFilters()">Rensa filter</button></div>`;
+}
+
+/* Bevaka orten man faktiskt står på, inte den man råkar titta på. */
+function bevakaHar() {
+  const a = (S.utanfor && S.utanfor.omrade) || AREAS.find(x => x.id === S.area);
+  if (!a) return;
+  if (!WATCH.includes(a.id)) { WATCH.push(a.id); persist(); }
+  toast("Vi hör av oss när " + a.name + " öppnar", "bell");
+  render();
+}
+/* Prissidan lovar att allt vi tar syns innan man klickar. Då måste det
+   också stå här, ovanför listan – inte först inne på platsen. */
+function prisnotisHTML() {
+  return `<p class="muted small" style="margin:2px 0 12px">
+    Priserna är värdens. Till kommer ${Math.round(FEES.driverPct * 100)} % serviceavgift
+    och ${kr(FEES.tryggShort)} trygghetsgaranti – vid månadshyra
+    ${Math.round(FEES.driverPctMonthly * 100)} % och ${kr(FEES.tryggMonthly)}.</p>`;
 }
 function savingsHTML(list, area) {
   if (S.mode !== "manad" || !list.length) return "";
@@ -720,6 +757,71 @@ function toggleFav(id) {
   if (i < 0) { FAVS.push(id); toast("Sparad", "heart"); } else { FAVS.splice(i, 1); toast("Borttagen", "heart"); }
   persist(); refreshResults();
 }
+/* ============================================================
+   Frågan till styrelsen
+
+   Appen lovade på fyra ställen att vi skickar en färdig fråga
+   åt värden. Det gjorde vi inte. Nu finns den på riktigt.
+   ============================================================ */
+function brfBrevText(namn, adress) {
+  const n = (namn || "").trim() || "[ditt namn]";
+  const a = (adress || "").trim() || "[din adress]";
+  return "Hej,\n\n" +
+    "Jag heter " + n + " och bor på " + a + ".\n\n" +
+    "Jag vill fråga om tillåtelse att hyra ut min parkeringsplats de tider jag inte " +
+    "använder den själv, via tjänsten Parkla.\n\n" +
+    "Några saker som kan vara bra att veta för styrelsen:\n\n" +
+    "• En parkeringsplats utomhus är juridiskt ett lägenhetsarrende. Uthyrning i andra " +
+    "hand kräver därför föreningens tillstånd, och det är därför jag frågar.\n" +
+    "• Alla förare legitimerar sig innan de kan boka. Ingen kan parkera anonymt.\n" +
+    "• Varje bokning omfattas av Parklas trygghetsgaranti, som ersätter skador på " +
+    "egendom upp till 25 000 kr utan självrisk.\n" +
+    "• Jag använder bara min egen plats, aldrig gemensamma ytor.\n" +
+    "• Säger styrelsen ja kan beslutet gälla alla i föreningen, och föreningen kan " +
+    "välja att ta en andel av intäkterna till kassan.\n\n" +
+    "Jag svarar gärna på frågor, och kan ta upp det på nästa möte om ni vill.\n\n" +
+    "Med vänlig hälsning\n" + n;
+}
+
+function openBrfBrev() {
+  openSheet(sheetHead("Frågan till styrelsen") + `<div class="sheet-b stack">
+    <p class="dim">Bor du i bostadsrätt behöver du styrelsens ja. Här är en färdig
+      fråga – fyll i namn och adress, så skriver vi resten.</p>
+    <div class="field"><label>Ditt namn</label>
+      <input class="inp" id="brf-namn" placeholder="Anna Andersson" oninput="brfUppdatera()"></div>
+    <div class="field"><label>Din adress</label>
+      <input class="inp" id="brf-adr" placeholder="Storgatan 1, Stockholm" oninput="brfUppdatera()"></div>
+    <div class="field"><label>Brevet</label>
+      <textarea class="inp" id="brf-text" rows="12" oninput="this.dataset.rord='1'"
+        style="line-height:1.55;resize:vertical">${esc(brfBrevText("", ""))}</textarea></div>
+    <button class="btn btn-p btn-block btn-lg" onclick="brfKopiera()">${I("copy", 17)} Kopiera texten</button>
+    <button class="btn btn-block" onclick="brfMejla()">${I("message", 16)} Öppna i mejlprogrammet</button>
+    <p class="muted small">Texten är din – ändra den precis som du vill innan du skickar.</p>
+  </div>`);
+}
+
+/* Har värden själv skrivit i brevet skriver vi aldrig över det. */
+function brfUppdatera() {
+  const t = document.getElementById("brf-text");
+  if (!t || t.dataset.rord === "1") return;
+  t.value = brfBrevText(document.getElementById("brf-namn").value,
+                        document.getElementById("brf-adr").value);
+}
+
+function brfKopiera() {
+  const t = document.getElementById("brf-text");
+  navigator.clipboard.writeText(t.value)
+    .then(() => toast("Kopierat – klistra in i mejlet", "check"))
+    .catch(() => { t.select(); toast("Markerat – kopiera med Ctrl+C", "info"); });
+}
+
+function brfMejla() {
+  const t = document.getElementById("brf-text");
+  location.href = "mailto:?subject=" +
+    encodeURIComponent("Fråga om uthyrning av min parkeringsplats") +
+    "&body=" + encodeURIComponent(t.value);
+}
+
 function addWatch() {
   const a = AREAS.find(x => x.id === S.area);
   if (!WATCH.includes(a.id)) { WATCH.push(a.id); persist(); }
@@ -776,16 +878,39 @@ function openPlacePicker() {
     <button class="btn btn-p btn-block btn-lg" onclick="closeSheet();render()">Visa platserna</button>
   </div>`);
 }
+/* Vilket område ligger närmast en punkt, och hur långt bort? */
+function narmasteOmrade(ll) {
+  let bast = null, km = Infinity;
+  AREAS.forEach(a => { const d = distKm(ll, a.c); if (d < km) { km = d; bast = a; } });
+  return { omrade: bast, km: Math.round(km) };
+}
+
+/* Längre bort än så här räcker det inte att sortera –
+   då finns Parkla helt enkelt inte där användaren står. */
+const UTANFOR_KM = 45;
+
+function satPosition(ll, etikett) {
+  const n = narmasteOmrade(ll);
+  S.near = ll; S.nearLabel = etikett; S.part = null; S.sort = "avstand";
+  S.utanfor = n.km > UTANFOR_KM ? n : null;
+  /* Listan och kartan MÅSTE visa samma stad. */
+  if (n.omrade) S.area = n.omrade.id;
+  return n;
+}
+
 function usePlacePos() {
   toast("Letar upp var du är …", "target");
   PMap.locate((ll, err) => {
     if (!ll) { toast(err || "Kunde inte hitta dig. Tillåt platstjänster i webbläsaren.", "info"); return; }
-    S.near = ll; S.nearLabel = "Nära mig"; S.part = null; S.sort = "avstand";
-    closeSheet(); render(); toast("Visar platser nära dig", "check");
+    const n = satPosition(ll, "Nära mig");
+    closeSheet(); render();
+    toast(S.utanfor
+      ? "Närmast dig är " + n.omrade.name + ", " + n.km + " km bort"
+      : "Visar platser nära dig", S.utanfor ? "info" : "check");
   });
 }
 function pickCity(id) {
-  S.area = id; SET.city = id; saveSettings();
+  S.area = id; SET.city = id; S.utanfor = null; saveSettings();
   S.near = null; S.nearLabel = ""; S.part = null; S.selSpot = null;
   openPlacePicker();
 }
@@ -815,9 +940,12 @@ function locateMe() {
   toast("Letar upp var du är …", "target");
   PMap.locate((ll, err) => {
     if (!ll) { toast(err || "Kunde inte hitta dig", "info"); return; }
-    S.near = ll; S.nearLabel = "Min position"; S.sort = "avstand";
+    const n = satPosition(ll, "Min position");
     const box = document.getElementById("mapq"); if (box) box.value = "Min position";
-    refreshResults(); toast("Sorterat efter närmast dig", "check");
+    refreshResults();
+    toast(S.utanfor
+      ? "Parkla finns inte här än – närmast är " + n.omrade.name
+      : "Sorterat efter närmast dig", S.utanfor ? "info" : "check");
   });
 }
 function pickSpot(id) {
@@ -1719,7 +1847,7 @@ function renderWizard() {
     `<div class="center"><div class="tick">${I("check", 30)}</div>
        <h3 style="font-family:var(--serif);font-size:1.5rem">Redo att lägga upp</h3>
        <p class="dim small" style="margin-top:8px">${esc(w.ad || "Din adress")} · ${esc(w.type)} · ${num(w.pris)} ${sym()}/mån</p></div>
-     <div class="hint" style="margin-top:18px">${I("info", 17)}<div>I skarpt läge kommer här: BankID, foto på platsen, ditt kontonummer och – om du bor i bostadsrätt – en färdig fråga till styrelsen som vi skickar åt dig.</div></div>`
+     <div class="hint" style="margin-top:18px">${I("info", 17)}<div>I skarpt läge kommer här: BankID, foto på platsen, ditt kontonummer och – om du bor i bostadsrätt – styrelsens ja. <button class="lnk" onclick="openBrfBrev()">Hämta den färdiga frågan</button></div></div>`
   ];
   openSheet(sheetHead(titles[w.step]) + `<div class="sheet-b stack">
     <div class="progress">${titles.map((_, k) => `<i class="${k <= w.step ? "on" : ""}"></i>`).join("")}</div>
@@ -2142,7 +2270,7 @@ function viewTrygg() {
     ["camera", "Foto före och efter", "Båda tar ett kort på platsen. Bilderna får en tidsstämpel och sparas i 90 dagar. Blir det tvist tittar vi på bevis, inte påståenden."],
     ["star", "Betyg åt båda håll", "Förare betygsätts också. Under 4,3 i snitt och man förlorar tillgång till de bästa platserna. Du kan kräva minst 4,5 för att någon ska få boka direkt."],
     ["message", "All kontakt sker i appen", "Vi lämnar aldrig ut ditt telefonnummer. Samtal kopplas via ett växelnummer och chatten sparas."],
-    ["building", "Bor du i bostadsrätt?", "Då måste styrelsen säga ja – en utomhusplats är juridiskt ett lägenhetsarrende. Vi skickar en färdig fråga åt dig. Säger de ja en gång gäller det för alla i föreningen, och föreningen kan ta 10 % av intäkterna till kassan."]
+    ["building", "Bor du i bostadsrätt?", "Då måste styrelsen säga ja – en utomhusplats är juridiskt ett lägenhetsarrende. <button class=\"lnk\" onclick=\"openBrfBrev()\">Hämta en färdig fråga att skicka</button>. Säger de ja en gång gäller det för alla i föreningen, och föreningen kan ta 10 % av intäkterna till kassan."]
   ])}</div>
   <div class="panel pad-lg" style="margin-top:34px;border-color:var(--brass)" data-reveal>
     <div class="row"><span style="color:var(--brass)">${I("bank", 24)}</span><h3>Vem betalar egentligen?</h3></div>
@@ -2224,7 +2352,7 @@ function viewSkatt() {
     ["receipt", "1 · Du får tjäna 40 000 kr skattefritt", "Hyr du ut en plats som hör till din bostad beskattas det som kapitalinkomst, och du får ett schablonavdrag på 40 000 kr. Bor du i småhus får du dessutom dra av 20 % av hyran. I praktiken blir de flesta uppfartsuthyrningar helt skattefria.",
      "Viktigt: du får <b>ett</b> schablonavdrag per bostad och år – även om du både hyr ut rum, säljer solel och hyr ut p-platsen."],
     ["roof", "2 · Bygglov behövs oftast inte", "Du behöver inget bygglov för en p-plats som är till för fastighetens eget behov, på mark där det redan står ett en- eller tvåbostadshus. Bygglov krävs om ytan tillsammans med andra p-platser blir större än 50 m² inom detaljplan (100 m² utanför). Börjar det likna kommersiell parkeringsverksamhet kan kommunen se det som ändrad användning – håll dig till din befintliga uppfart."],
-    ["building", "3 · Bor du i bostadsrätt eller hyresrätt? Fråga först.", "En p-plats utomhus är juridiskt ett lägenhetsarrende. Du får inte hyra ut den i andra hand utan föreningens tillstånd, och styrelsen får säga nej. Samma sak gäller hyresrätt. Vi skickar en färdig fråga till styrelsen åt dig."],
+    ["building", "3 · Bor du i bostadsrätt eller hyresrätt? Fråga först.", "En p-plats utomhus är juridiskt ett lägenhetsarrende. Du får inte hyra ut den i andra hand utan föreningens tillstånd, och styrelsen får säga nej. Samma sak gäller hyresrätt. <button class=\"lnk\" onclick=\"openBrfBrev()\">Hämta en färdig fråga till styrelsen</button>."],
     ["info", "4 · Moms – håll koll på 2027", "Att upplåta en parkeringsplats är i grunden momspliktigt. Som privatperson under omsättningsgränsen behöver du inte momsregistrera dig. Skatteverket har ändrat ställning kring moms på p-platser (tillämpning framflyttad till 1 april 2027) och regeringen tillsatte i mars 2026 en utredning. Vi bevakar och säger till."],
     ["shield", "5 · Vi rapporterar åt dig", "Parkla är en rapporteringsskyldig plattform enligt EU:s DAC7-regler. Vi rapporterar dina intäkter till Skatteverket senast 31 januari varje år och skickar dig samma underlag. Du slipper räkna och slipper överraskningar."],
     ["chart", "6 · Om det blir näringsverksamhet", "Hyr du ut många platser, anlägger nya ytor eller driver det i större skala kan det bedömas som näringsverksamhet – då gäller andra regler. Skattemätaren i appen varnar dig i god tid."]
@@ -2511,7 +2639,7 @@ function viewMer() {
     ["Måste jag vara hemma när någon parkerar?", "Nej. De flesta uthyrningar sker utan att ni ens träffas. Kod, karta och instruktioner finns i appen."],
     ["Hur mycket kan jag tjäna?", "En uppfart i Stockholms innerstad: 1 800–2 500 kr i månaden. Märsta nära Arlanda: 1 200–1 700 kr. Förort: 400–900 kr. Med laddbox ungefär 28 % mer."],
     ["Måste jag betala skatt?", "Oftast inte. Du får tjäna 40 000 kr per bostad och år skattefritt. Appen har en mätare, och vi skickar underlag i januari."],
-    ["Jag bor i bostadsrätt – får jag hyra ut?", "Bara med styrelsens tillstånd. Vi skickar en färdig fråga åt dig."],
+    ["Jag bor i bostadsrätt – får jag hyra ut?", "Bara med styrelsens tillstånd. <button class=\"lnk\" onclick=\"openBrfBrev()\">Hämta en färdig fråga åt dig</button>."],
     ["Vad skiljer Parkla från de som redan finns?", "De är gratis och därför tomma – ingen har råd att lösa problemet. Vi tar betalt från dag ett, satsar allt på ett område i taget och är ensamma om en riktig skadegaranti."],
     ["Vad händer om min bil blir skadad där?", "Din egen bilförsäkring gäller som vanligt. Vår garanti täcker det omvända: skador som din bil orsakar på värdens uppfart eller garage."],
     ["Kan jag hyra ut när jag är bortrest?", "Ja – det är själva poängen. Ställ in dina resdagar eller lägg upp platsen bara när du vet att du är borta."],

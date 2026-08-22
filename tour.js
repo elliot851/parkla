@@ -31,7 +31,9 @@ const Tour = (function () {
     root.querySelector(".tour-skip").onclick = stop;
     root.querySelector(".tour-prev").onclick = () => jump(i - 1);
     root.querySelector(".tour-next").onclick = () => jump(i + 1);
-    root.querySelector(".tour-veil").onclick = stop;
+    /* Slöjan avslutade rundturen. Säger den "tryck här" och man
+       trycker bredvid ska turen leva vidare – inte försvinna.
+       Vill man ut finns Hoppa över-knappen. */
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, { passive: true });
   }
