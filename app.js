@@ -2343,7 +2343,7 @@ function viewTrygg() {
       <li><span class="n">03</span><div><b>Sedan kräver vi föraren</b>
         <p>Vi tar över kravet. Kan föraren inte betala är det <b>vår förlust, inte din</b>. Det är precis det du betalar trygghetsavgiften för: ${kr(FEES.tryggShort)} per bokning eller ${kr(FEES.tryggMonthly)} i månaden.</p></div></li>
     </ul>
-    <div class="callout brass" style="margin-top:16px"><b>Viktigt att vara korrekt med:</b> det här är en <b>garanti från Parkla</b>, inte en försäkring. Att kalla något försäkring kräver tillstånd från Finansinspektionen. Garantin ska backas av en riktig försäkringspartner innan vi öppnar. Är den inte det då, tar vi bort avgiften – vi tänker inte ta betalt för ett skydd som inte finns.</div>
+    <div class="callout brass" style="margin-top:16px"><b>Viktigt att vara korrekt med:</b> det här är en <b>garanti från Parkla</b>, inte en försäkring. Att kalla något försäkring kräver tillstånd från Finansinspektionen. Garantin ska backas av en riktig försäkringspartner innan vi öppnar.</div>
   </div>
 
   <button class="btn" style="margin-top:26px" data-go="brf">Läs mer för bostadsrättsföreningar${I("arrow", 16, "arw")}</button>
