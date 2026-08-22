@@ -3152,7 +3152,10 @@ function skarptPanelHTML() {
           <button class="btn btn-sm" onclick="PAPI.loggaUt();render()">Logga ut</button></div>`
         : `<div class="setrow"><span style="color:var(--ink-45)">${I("users", 20)}</span>
           <div class="t"><b>Inte inloggad</b><span>Krävs för att boka och hyra ut</span></div>
-          <button class="btn btn-p btn-sm" onclick="openLogin()">Logga in</button></div>`}
+          <div class="row" style="gap:8px">
+            <button class="btn btn-p btn-sm" onclick="openLogin()">Logga in</button>
+            <button class="btn btn-sm" onclick="openSkapaKonto()">Skapa konto</button>
+          </div></div>`}
     </div>` : ""}
   </div>`;
 }
@@ -3193,54 +3196,199 @@ function loginFel(m) {
   if (f) { f.textContent = m; f.hidden = false; }
 }
 
+/* ══════════════════════════════════════════════════════════
+   KONTO — e-post och lösenord
+
+   Skapa konto → bekräftelsemejl → logga in.
+   Ögat visar lösenordet. Glömt lösenord skickar en länk som
+   landar här igen och öppnar "välj nytt lösenord".
+   ══════════════════════════════════════════════════════════ */
+
+/* Fältet med ögat. type växlas mellan password och text. */
+function losenFalt(id, label, autocomplete) {
+  return `<div class="field"><label>${label}</label>
+    <div class="pwwrap">
+      <input class="inp" id="${id}" type="password" autocomplete="${autocomplete}"
+        placeholder="Minst 8 tecken">
+      <button type="button" class="pweye" aria-label="Visa lösenordet"
+        onclick="togglaLosen('${id}', this)">${I("eye", 18)}</button>
+    </div></div>`;
+}
+
+function togglaLosen(id, knapp) {
+  const f = document.getElementById(id); if (!f) return;
+  const visas = f.type === "text";
+  f.type = visas ? "password" : "text";
+  knapp.classList.toggle("on", !visas);
+  knapp.setAttribute("aria-label", visas ? "Visa lösenordet" : "Dölj lösenordet");
+  f.focus();
+}
+
+function epostOk(e) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e); }
+
+/* ── Logga in ── */
 function openLogin(efterat) {
   LOGIN_EFTER = typeof efterat === "function" ? efterat : null;
   openSheet(sheetHead("Logga in") + `<div class="sheet-b stack">
-    <p class="dim">Vi skickar en sexsiffrig kod till din mejl. Inget lösenord att komma ihåg.</p>
     <div class="field"><label>E-post</label>
       <input class="inp" id="log-epost" type="email" inputmode="email" autocomplete="email"
-        placeholder="du@exempel.se" onkeydown="if(event.key==='Enter')loginSkicka(this.parentNode.parentNode.querySelector('.btn-p'))"></div>
+        placeholder="du@exempel.se" value="${esc(LOGIN_EPOST)}"></div>
+    ${losenFalt("log-losen", "Lösenord", "current-password")}
     <div class="paysheet-fel" id="log-fel" hidden></div>
-    <button class="btn btn-p btn-lg" style="width:100%" onclick="loginSkicka(this)">Skicka koden</button>
+    <button class="btn btn-p btn-lg" style="width:100%" onclick="loggaInNu(this)">Logga in</button>
+    <div class="row" style="justify-content:space-between">
+      <button class="lnk" onclick="openGlomt()">Glömt lösenordet?</button>
+      <button class="lnk" onclick="openSkapaKonto(LOGIN_EFTER)">Ny här? Skapa konto</button>
+    </div>
   </div>`);
-  setTimeout(() => { const e = document.getElementById("log-epost"); if (e) e.focus(); }, 260);
+  const lf = document.getElementById("log-losen");
+  if (lf) lf.addEventListener("keydown", e => { if (e.key === "Enter") loggaInNu(); });
+  setTimeout(() => { const e = document.getElementById("log-epost"); if (e && !e.value) e.focus(); }, 260);
 }
 
-function loginSkicka(knapp) {
+function loggaInNu(knapp) {
   const e = (document.getElementById("log-epost").value || "").trim();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return loginFel("Skriv en riktig mejladress.");
+  const p = document.getElementById("log-losen").value || "";
+  if (!epostOk(e)) return loginFel("Skriv en riktig mejladress.");
+  if (!p) return loginFel("Skriv ditt lösenord.");
   LOGIN_EPOST = e;
-  if (knapp) { knapp.disabled = true; knapp.textContent = "Skickar…"; }
-  PAPI.skickaKod(e).then(() => {
-    openSheet(sheetHead("Kolla mejlen") + `<div class="sheet-b stack">
-      <p class="dim">Vi skickade en kod till <b>${esc(e)}</b>.</p>
-      <div class="field"><label>Koden</label>
-        <input class="inp mono" id="log-kod" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
-          placeholder="123456" style="font-size:1.55rem;letter-spacing:.3em;text-align:center"
-          oninput="if(this.value.length===6)loginVerifiera(this.parentNode.parentNode.querySelector('.btn-p'))"></div>
-      <div class="paysheet-fel" id="log-fel" hidden></div>
-      <button class="btn btn-p btn-lg" style="width:100%" onclick="loginVerifiera(this)">Logga in</button>
-      <button class="btn" style="width:100%" onclick="openLogin(LOGIN_EFTER)">Byt mejladress</button>
-    </div>`);
-    setTimeout(() => { const k = document.getElementById("log-kod"); if (k) k.focus(); }, 260);
+  if (knapp) { knapp.disabled = true; knapp.textContent = "Loggar in…"; }
+  PAPI.loggaIn(e, p).then(() => {
+    closeSheet(); toast("Inloggad", "check");
+    const f = LOGIN_EFTER; LOGIN_EFTER = null;
+    render(); if (typeof f === "function") setTimeout(f, 120);
   }).catch(err => {
-    loginFel(err.message);
-    if (knapp) { knapp.disabled = false; knapp.textContent = "Skicka koden"; }
+    if (knapp) { knapp.disabled = false; knapp.textContent = "Logga in"; }
+    if (/not confirmed/i.test(err.message)) {
+      return loginFelMedKnapp("Mejlen är inte bekräftad än. Kolla inkorgen – eller",
+        "Skicka bekräftelsen igen", () => skickaBekraftelse(e));
+    }
+    loginFel(/invalid/i.test(err.message)
+      ? "Fel mejl eller lösenord. Försök igen."
+      : err.message);
   });
 }
 
-function loginVerifiera(knapp) {
-  const k = (document.getElementById("log-kod").value || "").trim();
-  if (!/^\d{6}$/.test(k)) return loginFel("Koden är sex siffror.");
-  if (knapp) { knapp.disabled = true; knapp.textContent = "Loggar in…"; }
-  PAPI.verifieraKod(LOGIN_EPOST, k).then(() => {
-    closeSheet(); toast("Inloggad", "check");
-    const f = LOGIN_EFTER; LOGIN_EFTER = null;
-    render();
-    if (typeof f === "function") setTimeout(f, 120);
+function loginFelMedKnapp(text, knappText, fn) {
+  const f = document.getElementById("log-fel"); if (!f) return;
+  f.innerHTML = esc(text) + ' <button class="lnk" id="log-fel-btn">' + esc(knappText) + "</button>";
+  f.hidden = false;
+  document.getElementById("log-fel-btn").onclick = fn;
+}
+
+function skickaBekraftelse(e) {
+  PAPI.skickaBekraftelseIgen(e)
+    .then(() => toast("Skickat – kolla inkorgen", "check"))
+    .catch(err => toast(err.message, "info"));
+}
+
+/* ── Skapa konto ── */
+function openSkapaKonto(efterat) {
+  LOGIN_EFTER = typeof efterat === "function" ? efterat : null;
+  openSheet(sheetHead("Skapa konto") + `<div class="sheet-b stack">
+    <div class="field"><label>Namn</label>
+      <input class="inp" id="reg-namn" autocomplete="name" placeholder="För- och efternamn"></div>
+    <div class="field"><label>E-post</label>
+      <input class="inp" id="reg-epost" type="email" inputmode="email" autocomplete="email"
+        placeholder="du@exempel.se"></div>
+    ${losenFalt("reg-losen", "Välj lösenord", "new-password")}
+    <div class="paysheet-fel" id="log-fel" hidden></div>
+    <button class="btn btn-p btn-lg" style="width:100%" onclick="skapaKontoNu(this)">Skapa kontot</button>
+    <button class="lnk" style="align-self:center" onclick="openLogin(LOGIN_EFTER)">Har du redan ett konto? Logga in</button>
+  </div>`);
+  setTimeout(() => { const n = document.getElementById("reg-namn"); if (n) n.focus(); }, 260);
+}
+
+function skapaKontoNu(knapp) {
+  const namn = (document.getElementById("reg-namn").value || "").trim();
+  const e = (document.getElementById("reg-epost").value || "").trim();
+  const p = document.getElementById("reg-losen").value || "";
+  if (namn.length < 2) return loginFel("Skriv ditt namn.");
+  if (!epostOk(e)) return loginFel("Skriv en riktig mejladress.");
+  if (p.length < 8) return loginFel("Lösenordet behöver minst 8 tecken.");
+  LOGIN_EPOST = e;
+  if (knapp) { knapp.disabled = true; knapp.textContent = "Skapar kontot…"; }
+  PAPI.registrera(e, p, namn).then(r => {
+    if (r.klar) {
+      closeSheet(); toast("Välkommen till Parkla", "check");
+      const f = LOGIN_EFTER; LOGIN_EFTER = null;
+      render(); if (typeof f === "function") setTimeout(f, 120);
+      return;
+    }
+    openSheet(sheetHead("Bekräfta din mejl") + `<div class="sheet-b center" style="padding-top:26px">
+      <div class="tick" style="background:var(--pine)">${I("message", 28)}</div>
+      <h3 style="font-family:var(--display);font-size:1.4rem;margin-top:16px">Ett mejl är på väg</h3>
+      <p class="dim" style="margin-top:10px;max-width:38ch;margin-inline:auto">Vi skickade en länk till
+        <b>${esc(e)}</b>. Tryck på den så är kontot klart – sedan loggar du in här.</p>
+      <button class="btn btn-p btn-block btn-lg" style="margin-top:22px" onclick="openLogin(LOGIN_EFTER)">Till inloggningen</button>
+      <button class="lnk" style="margin-top:12px" onclick="skickaBekraftelse('${esc(e)}')">Fick du inget mejl? Skicka igen</button>
+    </div>`);
   }).catch(err => {
-    loginFel(err.message || "Fel kod. Försök igen.");
-    if (knapp) { knapp.disabled = false; knapp.textContent = "Logga in"; }
+    if (knapp) { knapp.disabled = false; knapp.textContent = "Skapa kontot"; }
+    loginFel(/already registered|already been registered/i.test(err.message)
+      ? "Den mejladressen har redan ett konto. Logga in i stället."
+      : err.message);
+  });
+}
+
+/* ── Glömt lösenordet ── */
+function openGlomt() {
+  openSheet(sheetHead("Glömt lösenordet") + `<div class="sheet-b stack">
+    <p class="dim">Skriv din mejladress så skickar vi en länk där du väljer ett nytt.</p>
+    <div class="field"><label>E-post</label>
+      <input class="inp" id="glm-epost" type="email" inputmode="email" autocomplete="email"
+        placeholder="du@exempel.se" value="${esc(LOGIN_EPOST)}"></div>
+    <div class="paysheet-fel" id="log-fel" hidden></div>
+    <button class="btn btn-p btn-lg" style="width:100%" onclick="glomtSkicka(this)">Skicka länken</button>
+    <button class="lnk" style="align-self:center" onclick="openLogin(LOGIN_EFTER)">Tillbaka till inloggningen</button>
+  </div>`);
+  setTimeout(() => { const e = document.getElementById("glm-epost"); if (e && !e.value) e.focus(); }, 260);
+}
+
+function glomtSkicka(knapp) {
+  const e = (document.getElementById("glm-epost").value || "").trim();
+  if (!epostOk(e)) return loginFel("Skriv en riktig mejladress.");
+  LOGIN_EPOST = e;
+  if (knapp) { knapp.disabled = true; knapp.textContent = "Skickar…"; }
+  PAPI.glomtLosen(e).then(() => {
+    openSheet(sheetHead("Kolla mejlen") + `<div class="sheet-b center" style="padding-top:26px">
+      <div class="tick" style="background:var(--pine)">${I("message", 28)}</div>
+      <p class="dim" style="margin-top:16px;max-width:38ch;margin-inline:auto">Finns det ett konto på
+        <b>${esc(e)}</b> ligger en återställningslänk i inkorgen inom någon minut.</p>
+      <button class="btn btn-block" style="margin-top:22px" onclick="closeSheet()">Stäng</button>
+    </div>`);
+  }).catch(err => {
+    if (knapp) { knapp.disabled = false; knapp.textContent = "Skicka länken"; }
+    loginFel(err.message);
+  });
+}
+
+/* ── Nytt lösenord — hit landar återställningslänken ── */
+function openNyttLosen(bearer) {
+  openSheet(sheetHead("Välj nytt lösenord") + `<div class="sheet-b stack">
+    ${losenFalt("nyl-losen", "Nytt lösenord", "new-password")}
+    ${losenFalt("nyl-losen2", "Samma en gång till", "new-password")}
+    <div class="paysheet-fel" id="log-fel" hidden></div>
+    <button class="btn btn-p btn-lg" style="width:100%" onclick="sparaNyttLosen(this, '${esc(bearer)}')">Byt lösenordet</button>
+  </div>`);
+  setTimeout(() => { const f = document.getElementById("nyl-losen"); if (f) f.focus(); }, 260);
+}
+
+function sparaNyttLosen(knapp, bearer) {
+  const p1 = document.getElementById("nyl-losen").value || "";
+  const p2 = document.getElementById("nyl-losen2").value || "";
+  if (p1.length < 8) return loginFel("Minst 8 tecken.");
+  if (p1 !== p2) return loginFel("Lösenorden är inte likadana.");
+  if (knapp) { knapp.disabled = true; knapp.textContent = "Byter…"; }
+  PAPI.sattNyttLosen(p1, bearer).then(u => {
+    /* Återställningstokenet ÄR en session — logga in direkt. */
+    PAPI.setSessRaw({ token: bearer, refresh: (window.__AUTH || {}).refresh_token || "",
+      gar_ut: Date.now() + 3000 * 1000, user: u });
+    window.__AUTH = null;
+    closeSheet(); toast("Lösenordet är bytt – du är inloggad", "check"); render();
+  }).catch(err => {
+    if (knapp) { knapp.disabled = false; knapp.textContent = "Byt lösenordet"; }
+    loginFel(err.message);
   });
 }
 

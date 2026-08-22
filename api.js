@@ -56,7 +56,78 @@
     });
   }
 
-  /* Sexsiffrig kod till mejlen — inga lösenord att glömma. */
+  /* Vart bekräftelse- och återställningslänkarna ska landa. */
+  function returAdress() {
+    return location.origin + location.pathname;
+  }
+
+  /* Anrop som bär ett eget token (återställningslänkens). */
+  function gotrueMed(vag, kropp, metod, bearer) {
+    var c = cfg();
+    return fetch(c.url + "/auth/v1/" + vag, {
+      method: metod || "POST",
+      headers: { "apikey": c.anon, "Authorization": "Bearer " + bearer, "Content-Type": "application/json" },
+      body: JSON.stringify(kropp)
+    }).then(function (r) {
+      return r.json().then(function (j) {
+        if (!r.ok) throw new Error(j.error_description || j.msg || j.error || "Något gick fel");
+        return j;
+      });
+    });
+  }
+
+  /* ── Konto med lösenord ─────────────────────────────── */
+
+  function registrera(epost, losen, namn) {
+    return gotrue("signup?redirect_to=" + encodeURIComponent(returAdress()), {
+      email: epost, password: losen, data: { namn: namn || "" }
+    }).then(function (j) {
+      /* Är mejlbekräftelse avstängd kommer en session direkt. */
+      if (j.access_token) {
+        setSess({ token: j.access_token, refresh: j.refresh_token,
+          gar_ut: Date.now() + (j.expires_in - 60) * 1000, user: j.user });
+        return { klar: true, user: j.user };
+      }
+      return { klar: false, user: j.user || j };   /* bekräftelse krävs */
+    });
+  }
+
+  function loggaIn(epost, losen) {
+    return gotrue("token?grant_type=password", { email: epost, password: losen })
+      .then(function (j) {
+        setSess({ token: j.access_token, refresh: j.refresh_token,
+          gar_ut: Date.now() + (j.expires_in - 60) * 1000, user: j.user });
+        return j.user;
+      });
+  }
+
+  function glomtLosen(epost) {
+    return gotrue("recover?redirect_to=" + encodeURIComponent(returAdress()), { email: epost });
+  }
+
+  function sattNyttLosen(nytt, bearer) {
+    return gotrueMed("user", { password: nytt }, "PUT", bearer);
+  }
+
+  /* Sessionen fran en mejllank saknar user-objektet — hamta det. */
+  function hamtaMig() {
+    var s = sess();
+    if (!s || s.user) return Promise.resolve(s ? s.user : null);
+    var c = cfg();
+    return fetch(c.url + "/auth/v1/user", {
+      headers: { "apikey": c.anon, "Authorization": "Bearer " + s.token }
+    }).then(function (r) { return r.json(); }).then(function (u) {
+      if (u && u.id) { s.user = u; setSess(s); return u; }
+      return null;
+    }).catch(function () { return null; });
+  }
+
+  function skickaBekraftelseIgen(epost) {
+    return gotrue("resend", { type: "signup", email: epost,
+      options: { email_redirect_to: returAdress() } });
+  }
+
+  /* Sexsiffrig kod till mejlen — reservväg utan lösenord. */
   function skickaKod(epost) {
     return gotrue("otp", { email: epost, create_user: true });
   }
@@ -360,9 +431,32 @@
     }) + " kr";
   }
 
+  /* Bekräftelse- och återställningslänkar landar med tokens i #hash.
+     Fånga dem här — api.js laddar före appens router. */
+  (function () {
+    var h = location.hash || "";
+    if (h.indexOf("access_token=") === -1 && h.indexOf("error=") === -1) return;
+    var p = {};
+    h.replace(/^#/, "").split("&").forEach(function (par) {
+      var i = par.indexOf("=");
+      if (i > 0) p[par.slice(0, i)] = decodeURIComponent(par.slice(i + 1));
+    });
+    window.__AUTH = p;
+    /* Städa adressraden så tokens inte blir kvar i historiken. */
+    history.replaceState(null, "", location.pathname + location.search);
+    if (p.type !== "recovery" && p.access_token) {
+      /* Bekräftad mejl → sessionen gäller direkt. */
+      setSess({ token: p.access_token, refresh: p.refresh_token || "",
+        gar_ut: Date.now() + ((+p.expires_in || 3600) - 60) * 1000, user: null });
+    }
+  })();
+
   window.PAPI = {
     pa: pa, cfg: cfg, setCfg: setCfg,
     skickaKod: skickaKod, verifieraKod: verifieraKod, loggaUt: loggaUt, jag: jag,
+    registrera: registrera, loggaIn: loggaIn, glomtLosen: glomtLosen,
+    sattNyttLosen: sattNyttLosen, skickaBekraftelseIgen: skickaBekraftelseIgen,
+    setSessRaw: setSess, hamtaMig: hamtaMig,
     platserIRutan: platserIRutan, minaPlatser: minaPlatser,
     sparaPlats: sparaPlats, taBortPlats: taBortPlats,
     blockeraDag: blockeraDag, sattDagspris: sattDagspris,

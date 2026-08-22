@@ -262,6 +262,21 @@
 
   function boot() {
     if (!pa()) return;
+
+    /* Mejllänkar: återställning öppnar "nytt lösenord",
+       bekräftelse loggar in och hälsar välkommen. */
+    var au = window.__AUTH;
+    if (au && au.error_description) {
+      toast(au.error_description.replace(/\+/g, " "), "info");
+      window.__AUTH = null;
+    } else if (au && au.type === "recovery" && au.access_token) {
+      setTimeout(function () { openNyttLosen(au.access_token); }, 300);
+    } else if (au && au.access_token) {
+      window.__AUTH = null;
+      PAPI.hamtaMig().then(function (u) {
+        if (u) { toast("Mejlen är bekräftad – välkommen till Parkla", "check"); render(); }
+      });
+    }
     laddaPlatser();
     if (!inne()) return;
 
