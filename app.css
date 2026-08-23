@@ -468,14 +468,15 @@ ul.numlist{padding:0;margin:0}
 .scrim.on{opacity:1;pointer-events:auto}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:95;background:var(--paper);
   border-radius:var(--r-lg) var(--r-lg) 0 0;box-shadow:var(--lift-2);
-  transform:translateY(101%);transition:transform .42s cubic-bezier(.22,1,.28,1);
+  transform:translateY(101%);transition:transform .42s cubic-bezier(.22,1,.28,1),opacity .3s ease;
+  pointer-events:none;   /* stängt ark fangar aldrig klick — annars doda knappar under det */
   max-height:93vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding-bottom:calc(24px + env(safe-area-inset-bottom))}
-.sheet.on{transform:translateY(0)}
+.sheet.on{transform:translateY(0);pointer-events:auto}
 @media(min-width:780px){
   .sheet{left:50%;right:auto;bottom:auto;top:50%;width:580px;max-width:calc(100vw - 48px);
     border-radius:var(--r-md);transform:translate(-50%,-47%) scale(.98);opacity:0;max-height:88vh}
-  .sheet.on{transform:translate(-50%,-50%) scale(1);opacity:1}
+  .sheet.on{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
 }
 .sheet-h{position:sticky;top:0;z-index:3;background:var(--paper);padding:20px 24px 15px;
   border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:14px}
