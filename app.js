@@ -33,7 +33,7 @@ function applyTheme() {
   /* rem räknas mot <html>, inte <body> — skalan måste sitta på roten. */
   el.style.fontSize = SET.bigText ? "18px" : "";
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue("--paper").trim() || "#F4F1E9";
+  if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue("--paper").trim() || "#F5F7F6";
 }
 
 let BOOKINGS = LS.get("bookings", []);
