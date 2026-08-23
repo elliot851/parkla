@@ -183,7 +183,6 @@ function footerHTML() {
       <li><a href="#brf" data-go="brf">BRF och fastighet</a></li>
       <li><a href="#bjudin" data-go="bjudin">Bjud in en vän</a></li></ul></div>
     <div><h5>Parkla</h5><ul>
-      <li><a href="#affar" data-go="affar">Affärsmodell</a></li>
       <li><a href="#installningar" data-go="installningar">Inställningar</a></li>
       <li><a href="#mer" data-go="mer">Vanliga frågor</a></li>
       <li>hej@parkla.se</li></ul></div>
@@ -213,7 +212,7 @@ ${liveBanner()}
     <p class="lede" style="margin-top:26px" data-reveal>Har du en ledig plats framför huset? Lägg upp den. Någon som behöver parkera betalar dig varje månad. Vi sköter pengarna, legitimeringen och tryggheten.</p>
     <div class="hero-cta" data-reveal style="--d:120ms">
       <button class="btn btn-p btn-lg" data-go="hyrut">${I("wallet", 18)}Se vad min plats är värd${I("arrow", 17, "arw")}</button>
-      <button class="btn btn-lg" onclick="document.getElementById('kartan').scrollIntoView({behavior:'smooth',block:'start'})">${I("search", 18)}Se lediga platser</button>
+      <button class="btn btn-lg" data-go="sok">${I("search", 18)}Se lediga platser</button>
     </div>
     <div class="trustrow" data-reveal style="--d:150ms">
       <span>${I("shield", 16)} BankID vid lansering</span>
@@ -2456,7 +2455,6 @@ function viewPriser() {
     <div class="panel pad-lg" data-reveal>
       <h3>Varför ingen månadsavgift?</h3>
       <p class="dim" style="margin-top:10px">Vi har räknat på det. En abonnemangsavgift dödar en marknadsplats innan den kommit igång – varje krona i inträde är en anledning att låta bli. Vi tar betalt per bokning, och säljer abonnemang till dem som har råd: bostadsrättsföreningar och fastighetsägare.</p>
-      <button class="btn btn-sm" style="margin-top:16px" data-go="affar">Se hela affärsmodellen${I("arrow", 15, "arw")}</button>
     </div>
     <div class="panel pad-lg" data-reveal>
       <h3>Ingen reklam i appen</h3>
@@ -2763,7 +2761,6 @@ function viewMer() {
     ["skatt", "receipt", "Skatt och regler", "40 000 kr skattefritt, bygglov, förening"],
     ["brf", "building", "För föreningar", "Fyll era tomma platser"],
     ["bjudin", "gift", "Bjud in en vän", `Ge ${num(FEES.refForare)} ${sym()}, få ${num(FEES.refVard)} ${sym()}`],
-    ["affar", "chart", "Affärsmodell", "Hur Parkla tjänar pengar"]
   ];
   const faq = [
     ["Vad händer om någon inte flyttar bilen?", `Du trycker på ”Flytta bilen”. Vi kontaktar föraren, parkeringen avslutas på sekunden, och står bilen kvar efter fyrtiofem minuter kostar det ${kr(FEES.overtidPerTimme)} per påbörjad timme – hela beloppet till dig. Bärgning kan vi inte lova: att flytta ett fordon från tomtmark är kommunens eller Polisens sak, på markägarens begäran.`],
