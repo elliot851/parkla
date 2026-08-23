@@ -1450,7 +1450,9 @@ function renderBooking() {
       ${dots(1)}
       <div>
         <h3 style="font-size:1.3rem">N\u00e4r vill du parkera?</h3>
-        <p class="muted small" style="margin-top:5px">Tv\u00e5 steg. Du betalar f\u00f6rst n\u00e4r v\u00e4rden sagt ja.</p>
+        <p class="muted small" style="margin-top:5px">${needsApproval(s, S.mode)
+          ? "Berätta när du vill stå. Pengarna dras först när värden sagt ja."
+          : "Berätta när du vill stå. Betalningen dras direkt och koden kommer på en gång."}</p>
       </div>
 
       <div class="field"><label>Fr\u00e5n vilken dag?</label>
