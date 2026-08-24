@@ -297,7 +297,7 @@ ${liveBanner()}
         <button class="${SET.mapMode !== "satellit" ? "on" : ""}" onclick="setMapMode('karta')">${I("map", 14)} Karta</button>
         <button class="${SET.mapMode === "satellit" ? "on" : ""}" onclick="setMapMode('satellit')">${I("layers", 14)} Satellit</button>
       </div>
-      <button class="mbtn" onclick="locateMe()" title="Var är jag?">${I("target", 19)}</button>
+      <button class="mbtn" onclick="locateMe()" aria-label="Visa var jag är" title="Var är jag?">${I("target", 19)}</button>
     </div>
     <div class="maplegend">
       <span class="l-free"><i></i>Ledig nu</span>
@@ -643,7 +643,7 @@ function sokBodyHTML(list, area) {
   <div class="mapwrap short" style="margin-bottom:18px">
     <div id="lmap" class="leafletmap"></div>
     <div class="mapui bl"><span class="mapnote" style="position:static">${esc(area.name)}</span></div>
-    <div class="mapui tr"><button class="mbtn" onclick="setView('karta')" title="Öppna stor karta">${I("external", 18)}</button></div>
+    <div class="mapui tr"><button class="mbtn" onclick="setView('karta')" aria-label="Öppna stora kartan" title="Öppna stor karta">${I("external", 18)}</button></div>
   </div>
   <div class="spread" style="margin-bottom:6px">
     <h3>${list.length} ${esc(t("free_spots"))}</h3>
