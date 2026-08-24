@@ -34,6 +34,7 @@ function saveSettings() { LS.set("settings", SET); applyTheme(); }
 function initMetaPixel() {
   const id = (SET.metaPixel || "").trim();
   if (!/^\d{6,20}$/.test(id) || window.__fbqLoaded) return;
+  if (CONSENT !== "yes") return;   /* ingen spårning utan samtycke */
   window.__fbqLoaded = true;
   !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
@@ -45,6 +46,33 @@ function initMetaPixel() {
 }
 function pixelLead(typ) {
   if (window.fbq) try { fbq("track", "Lead", { content_name: typ === "vard" ? "host_waitlist" : "driver_waitlist" }); } catch (e) {}
+}
+
+/* ── Samtyckesruta ─────────────────────────────────────────
+   Visas BARA om ett Meta Pixel-ID är satt och inget val gjorts.
+   Inget spårar förrän man aktivt tryckt Godkänn. Neka är lika
+   lätt som Godkänn (GDPR). */
+function needConsent() { return !!(SET.metaPixel || "").trim() && CONSENT === null; }
+function renderConsent() {
+  let el = document.getElementById("consentbar");
+  if (!needConsent()) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement("div"); el.id = "consentbar"; document.body.appendChild(el); }
+  el.className = "consentbar";
+  el.innerHTML = `<div class="consent-in">
+    <p>Vi vill använda en pixel från Meta (Facebook) för att mäta hur våra annonser fungerar. Du bestämmer – appen fungerar lika bra utan.
+      <button class="lnk" onclick="setConsent(null);go('integritet')">Läs mer</button></p>
+    <div class="consent-btns">
+      <button class="btn btn-sm" onclick="setConsent('no')">Neka</button>
+      <button class="btn btn-sm consent-ok" onclick="setConsent('yes')">Godkänn</button>
+    </div>
+  </div>`;
+}
+function setConsent(v) {
+  if (v === null) { const e = document.getElementById("consentbar"); if (e) e.remove(); return; }
+  CONSENT = v; LS.set("consent", v);
+  const e = document.getElementById("consentbar"); if (e) e.remove();
+  if (v === "yes") initMetaPixel();
+  toast(v === "yes" ? "Tack – du kan ändra dig i integritetspolicyn" : "Ingen spårning – noterat", "check");
 }
 function applyTheme() {
   const el = document.documentElement;
@@ -2678,7 +2706,7 @@ function viewInstallningar() {
       <input class="inp mono" id="metapixel" placeholder="t.ex. 123456789012345" value="${esc(SET.metaPixel || "")}"></div>
     <p class="muted small" style="margin-top:8px">Skapa en pixel i Meta Events Manager, klistra in ID:t här, så mäts besök och anmälningar (Lead) för dina annonser. <b>Obs:</b> pixeln är en marknadsföringscookie – uppdatera integritetspolicyn och lägg en samtyckesruta innan du kör skarpt.</p>
     <div class="row wrap" style="margin-top:12px">
-      <button class="btn btn-sm btn-p" onclick="SET.metaPixel=(document.getElementById('metapixel').value||'').replace(/\D/g,'');saveSettings();initMetaPixel();toast(SET.metaPixel?'Pixel sparad':'Pixel avstängd','check')">Spara pixeln</button>
+      <button class="btn btn-sm btn-p" onclick="SET.metaPixel=(document.getElementById('metapixel').value||'').replace(/\D/g,'');saveSettings();renderConsent();initMetaPixel();toast(SET.metaPixel?'Pixel sparad':'Pixel avstängd','check')">Spara pixeln</button>
     </div>
   </div>
 
@@ -2916,6 +2944,7 @@ ${footerHTML()}`;
    TIDIG TILLGÅNG — det som faktiskt kan släppas innan betalning finns
    ============================================================ */
 let LEADS = LS.get("leads", []);
+let CONSENT = LS.get("consent", null);   /* "yes" | "no" | null */
 let SESSION = LS.get("session", null);   /* { spotId, state:"pahagg"|"star", start, hold } */
 function saveSession() { LS.set("session", SESSION); }
 
@@ -3522,6 +3551,7 @@ function render() {
   document.documentElement.lang = SET.lang;
   observeReveals();
   countUps();
+  renderConsent();
   if (S.route === "sok") setTimeout(() => mountMap("lmap", { fit: S.view === "lista", pad: 30 }), 40);
   if (S.route === "start") setTimeout(() => mountMap("hmap", { fit: true, pad: 46, onPick: openSpot }), 60);
   if (typeof Tour !== "undefined" && Tour.active()) setTimeout(Tour.place, 120);

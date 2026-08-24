@@ -455,3 +455,25 @@ body.harsession{padding-bottom:calc(128px + env(safe-area-inset-bottom))}
   border-color:color-mix(in srgb, #E8C766 34%, transparent);
 }
 :root[data-theme="dark"] .tag.grundare svg{ stroke:#E8C766 }
+
+/* ============================================================
+   Samtyckesruta (cookie/pixel) — visas bara när pixel är satt
+   ============================================================ */
+.consentbar{
+  position:fixed; left:0; right:0; z-index:80;
+  bottom:calc(70px + env(safe-area-inset-bottom));
+  display:flex; justify-content:center; padding:0 12px;
+  pointer-events:none;
+}
+@media(min-width:981px){ .consentbar{ bottom:20px } }
+.consent-in{
+  pointer-events:auto; width:100%; max-width:560px;
+  background:var(--card); border:1px solid var(--rule); border-radius:16px;
+  box-shadow:var(--lift-2); padding:14px 16px;
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+}
+.consent-in p{ flex:1; min-width:200px; margin:0; font-size:.86rem; line-height:1.45; color:var(--ink-70,var(--ink)) }
+.consent-btns{ display:flex; gap:8px; flex:none }
+.consent-btns .btn{ min-height:40px }
+.consent-ok{ color:var(--green); border-color:color-mix(in srgb,var(--green) 40%,transparent) }
+.consent-ok:hover{ background:var(--green-wash) }
