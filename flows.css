@@ -439,3 +439,19 @@ body.harsession{padding-bottom:calc(128px + env(safe-area-inset-bottom))}
 .pweye:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 6%,transparent)}
 .pweye.on{color:var(--green)}
 .pweye:active{transform:translateY(-50%) scale(.92)}
+
+/* ============================================================
+   Grundare-badge — guld, för de första värdarna
+   ============================================================ */
+.tag.grundare{
+  background:linear-gradient(180deg, color-mix(in srgb, var(--brass) 20%, transparent), color-mix(in srgb, var(--brass) 12%, transparent));
+  color:var(--brass);
+  border-color:color-mix(in srgb, var(--brass) 40%, transparent);
+  font-weight:600;
+}
+.tag.grundare svg{ stroke:var(--brass) }
+:root[data-theme="dark"] .tag.grundare{
+  color:#E8C766;
+  border-color:color-mix(in srgb, #E8C766 34%, transparent);
+}
+:root[data-theme="dark"] .tag.grundare svg{ stroke:#E8C766 }

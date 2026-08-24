@@ -409,7 +409,7 @@ function listingToSpot(l) {
     rate: 5, n: 0, host: "Du", hostSince: new Date().getFullYear(),
     charge: !!l.charger, feat: feat.length ? feat : ["Ny plats"], size: l.size || "Personbil",
     walk: 0, ll: l.ll || (AREAS.find(a => a.id === (l.area || SET.city)) || AREAS[0]).c,
-    instr: l.info || "Instruktion saknas ännu.", paused: l.paused
+    instr: l.info || "Instruktion saknas ännu.", paused: l.paused, grundare: !!l.grundare
   };
 }
 function allSpots() {
@@ -658,6 +658,10 @@ function sokBodyHTML(list, area) {
   </div>`;
 }
 
+/* Grundare = en av de första värdarna. Guldbadge, syns som social proof. */
+function isGrundare(s) { return !!(s && s.grundare); }
+function grundareBadge() { return `<span class="tag grundare">${I("leaf", 11)} Grundare</span>`; }
+
 function spotRow(s, mode) {
   /* map(spotRow) skickar index som andra argument — bara strangar raknas */
   const lage = typeof mode === "string" ? mode : null;
@@ -673,6 +677,7 @@ function spotRow(s, mode) {
         ${nowFree(s) ? `<span class="tag green nu">${I("car", 11)} Ledig nu</span>`
           : needsApproval(s, S.mode) ? `<span class="tag">${I("clock", 11)} Värden svarar</span>`
           : `<span class="tag green">${I("bolt", 11)} Boka direkt</span>`}
+        ${isGrundare(s) ? grundareBadge() : ""}
         ${s.charge ? `<span class="tag">${I("bolt", 11)} Laddbox</span>` : ""}
         ${s._km != null ? `<span class="tag">${s._km < 1 ? Math.round(s._km * 1000) + " m" : s._km.toFixed(1).replace(".", ",") + " km"}</span>` : ""}
         ${ratingHTML(s)}
@@ -1088,7 +1093,7 @@ function openSpot(id) {
 
     <div class="panel pad" style="margin-top:18px;background:var(--paper-2)">
       <div class="row"><span class="rev-av av" style="width:38px;height:38px;border-radius:50%;background:var(--pine);color:var(--on-dark);display:grid;place-items:center;font-weight:600">${esc(s.host[0])}</span>
-        <div><b>${esc(s.host)}</b><div class="muted small">Värd sedan ${s.hostSince} · svarar oftast inom 10 minuter</div></div></div>
+        <div><b>${esc(s.host)}</b>${isGrundare(s) ? " " + grundareBadge() : ""}<div class="muted small">Värd sedan ${s.hostSince} · svarar oftast inom 10 minuter</div></div></div>
       <p class="quote" style="margin:14px 0 0">${esc(s.instr)}</p>
       <button class="btn btn-sm" style="margin-top:14px" onclick="closeSheet();go('meddelanden')">${I("message", 15)} Ställ en fråga</button>
     </div>
@@ -1923,6 +1928,8 @@ function saveListing() {
   const rec = { id: w.editId || Date.now(), ad: w.ad.trim(), type: w.type, size: w.size, pris: w.pris,
     tid: w.tid, info: w.info, charger: w.charger, gated: w.gated, cam: w.cam, vinter: w.vinter, dyn: w.dyn,
     instant: w.instant !== false,   /* vardens "boka direkt"-val ska foljas, inte bara lagras */
+    /* Alla som lagger upp nu ar grundare. Behall flaggan vid redigering. */
+    grundare: w.editId ? ((LISTINGS.find(x => x.id === w.editId) || {}).grundare !== false) : true,
     paused: false, since: new Date().toISOString().slice(0, 10) };
   rec.area = (LISTINGS.find(x => x.id === rec.id) || {}).area || SET.city;
   rec.blocked = (LISTINGS.find(x => x.id === rec.id) || {}).blocked || [];

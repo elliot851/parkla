@@ -57,6 +57,7 @@
       paused: r.pausad,
       direkt: r.direktbokning !== false,
       korin: r.korin !== false,
+      grundare: !!r.grundare,
       db: true
     };
   }

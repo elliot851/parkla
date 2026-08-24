@@ -3,7 +3,7 @@
    ============================================================ */
 "use strict";
 
-const VERSION = "2026-08-24.37";
+const VERSION = "2026-08-24.38";
 
 /* ---------- Avgiftsmodell ---------- */
 const FEES = {
@@ -180,6 +180,9 @@ const PARTS = {
 
 /* Upptagna just nu — resten lyser grönt på kartan */
 const BUSY_IDS = [5, 7, 12, 22, 32, 41, 52, 61, 71];
+/* Grundare-demomarkering: visa hur guldbadgen ser ut pa nagra platser. */
+[1, 5, 12].forEach(function (id) { var sp = SPOTS.find(function (x) { return x.id === id; }); if (sp) sp.grundare = true; });
+
 const spotFree = s => BUSY_IDS.indexOf(s.id) === -1;
 
 /* ---------- Evenemang ---------- */
