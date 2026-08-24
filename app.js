@@ -2979,9 +2979,16 @@ function saveLead(typ) {
   LEADS.unshift(rec); LS.set("leads", LEADS);
   pixelLead(typ);   /* konvertering för annonsoptimering */
 
+  /* FormData + Accept = "enkel" CORS-request utan preflight. Funkar med
+     Formspree, Tally, Google Forms m.fl. — JSON tvingar fram en preflight
+     som en del endpoints inte svarar rätt på och POST:en blockeras. */
   const skicka = SET.formUrl
-    ? fetch(SET.formUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rec) })
-        .then(r => r.ok).catch(() => false)
+    ? (function () {
+        const fd = new FormData();
+        Object.keys(rec).forEach(k => fd.append(k, rec[k]));
+        return fetch(SET.formUrl, { method: "POST", headers: { "Accept": "application/json" }, body: fd })
+          .then(r => r.ok).catch(() => false);
+      })()
     : Promise.resolve(null);
 
   skicka.then(ok => {
