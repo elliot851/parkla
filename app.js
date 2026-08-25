@@ -1544,15 +1544,25 @@ function clearBlocks(id) {
 /* ---- bokning ---- */
 function startBooking(id) {
   S.blockFor = null;
-  S.bk = { id, step: 1, qty: 1, start: "09:00", attest: false, charge: false, extraCar: false, code: "", pay: "swish",
+  S.bk = { id, step: 1, qty: 1, min: 135, start: "09:00", attest: false, charge: false, extraCar: false, code: "", pay: "swish",
            reg: LS.get("lastreg", ""), date: new Date(Date.now() + 864e5).toISOString().slice(0, 10) };
   renderBooking();
 }
 function bkTotals() {
   const s = allSpots().find(x => x.id === S.bk.id), b = S.bk;
   const unit = priceOnDate(s, b.date, S.mode) || priceFor(s, S.mode) || s.d || s.m;
-  const base = S.mode === "sasong" ? unit : unit * b.qty;
-  const chargeCost = b.charge ? (S.mode === "manad" ? 380 : 55) * b.qty : 0;
+  let base, chargeCost;
+  if (S.mode === "sasong") { base = unit; chargeCost = 0; }
+  else if (S.mode === "timme") {
+    /* Minutbaserat: första timmen alltid, sedan påbörjad halvtimme. Samma regel som kör-in. */
+    const min = b.min || 135;
+    const deb = Math.max(60, Math.ceil(min / 30) * 30);
+    base = Math.round(unit * deb / 60);
+    chargeCost = b.charge ? 55 * Math.ceil(min / 60) : 0;
+  } else {
+    base = unit * b.qty;
+    chargeCost = b.charge ? (S.mode === "manad" ? 380 : 55) * b.qty : 0;
+  }
   const extraCost = b.extraCar ? Math.round(base * 0.6) : 0;
   const sub = base + chargeCost + extraCost;
   const råDisc = b.code.toUpperCase() === "PARKLA50" ? Math.round(sub * .5) : b.code.toUpperCase() === "GRANNE" ? 100 : 0;
@@ -1565,6 +1575,7 @@ const QTY_ONE  = { timme:"timme",  dygn:"dygn", vecka:"vecka",  manad:"m\u00e5na
 
 /* "3 manad" i bokningskortet var lagesnamnet, inte ett ord. */
 function qtyText(b) {
+  if ((b.mode || S.mode) === "timme" && b.min) return tidText(b.min);
   const n = b.qty || 1;
   return n + " " + (n === 1 ? (QTY_ONE[b.mode] || "dygn") : (QTY_WORD[b.mode] || "dygn"));
 }
@@ -1595,9 +1606,11 @@ function renderBooking() {
           ${timeOptions(b.start)}
         </select></div>
       <div class="field"><label>Hur länge?</label>
-        <div class="chips" id="bkdur" style="flex-wrap:wrap;overflow:visible">
-          ${DURATIONS.map(d => `<button class="chip ${b.qty === d.h ? "on" : ""}"
-            onclick="bkPreset(${d.h})">${d.label}</button>`).join("")}
+        <div class="timewheel" id="bkwheel">
+          <div class="tw-sel"></div>
+          <div class="tw-track" id="twtrack">
+            ${DUR_STEPS.map(mi => `<div class="tw-opt" data-min="${mi}">${tidText(mi)}</div>`).join("")}
+          </div>
         </div>
         <p class="muted small" style="margin-top:9px" id="bkspan">${timeSpanText(b)}</p>
       </div>` : ""}
@@ -1638,6 +1651,7 @@ function renderBooking() {
         <button class="btn btn-p btn-block btn-lg" onclick="bkStep(2)">Forts\u00e4tt${I("arrow", 17, "arw")}</button>
       </div>
     </div>`);
+    setTimeout(initTimeWheel, 30);
     return;
   }
 
@@ -1652,7 +1666,7 @@ function renderBooking() {
 
     <div class="recap">
       <span class="ic">${kindIcon(s.kind, 22)}</span>
-      <div class="t"><b>${esc(s.nm)}</b><span>${b.qty} ${b.qty === 1 ? one : word} fr\u00e5n ${esc(b.date)}</span></div>
+      <div class="t"><b>${esc(s.nm)}</b><span>${S.mode === "timme" ? tidText(b.min || 135) : b.qty + " " + (b.qty === 1 ? one : word)} fr\u00e5n ${esc(b.date)}</span></div>
       <button class="btn btn-sm" onclick="bkStep(1)">\u00c4ndra</button>
     </div>
 
@@ -1712,6 +1726,22 @@ function bkStep(n) {
   const r = document.getElementById("regnr");  if (r) S.bk.reg = r.value;
   S.bk.step = n; renderBooking();
 }
+/* EasyPark-tidshjul: minuter i 15-min-steg, från 30 min till 12 tim. */
+const DUR_STEPS = (function () { const a = []; for (let mi = 30; mi <= 720; mi += 15) a.push(mi); return a; })();
+function initTimeWheel() {
+  const track = document.getElementById("twtrack"); if (!track) return;
+  const opts = [...track.children], H = 44;
+  const paint = i => opts.forEach((o, k) => o.classList.toggle("on", k === i));
+  let cur = DUR_STEPS.indexOf(S.bk.min || 135); if (cur < 0) cur = DUR_STEPS.indexOf(135);
+  track.scrollTop = cur * H; paint(cur);
+  const update = () => {
+    const i = clamp(Math.round(track.scrollTop / H), 0, opts.length - 1);
+    paint(i);
+    const min = +opts[i].dataset.min;
+    if (min !== S.bk.min) { S.bk.min = min; patchBkSum(); }
+  };
+  track.addEventListener("scroll", () => { clearTimeout(track._t); track._t = setTimeout(update, 40); }, { passive: true });
+}
 function bkPreset(n) { S.bk.qty = n; patchBkSum(); }
 function pickSeason(id) { S.season = id; renderBooking(); }
 
@@ -1728,7 +1758,8 @@ function timeOptions(sel) {
 }
 function timeSpanText(b) {
   const [h, m] = (b.start || "09:00").split(":").map(Number);
-  const end = new Date(2000, 0, 1, h + b.qty, m);
+  const durMin = S.mode === "timme" ? (b.min || 135) : b.qty * 60;
+  const end = new Date(2000, 0, 1, h, m + durMin);
   const endTxt = String(end.getHours()).padStart(2, "0") + ":" + String(end.getMinutes()).padStart(2, "0");
   const over = end.getDate() > 1 ? " (dagen efter)" : "";
   return `Du står från ${b.start || "09:00"} till ${endTxt}${over}.`;
@@ -1809,7 +1840,7 @@ function finishBooking(reg, date) {
   const s = allSpots().find(x => x.id === S.bk.id), T = bkTotals();
   const code = String(Math.floor(1000 + Math.random() * 9000));
   const bk = { id: Date.now(), spotId: s.id, spot: s.nm, addr: s.ad, area: s.area, reg, mode: S.mode,
-    qty: S.bk.qty, total: T.driverTotal, host: s.host, date: date || new Date().toISOString().slice(0, 10),
+    qty: S.bk.qty, min: S.bk.min, total: T.driverTotal, host: s.host, date: date || new Date().toISOString().slice(0, 10),
     code, charge: S.bk.charge, pay: S.bk.pay, instr: s.instr,
     /* Spara delbeloppen — kvittot ska visa det som faktiskt betalades,
        inte en baklangesrakning som inte gar ihop. */

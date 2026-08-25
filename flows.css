@@ -477,3 +477,17 @@ body.harsession{padding-bottom:calc(128px + env(safe-area-inset-bottom))}
 .consent-btns .btn{ min-height:40px }
 .consent-ok{ color:var(--green); border-color:color-mix(in srgb,var(--green) 40%,transparent) }
 .consent-ok:hover{ background:var(--green-wash) }
+
+/* ── EasyPark-tidshjul ─────────────────────────────────────── */
+.timewheel{ position:relative; height:176px; overflow:hidden; border-radius:16px;
+  background:color-mix(in srgb, var(--green,#0a7d5a) 6%, transparent); }
+.timewheel .tw-track{ height:100%; overflow-y:scroll; scroll-snap-type:y mandatory;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none; padding:66px 0; }
+.timewheel .tw-track::-webkit-scrollbar{ display:none }
+.timewheel .tw-opt{ height:44px; display:flex; align-items:center; justify-content:center;
+  scroll-snap-align:center; font-variant-numeric:tabular-nums; font-size:1.02rem; opacity:.45;
+  transition:opacity .16s, font-size .16s, font-weight .16s; }
+.timewheel .tw-opt.on{ opacity:1; font-weight:700; font-size:1.4rem; color:var(--green,#0a7d5a); }
+.timewheel .tw-sel{ position:absolute; left:14px; right:14px; top:66px; height:44px;
+  border-radius:12px; z-index:1; pointer-events:none;
+  border:1.5px solid color-mix(in srgb, var(--green,#0a7d5a) 45%, transparent); }
