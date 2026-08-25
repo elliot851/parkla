@@ -223,7 +223,7 @@ window.addEventListener("hashchange", () => { openDeepLink(); });
 
 /* ============================================================
    Alltid senaste versionen.
-   Adressen https://elliot851.github.io/parkla/ ska funka för alltid:
+   Adressen https://parkla.se/ ska funka för alltid:
    spara den på hemskärmen en gång, sedan håller appen sig själv aktuell.
    ============================================================ */
 (function keepFresh() {
