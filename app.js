@@ -458,7 +458,7 @@ function listingToSpot(l) {
     rate: 5, n: 0, host: "Du", hostSince: new Date().getFullYear(),
     charge: !!l.charger, feat: feat.length ? feat : ["Ny plats"], size: l.size || "Personbil",
     walk: 0, ll: l.ll || (AREAS.find(a => a.id === (l.area || SET.city)) || AREAS[0]).c,
-    instr: l.info || "Instruktion saknas ännu.", paused: l.paused, grundare: !!l.grundare
+    instr: l.info || "Instruktion saknas ännu.", paused: l.paused, grundare: !!l.grundare, photo: l.photo || null
   };
 }
 function allSpots() {
@@ -788,7 +788,7 @@ function spotRow(s, mode) {
   const p = priceFor(s, S.mode);
   const fav = FAVS.includes(s.id);
   return `<button class="spot ${S.selSpot === s.id ? "sel" : ""}" onclick="${lage ? `S.mode='${lage}';` : ""}openSpot(${idArg(s.id)})">
-    <span class="thumb">${kindIcon(s.kind, 28)}</span>
+    <span class="thumb">${s.photo ? `<img src="${s.photo}" alt="">` : kindIcon(s.kind, 28)}</span>
     <span class="body">
       <span class="nm">${s.mine ? '<span class="tag green" style="margin-right:6px">Din plats</span>' : demoBadge()}${esc(s.nm)}</span>
       <span class="ad">${esc(s.ad)}</span>
@@ -1204,7 +1204,9 @@ function openSpot(id) {
   const revs = (typeof reviewsWithMine === "function") ? reviewsWithMine(id) : reviewsFor(id);
   const sim = allSpots().filter(x => x.area === s.area && x.id !== s.id && priceFor(x, S.mode) > 0).slice(0, 3);
   openSheet(sheetHead(s.nm) + `<div class="sheet-b">
-    <div class="gallery">${["driveway", "camera", "map", "moon"].map(g => `<div class="g">${I(g, 40)}</div>`).join("")}</div>
+    <div class="gallery">${s.photo
+      ? `<div class="g photo"><img src="${s.photo}" alt="Foto på ${esc(s.nm)}"></div>`
+      : ["driveway", "camera", "map", "moon"].map(g => `<div class="g">${I(g, 40)}</div>`).join("")}</div>
     <div class="row wrap" style="margin-top:14px">
       <span class="tag">${esc(s.type)}</span>
       ${s.charge ? `<span class="tag green">${I("bolt", 11)} Laddbox</span>` : ""}
@@ -2021,7 +2023,10 @@ function renderWizard() {
   const bodies = [
     `<div class="field"><label>Adress</label><input class="inp" id="w_ad" value="${esc(w.ad)}" placeholder="Ringvägen 41, Stockholm"></div>
      <div class="hint">${I("lock", 17)}<div>Exakt adress visas först efter bokning. I listan syns bara gatan och stadsdelen.</div></div>`,
-    `<div class="field"><label>Typ av plats</label><select class="inp" id="w_type">
+    `<div class="field"><label>Foto på platsen</label>
+       <div id="w_photofield">${photoFieldHTML(w)}</div>
+       <p class="muted small" style="margin-top:6px">Förare väljer oftare en plats de kan se. Ett foto på uppfarten räcker.</p></div>
+     <div class="field"><label>Typ av plats</label><select class="inp" id="w_type">
        ${Object.keys(TYPE_MULT).map(k => `<option ${k === w.type ? "selected" : ""}>${k}</option>`).join("")}</select></div>
      <div class="field"><label>Vad får plats?</label><select class="inp" id="w_size">
        ${["Personbil", "Personbil + SUV", "Personbil, husbil", "Personbil, släp", "Buss eller lastbil"].map(k => `<option ${k === w.size ? "selected" : ""}>${k}</option>`).join("")}</select></div>
@@ -2057,6 +2062,34 @@ function renderWizard() {
     </div>
   </div>`);
 }
+/* Foto på platsen: skala ner till max 1000 px och JPEG så localStorage inte sprängs. */
+function photoFieldHTML(w) {
+  return w.photo
+    ? `<div class="photoprev"><img src="${w.photo}" alt="Foto på platsen">
+         <button class="photodel" type="button" onclick="wizPhotoDel()" aria-label="Ta bort foto">${I("close", 16)}</button></div>`
+    : `<label class="photodrop">${I("camera", 26)}<span>Ladda upp ett foto</span>
+         <input type="file" accept="image/*" onchange="wizPhoto(this)" hidden></label>`;
+}
+function wizPhoto(input) {
+  const file = input.files && input.files[0]; if (!file) return;
+  if (!/^image\//.test(file.type)) { toast("Välj en bildfil", "info"); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const max = 1000, sc = Math.min(1, max / Math.max(img.width, img.height));
+      const cw = Math.round(img.width * sc), ch = Math.round(img.height * sc);
+      const cv = document.createElement("canvas"); cv.width = cw; cv.height = ch;
+      cv.getContext("2d").drawImage(img, 0, 0, cw, ch);
+      S.wizard.photo = cv.toDataURL("image/jpeg", 0.78);
+      renderWizard();
+      toast("Foto tillagt", "camera");
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function wizPhotoDel() { S.wizard.photo = null; renderWizard(); }
 function wizPrice(inp) {
   const v = +inp.value || 0;
   S.wizard.pris = v;
@@ -2080,7 +2113,7 @@ function wizNext() {
 }
 function saveListing() {
   const w = S.wizard;
-  const rec = { id: w.editId || Date.now(), ad: w.ad.trim(), type: w.type, size: w.size, pris: w.pris,
+  const rec = { id: w.editId || Date.now(), ad: w.ad.trim(), type: w.type, size: w.size, pris: w.pris, photo: w.photo || null,
     tid: w.tid, info: w.info, charger: w.charger, gated: w.gated, cam: w.cam, vinter: w.vinter, dyn: w.dyn,
     instant: w.instant !== false,   /* vardens "boka direkt"-val ska foljas, inte bara lagras */
     /* Alla som lagger upp nu ar grundare. Behall flaggan vid redigering. */

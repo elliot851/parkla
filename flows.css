@@ -491,3 +491,18 @@ body.harsession{padding-bottom:calc(128px + env(safe-area-inset-bottom))}
 .timewheel .tw-sel{ position:absolute; left:14px; right:14px; top:66px; height:44px;
   border-radius:12px; z-index:1; pointer-events:none;
   border:1.5px solid color-mix(in srgb, var(--green,#0a7d5a) 45%, transparent); }
+
+/* ── Foto på platsen ───────────────────────────────────────── */
+.photodrop{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+  min-height:150px; border-radius:16px; cursor:pointer; text-align:center; padding:20px;
+  border:1.5px dashed color-mix(in srgb, var(--green,#0a7d5a) 40%, transparent);
+  background:color-mix(in srgb, var(--green,#0a7d5a) 5%, transparent); color:var(--green,#0a7d5a); }
+.photodrop span{ font-size:.9rem; font-weight:600 }
+.photoprev{ position:relative; border-radius:16px; overflow:hidden }
+.photoprev img{ display:block; width:100%; max-height:260px; object-fit:cover }
+.photodel{ position:absolute; top:10px; right:10px; width:34px; height:34px; border-radius:50%;
+  border:none; cursor:pointer; display:grid; place-items:center; color:#fff; background:rgba(0,0,0,.55) }
+.gallery .g.photo{ grid-column:1 / -1; flex:1 1 100%; width:100%; aspect-ratio:16/10;
+  padding:0; overflow:hidden }
+.gallery .g.photo img{ width:100%; height:100%; object-fit:cover; display:block }
+.spot .thumb img{ width:100%; height:100%; object-fit:cover; border-radius:inherit; display:block }
