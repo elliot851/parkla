@@ -259,6 +259,39 @@
     });
   };
 
+  /* ── Spara en plats till databasen (så förare kan boka den) ── */
+
+  var demoSave = window.saveListing;
+  window.saveListing = function () {
+    if (!pa()) return demoSave();
+    var w = S.wizard;
+    if (!w.ad || w.ad.trim().length < 4) return toast("Skriv adressen först", "info");
+    toast("Sparar platsen…", "clock");
+    PMap.geocode(w.ad, function (rows) {
+      if (!rows || !rows.length) return toast("Hittade inte adressen, prova en annan formulering", "info");
+      var ll = rows[0].ll, d = harledPriser(w.pris);
+      var db = {
+        titel: (w.ad.split(",")[0] || w.ad).trim(),
+        typ: (typeof TYPE_KIND !== "undefined" && TYPE_KIND[w.type]) || "uppfart",
+        adress: w.ad.trim(),
+        omrade: SET.city,
+        lat: ll[0], lng: ll[1],
+        pris_timme_kr: (w.egnaPriser && w.prisTimme) ? w.prisTimme : d.timme,
+        pris_dag_kr: (w.egnaPriser && w.prisDygn) ? w.prisDygn : d.dygn,
+        pris_manad_kr: w.pris,
+        direktbokning: w.instant !== false,
+        korin: w.instant !== false,
+        pausad: false,
+        funktioner: { laddbox: !!w.charger, grind: !!w.gated, kamera: !!w.cam, storlek: w.size || "Personbil" },
+        grundare: true
+      };
+      PAPI.sparaPlats(db).then(function () {
+        demoSave();       /* lokal kopia -> Min sida + koppla-utbetalning-knappen */
+        laddaPlatser();   /* så platsen dyker upp för förare och på kartan */
+      }).catch(function (e) { toast("Kunde inte spara till servern: " + e.message, "info"); });
+    });
+  };
+
   /* ── Vid start: hämta platser och ev. pågående parkering ── */
 
   function boot() {
