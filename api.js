@@ -309,22 +309,53 @@
         document.body.appendChild(el);
         requestAnimationFrame(function () { el.classList.add("pa"); });
 
+        /* Temat måste matcha arket. Appen har både ljust och mörkt läge —
+           läs de faktiska färgerna ur CSS-variablerna så Stripe aldrig blir
+           mörk text på mörk bakgrund (eller tvärtom). */
+        var css = getComputedStyle(document.documentElement);
+        var cvar = function (n, f) { var x = css.getPropertyValue(n).trim(); return x || f; };
+        function lum(hex) {
+          hex = (hex || "").replace("#", "");
+          if (hex.length === 3) hex = hex.replace(/./g, "$&$&");
+          var r = parseInt(hex.substr(0, 2), 16), g = parseInt(hex.substr(2, 2), 16), b = parseInt(hex.substr(4, 2), 16);
+          return isNaN(r) ? 1 : (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+        }
+        var kort = cvar("--card", "#FFFFFF");
+        var moerkt = lum(kort) < 0.5;
+        var groen = cvar("--green", moerkt ? "#10B981" : "#00875A");
+        var linje = cvar("--rule", moerkt ? "#232A29" : "#E2E7E5");
+        var text = cvar("--ink", moerkt ? "#EDF0EF" : "#0A0F0E");
         var elements = stripe.elements({
           clientSecret: client_secret,
           locale: "sv",
           appearance: {
-            theme: "flat",
+            theme: moerkt ? "night" : "flat",
             variables: {
-              colorPrimary: "#00875A",
-              colorBackground: "#FFFFFF",
-              colorText: "#0A0F0E",
+              colorPrimary: groen,
+              colorBackground: kort,
+              colorText: text,
+              colorTextSecondary: cvar("--ink-45", "#7F8A88"),
+              colorDanger: "#E5484D",
               fontFamily: "Instrument Sans, system-ui, sans-serif",
               borderRadius: "14px",
               spacingUnit: "5px"
+            },
+            rules: {
+              ".Label": { color: text, fontWeight: "500" },
+              ".Input": { border: "1px solid " + linje, boxShadow: "none", color: text },
+              ".Input:focus": { border: "1px solid " + groen, boxShadow: "0 0 0 3px rgba(16,185,129,.18)" },
+              ".Tab": { border: "1px solid " + linje },
+              ".Tab--selected": { borderColor: groen },
+              ".Tab:hover": { color: text }
             }
           }
         });
-        elements.create("payment", { layout: "tabs" }).mount("#pay-el");
+        elements.create("payment", {
+          layout: "tabs",
+          /* Ingen Link-inloggning — den ber om SMS-kod och krånglar till det.
+             Vi vill ha den enklaste vägen: kort, Klarna, Swish rakt av. */
+          wallets: { link: "never" }
+        }).mount("#pay-el");
 
         var knapp = el.querySelector(".paysheet-ok");
         var felruta = el.querySelector(".paysheet-fel");
