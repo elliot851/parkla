@@ -2231,12 +2231,17 @@ function viewMina() {
             <div class="micro">${a}</div><div style="font-family:var(--serif);font-size:1.3rem;margin-top:3px;font-variant-numeric:tabular-nums">${b}</div></div>`).join("")}
       </div>
       <div class="row wrap" style="margin-top:16px">
-        <button class="btn btn-sm" onclick="togglePause(${l.id})">${I(l.paused ? "play" : "minus", 15)} ${l.paused ? "Aktivera" : "Pausa"}</button>
         <button class="btn btn-sm" onclick="openWizard(${l.id})">${I("sliders", 15)} Ändra</button>
+        <button class="btn btn-sm" onclick="togglePause(${l.id})">${I(l.paused ? "play" : "minus", 15)} ${l.paused ? "Aktivera" : "Pausa"}</button>
         <button class="btn btn-sm ${l.nu === false ? "" : "btn-g"}" onclick="toggleNu(${l.id})">${I("car", 15)} ${l.nu === false ? "Stängd nu" : "Ledig nu"}</button>
-        <button class="btn btn-sm" onclick="openBlockCal(${l.id})">${I("calendar", 15)} Dagar och priser</button>
-        <button class="btn btn-sm" onclick="openSchedule(${l.id})">${I("clock", 15)} Veckotider</button>
-        <button class="btn btn-sm btn-d" onclick="kickCar()">${I("door", 15)} Flytta bilen</button>
+        <details class="card-more">
+          <summary class="btn btn-sm">Mer</summary>
+          <div class="morewrap">
+            <button class="btn btn-sm" onclick="openBlockCal(${l.id})">${I("calendar", 15)} Dagar och priser</button>
+            <button class="btn btn-sm" onclick="openSchedule(${l.id})">${I("clock", 15)} Veckotider</button>
+            <button class="btn btn-sm btn-d" onclick="kickCar()">${I("door", 15)} Flytta bilen</button>
+          </div>
+        </details>
       </div>
     </div>`).join("")}</div>
   <button class="btn btn-block" style="margin-top:14px" onclick="openWizard()">${I("plus", 17)} Lägg upp en till plats</button>
