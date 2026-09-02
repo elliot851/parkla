@@ -100,7 +100,7 @@ function persist() {
 /* ---------------- Läge ---------------- */
 let S = {
   route: (location.hash.replace("#", "").split("?")[0]) || "hem",
-  area: SET.city, mode: "manad", view: "karta",
+  area: SET.city, mode: "timme", view: "karta",
   q: "", near: null, nearLabel: "", part: null, partZoom: null, maxPrice: 0,
   fNu: false, fCharge: false, fGarage: false, fSecure: false, fBig: false,
   sort: "pris", selSpot: null,
@@ -625,6 +625,11 @@ function viewHem() {
     <button class="btn btn-sm" onclick="go('sok')">${I("filter", 15)} Filter</button>
   </div>
 
+  <div class="seg" style="margin-top:12px">
+    ${[["timme", t("hour")], ["dygn", t("day")], ["manad", t("month")]]
+      .map(([k, l]) => `<button data-mode="${k}" class="${S.mode === k ? "on" : ""}" onclick="setMode('${k}')">${esc(l)}</button>`).join("")}
+  </div>
+
   <div class="mapwrap full" style="margin-top:12px">
     <div id="lmap" class="leafletmap"></div>
     <div class="mapui tl">
@@ -708,7 +713,7 @@ function viewSok() {
     <button class="helplink" onclick="startTour()">${I("info", 15)} Visa hur appen funkar</button></div>
   <div class="seg" style="margin-top:10px" id="modeSeg">
     ${[["timme", t("hour")], ["dygn", t("day")], ["vecka", t("week")], ["manad", t("month")], ["evenemang", t("event")], ["sasong", "Vinterförvar"]]
-      .map(([k, l]) => `<button class="${S.mode === k ? "on" : ""}" onclick="setMode('${k}')">${esc(l)}</button>`).join("")}
+      .map(([k, l]) => `<button data-mode="${k}" class="${S.mode === k ? "on" : ""}" onclick="setMode('${k}')">${esc(l)}</button>`).join("")}
   </div>
 
   <div class="chips" style="margin-top:11px">
@@ -872,8 +877,7 @@ function savingsHTML(list, area) {
 function setView(v) { S.view = v; PMap.destroy(); render(); }
 function setMode(m) {
   S.mode = m; S.maxPrice = 0;
-  document.querySelectorAll("#modeSeg button").forEach((b, k) =>
-    b.classList.toggle("on", ["timme", "dygn", "vecka", "manad", "evenemang", "sasong"][k] === m));
+  document.querySelectorAll("[data-mode]").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
   refreshResults();
 }
 function tog(k, btn) { S[k] = !S[k]; btn.classList.toggle("on"); refreshResults(); }
