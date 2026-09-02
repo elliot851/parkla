@@ -2194,6 +2194,12 @@ function viewMina() {
   <div class="spread"><h1 style="font-size:clamp(2rem,4.6vw,3rem)">Mitt</h1>
     <button class="btn btn-sm" data-go="installningar">${I("sliders", 15)} ${esc(t("settings"))}</button></div>
 
+  ${skarptPa() && LISTINGS.length ? `
+  <div class="callout" style="margin-top:18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:space-between">
+    <div><b>Få betalt</b><div class="dim small" style="margin-top:2px">Koppla din utbetalning hos Stripe, en gång, så landar hyran på ditt konto.</div></div>
+    <button class="btn btn-sm btn-p" onclick="kopplaUtbetalning()">${I("bank", 15)} Koppla utbetalning</button>
+  </div>` : ""}
+
   ${LISTINGS.length ? `
   <div class="split" style="margin-top:28px;gap:34px">
     <div class="panel pad-lg">
