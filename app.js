@@ -1904,12 +1904,12 @@ function viewHyrut() {
               ${Object.keys(TYPE_MULT).map(k => `<option ${k === c.type ? "selected" : ""}>${k}</option>`).join("")}
             </select></div>
         </div>
-        <div class="slider" style="margin-top:20px">
-          <div class="top"><span class="lbl">3 · Hur långt är det att gå till centrum eller stationen?</span>
-            <span class="val"><span id="walkv">${c.walk}</span> min</span></div>
-          <input type="range" min="1" max="25" value="${c.walk}" style="--pct:${(c.walk - 1) / 24 * 100}%"
-            oninput="onWalk(this)">
-          <div class="scale"><span>1 min</span><span>25 min</span></div>
+        <div style="margin-top:20px">
+          <div class="lbl" style="margin-bottom:10px">3 · Hur nära centrum eller stationen ligger den?</div>
+          <div class="row wrap" id="walkchips">
+            ${[["Mitt i centrum", 2], ["Nära centrum", 5], ["En bit ut", 12], ["Utanför stan", 20]]
+              .map(b => `<button class="chip ${walkBucket(c.walk) === b[1] ? "on" : ""}" onclick="calcWalk(${b[1]},this)">${esc(b[0])}</button>`).join("")}
+          </div>
         </div>
         <div class="row wrap" style="margin-top:18px">
           <button class="chip ${c.charger ? "on" : ""}" onclick="calcTog('charger',this)">${I("bolt", 15)} Laddbox finns</button>
@@ -1991,12 +1991,11 @@ function patchCalc() {
   const bar = document.getElementById("txBar"); if (bar) bar.style.width = N.pct + "%";
 }
 /* Uppdaterar bara de tolv siffrorna – aldrig hela vyn. Mätt till under 1 ms per drag. */
-function onWalk(inp) {
-  const v = +inp.value;
-  if (v === S.calc.walk) return;
+function walkBucket(w) { return w <= 3 ? 2 : w <= 6 ? 5 : w <= 15 ? 12 : 20; }
+function calcWalk(v, el) {
   S.calc.walk = v;
-  inp.style.setProperty("--pct", (v - 1) / 24 * 100 + "%");
-  const lbl = document.getElementById("walkv"); if (lbl) lbl.textContent = v;
+  const row = el.parentNode; if (row) row.querySelectorAll(".chip").forEach(b => b.classList.remove("on"));
+  el.classList.add("on");
   patchCalc();
 }
 function calcTog(k, el) {
