@@ -1554,7 +1554,7 @@ function clearBlocks(id) {
 function startBooking(id) {
   S.blockFor = null;
   S.bk = { id, step: 1, qty: 1, min: 135, start: "09:00", attest: false, charge: false, extraCar: false, code: "", pay: "swish",
-           reg: LS.get("lastreg", ""), date: new Date(Date.now() + 864e5).toISOString().slice(0, 10) };
+           reg: LS.get("lastreg", ""), date: new Date(Date.now() + (S.mode === "timme" ? 0 : 864e5)).toISOString().slice(0, 10) };
   renderBooking();
 }
 function bkTotals() {
@@ -2026,7 +2026,7 @@ function openWizard(edit) {
 }
 function renderWizard() {
   const w = S.wizard;
-  const titles = ["Var ligger platsen?", "Vad för slags plats?", "När är den ledig?", "Vad ska den kosta?", "Klart att lägga upp"];
+  const titles = ["Var ligger platsen?", "Vad för slags plats?", "När är den ledig?", "Vad ska den kosta?"];
   const bodies = [
     `<div class="field"><label>Adress</label><input class="inp" id="w_ad" value="${esc(w.ad)}" placeholder="Ringvägen 41, Stockholm"></div>
      <div class="hint">${I("lock", 17)}<div>Exakt adress visas först efter bokning. I listan syns bara gatan och stadsdelen.</div></div>`,
@@ -2063,18 +2063,15 @@ function renderWizard() {
      <div class="setrow"><span style="color:var(--green)">${I("chart", 20)}</span>
        <div class="t"><b>Höj priset automatiskt</b><span>Vid matcher och högsäsong. Aldrig under ditt pris.</span></div>
        <div class="switch ${w.dyn ? "on" : ""}" role="switch" onclick="S.wizard.dyn=!S.wizard.dyn;this.classList.toggle('on')"></div></div>
-     <div class="callout" id="wizCalc">Du får <b>${kr(Math.round(w.pris * (1 - FEES.hostPctMonthly)))}</b> i månaden, alltså <b>${kr(Math.round(w.pris * (1 - FEES.hostPctMonthly) * 12))}</b> på ett år.</div>`,
-    `<div class="center"><div class="tick">${I("check", 30)}</div>
-       <h3 style="font-family:var(--serif);font-size:1.5rem">Redo att lägga upp</h3>
-       <p class="dim small" style="margin-top:8px">${esc(w.ad || "Din adress")} · ${esc(w.type)} · ${num(w.pris)} ${sym()}/mån</p></div>
-     <div class="hint" style="margin-top:18px">${I("info", 17)}<div>I skarpt läge kommer här: BankID, foto på platsen, ditt kontonummer och – om du bor i bostadsrätt – styrelsens ja. <button class="lnk" onclick="openBrfBrev(1)">Hämta den färdiga frågan</button></div></div>`
+     <div class="callout" id="wizCalc">Du får <b>${kr(Math.round(w.pris * (1 - FEES.hostPctMonthly)))}</b> i månaden, alltså <b>${kr(Math.round(w.pris * (1 - FEES.hostPctMonthly) * 12))}</b> på ett år.</div>
+     <div class="hint" style="margin-top:12px">${I("info", 17)}<div>I skarpt läge kommer här: BankID, foto på platsen, ditt kontonummer och, om du bor i bostadsrätt, styrelsens ja. <button class="lnk" onclick="openBrfBrev(1)">Hämta den färdiga frågan</button></div></div>`
   ];
   openSheet(sheetHead(titles[w.step]) + `<div class="sheet-b stack">
     <div class="progress">${titles.map((_, k) => `<i class="${k <= w.step ? "on" : ""}"></i>`).join("")}</div>
     ${bodies[w.step]}
     <div class="row" style="margin-top:8px">
       ${w.step > 0 ? `<button class="btn" onclick="wizBack()">${I("chevron", 15)} ${esc(t("back"))}</button>` : ""}
-      <button class="btn btn-p" style="flex:1" onclick="wizNext()">${w.step === 4 ? "Lägg upp platsen" : esc(t("next"))}${I("arrow", 16, "arw")}</button>
+      <button class="btn btn-p" style="flex:1" onclick="wizNext()">${w.step === 3 ? "Lägg upp platsen" : esc(t("next"))}${I("arrow", 16, "arw")}</button>
     </div>
   </div>`);
 }
@@ -2140,7 +2137,7 @@ function wizNext() {
   grabWizard(); const w = S.wizard;
   if (w.step === 0 && w.ad.trim().length < 4) { toast("Skriv adressen först", "info"); return; }
   if (w.step === 3 && (!w.pris || w.pris < 50)) { toast("Sätt ett rimligt pris", "info"); return; }
-  if (w.step < 4) { w.step++; renderWizard(); return; }
+  if (w.step < 3) { w.step++; renderWizard(); return; }
   saveListing();
 }
 function saveListing() {
@@ -2824,8 +2821,6 @@ function viewInstallningar() {
 <section class="tight"><div class="wrap" style="max-width:760px">
   <h1 style="font-size:clamp(2rem,4.6vw,3rem)">${esc(t("settings"))}</h1>
 
-  ${skarptPanelHTML()}
-
   <div class="panel pad-lg" style="margin-top:24px">
     <h3>Utseende</h3>
     <div class="field" style="margin-top:14px"><label>${esc(t("theme"))}</label>
@@ -2935,6 +2930,9 @@ function viewInstallningar() {
         <button class="btn btn-sm btn-d" onclick="resetAll()">Nollställ</button></div>
     </div>
   </div>
+
+  <h2 style="font-size:1.05rem;margin:34px 0 -4px;color:var(--ink-45)">Avancerat · för dig som driver Parkla</h2>
+  ${skarptPanelHTML()}
 
   <div class="panel pad-lg" style="margin-top:18px">
     <h3>Om appen</h3>
