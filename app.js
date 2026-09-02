@@ -443,8 +443,14 @@ const isoOf = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).p
 
 /* Värdens egen annons blir en sökbar plats, så att det värden stänger
    faktiskt syns för den som letar. */
+/* Härledda korttidspriser från månadspriset. Värden kan skriva över dem själv. */
+function harledPriser(manad) {
+  const d = Math.max(20, Math.round((manad || 0) / 22 * 1.6));
+  return { timme: Math.max(5, Math.round(d / 8)), dygn: d,
+    vecka: Math.round(d * 4.6 / 10) * 10, match: Math.round(d * 1.9 / 10) * 10 };
+}
 function listingToSpot(l) {
-  const d = Math.max(20, Math.round(l.pris / 22 * 1.6));
+  const d = (l.egnaPriser && l.prisDygn) ? l.prisDygn : Math.max(20, Math.round(l.pris / 22 * 1.6));
   const feat = [];
   if (l.charger) feat.push("Laddbox");
   if (l.gated) feat.push("Låst");
@@ -453,8 +459,9 @@ function listingToSpot(l) {
   return {
     id: l.id, mine: true, area: l.area || SET.city, kind: TYPE_KIND[l.type] || "uppfart",
     nm: l.ad, ad: "Din plats · " + esc(l.tid), type: l.type,
-    h: Math.max(5, Math.round(d / 8)), d: d, w: Math.round(d * 4.6 / 10) * 10,
-    m: l.pris, ev: l.vinter ? Math.round(d * 1.9 / 10) * 10 : Math.round(d * 1.9 / 10) * 10,
+    h: (l.egnaPriser && l.prisTimme) ? l.prisTimme : Math.max(5, Math.round(d / 8)), d: d,
+    w: (l.egnaPriser && l.prisVecka) ? l.prisVecka : Math.round(d * 4.6 / 10) * 10,
+    m: l.pris, ev: (l.egnaPriser && l.prisMatch) ? l.prisMatch : Math.round(d * 1.9 / 10) * 10,
     rate: 5, n: 0, host: "Du", hostSince: new Date().getFullYear(),
     charge: !!l.charger, feat: feat.length ? feat : ["Ny plats"], size: l.size || "Personbil",
     walk: 0, ll: l.ll || (AREAS.find(a => a.id === (l.area || SET.city)) || AREAS[0]).c,
@@ -527,7 +534,7 @@ function eventPrice(l, ev) {
 function kmText(km) { return km < 1 ? Math.round(km * 1000) + " m" : km.toFixed(1).replace(".", ",") + " km"; }
 
 /* Ordinarie dygnspris för en egen annons. */
-function baseDayPrice(l) { return Math.max(20, Math.round(l.pris / 22 * 1.6)); }
+function baseDayPrice(l) { return (l.egnaPriser && l.prisDygn) ? l.prisDygn : Math.max(20, Math.round(l.pris / 22 * 1.6)); }
 /* Priset för en bestämd dag – värdens specialpris om det finns, annars ordinarie. */
 function dayPriceFor(l, iso) {
   return (l.prices && l.prices[iso]) ? l.prices[iso] : baseDayPrice(l);
@@ -2012,7 +2019,8 @@ function openWizard(edit) {
   } else {
     const sug = priceSuggest(S.calc.city, S.calc.type, S.calc.walk, S.calc.charger, S.calc.gated);
     S.wizard = { step: 0, ad: "", type: S.calc.type, size: "Personbil", pris: sug.month, tid: "Alltid",
-                 info: "", charger: S.calc.charger, gated: S.calc.gated, cam: false, vinter: false, dyn: true, editId: null };
+                 info: "", charger: S.calc.charger, gated: S.calc.gated, cam: false, vinter: false, dyn: true,
+                 egnaPriser: false, prisTimme: 0, prisDygn: 0, prisVecka: 0, prisMatch: 0, editId: null };
   }
   renderWizard();
 }
@@ -2043,6 +2051,15 @@ function renderWizard() {
        <textarea class="inp" id="w_info" rows="3" placeholder="Kör in från gatan, plats närmast garaget. Vänd bilen så nosen pekar ut.">${esc(w.info)}</textarea></div>`,
     `<div class="field"><label>Pris per månad (kr)</label>
        <input class="inp mono" id="w_pris" value="${w.pris}" inputmode="numeric" style="font-size:1.4rem" oninput="wizPrice(this)"></div>
+     <div class="setrow"><span style="color:var(--green)">${I("wallet", 20)}</span>
+       <div class="t"><b>Sätt egna priser</b><span>Bestäm timme, dygn, vecka och match själv. Annars räknar vi ut dem åt dig.</span></div>
+       <div class="switch ${w.egnaPriser ? "on" : ""}" role="switch" onclick="wizEgnaPriser()"></div></div>
+     ${w.egnaPriser ? `<div class="grid g2" style="gap:12px">
+       <div class="field"><label>Per timme (kr)</label><input class="inp mono" id="w_pt" value="${w.prisTimme || harledPriser(w.pris).timme}" inputmode="numeric" oninput="wizPrisMode('Timme',this)"></div>
+       <div class="field"><label>Per dygn (kr)</label><input class="inp mono" id="w_pd" value="${w.prisDygn || harledPriser(w.pris).dygn}" inputmode="numeric" oninput="wizPrisMode('Dygn',this)"></div>
+       <div class="field"><label>Per vecka (kr)</label><input class="inp mono" id="w_pv" value="${w.prisVecka || harledPriser(w.pris).vecka}" inputmode="numeric" oninput="wizPrisMode('Vecka',this)"></div>
+       <div class="field"><label>Per match (kr)</label><input class="inp mono" id="w_pm" value="${w.prisMatch || harledPriser(w.pris).match}" inputmode="numeric" oninput="wizPrisMode('Match',this)"></div>
+     </div>` : ""}
      <div class="setrow"><span style="color:var(--green)">${I("chart", 20)}</span>
        <div class="t"><b>Höj priset automatiskt</b><span>Vid matcher och högsäsong. Aldrig under ditt pris.</span></div>
        <div class="switch ${w.dyn ? "on" : ""}" role="switch" onclick="S.wizard.dyn=!S.wizard.dyn;this.classList.toggle('on')"></div></div>
@@ -2095,12 +2112,28 @@ function wizPrice(inp) {
   const box = document.getElementById("wizCalc");
   if (box) box.innerHTML = `Du får <b>${kr(Math.round(v * (1 - FEES.hostPctMonthly)))}</b> i månaden, alltså <b>${kr(Math.round(v * (1 - FEES.hostPctMonthly) * 12))}</b> på ett år.`;
 }
+function wizEgnaPriser() {
+  grabWizard();
+  const w = S.wizard;
+  w.egnaPriser = !w.egnaPriser;
+  if (!w.egnaPriser) { w.prisTimme = 0; w.prisDygn = 0; w.prisVecka = 0; w.prisMatch = 0; }
+  renderWizard();
+}
+function wizPrisMode(field, inp) { S.wizard["pris" + field] = +inp.value || 0; }
 function grabWizard() {
   const g = id => (document.getElementById(id) || {}).value, w = S.wizard;
   if (w.step === 0 && g("w_ad") != null) w.ad = g("w_ad");
   if (w.step === 1) { w.type = g("w_type") || w.type; w.size = g("w_size") || w.size; }
   if (w.step === 2) { w.tid = g("w_tid") || w.tid; w.info = g("w_info") || w.info; }
-  if (w.step === 3) w.pris = +g("w_pris") || w.pris;
+  if (w.step === 3) {
+    w.pris = +g("w_pris") || w.pris;
+    if (w.egnaPriser) {
+      if (g("w_pt") != null) w.prisTimme = +g("w_pt") || 0;
+      if (g("w_pd") != null) w.prisDygn = +g("w_pd") || 0;
+      if (g("w_pv") != null) w.prisVecka = +g("w_pv") || 0;
+      if (g("w_pm") != null) w.prisMatch = +g("w_pm") || 0;
+    }
+  }
 }
 function wizBack() { grabWizard(); S.wizard.step--; renderWizard(); }
 function wizNext() {
@@ -2112,7 +2145,9 @@ function wizNext() {
 }
 function saveListing() {
   const w = S.wizard;
-  const rec = { id: w.editId || Date.now(), ad: w.ad.trim(), type: w.type, size: w.size, pris: w.pris, photo: w.photo || null,
+  const rec = { id: w.editId || Date.now(), ad: w.ad.trim(), type: w.type, size: w.size, pris: w.pris,
+    egnaPriser: !!w.egnaPriser, prisTimme: w.prisTimme || 0, prisDygn: w.prisDygn || 0, prisVecka: w.prisVecka || 0, prisMatch: w.prisMatch || 0,
+    photo: w.photo || null,
     tid: w.tid, info: w.info, charger: w.charger, gated: w.gated, cam: w.cam, vinter: w.vinter, dyn: w.dyn,
     instant: w.instant !== false,   /* vardens "boka direkt"-val ska foljas, inte bara lagras */
     /* Alla som lagger upp nu ar grundare. Behall flaggan vid redigering. */
