@@ -508,7 +508,7 @@ function sessionKostnad(sp, minuter) {
 function minuterSedan(ts) { return Math.max(0, Math.floor((Date.now() - ts) / 60000)); }
 function tidText(min) {
   const h = Math.floor(min / 60), m = min % 60;
-  return h ? `${h} tim ${m} min` : `${m} min`;
+  return h ? (m ? `${h} tim ${m} min` : `${h} tim`) : `${m} min`;
 }
 
 /* Evenemang som ligger nära en plats och som inte redan varit. */
@@ -1557,7 +1557,7 @@ function clearBlocks(id) {
 /* ---- bokning ---- */
 function startBooking(id) {
   S.blockFor = null;
-  S.bk = { id, step: 1, qty: 1, min: 135, start: "09:00", attest: false, charge: false, extraCar: false, code: "", pay: "swish",
+  S.bk = { id, step: 1, qty: 1, min: 60, start: "09:00", attest: false, charge: false, extraCar: false, code: "", pay: "swish",
            reg: LS.get("lastreg", ""), date: new Date(Date.now() + (S.mode === "timme" ? 0 : 864e5)).toISOString().slice(0, 10) };
   renderBooking();
 }
@@ -1567,10 +1567,9 @@ function bkTotals() {
   let base, chargeCost;
   if (S.mode === "sasong") { base = unit; chargeCost = 0; }
   else if (S.mode === "timme") {
-    /* Minutbaserat: första timmen alltid, sedan påbörjad halvtimme. Samma regel som kör-in. */
-    const min = b.min || 135;
-    const deb = Math.max(60, Math.ceil(min / 30) * 30);
-    base = Math.round(unit * deb / 60);
+    /* Minutfint: du betalar för exakt den tid du snurrar in. Priset följer hjulet mjukt. */
+    const min = b.min || 60;
+    base = Math.round(unit * min / 60);
     chargeCost = b.charge ? 55 * Math.ceil(min / 60) : 0;
   } else {
     base = unit * b.qty;
@@ -1635,7 +1634,7 @@ function renderBooking() {
             onclick="pickSeason('${x.id}')">
             <span class="t"><b>${x.label}</b><span>${x.period} · ${x.months} månader</span></span>
             <span class="p">${kr(seasonPrice(s, x.id))}</span></button>`).join("")}
-        </div></div>` : `
+        </div></div>` : S.mode === "timme" ? "" : `
       <div class="field"><label>Hur ${S.mode === "evenemang" ? "m\u00e5nga platser" : "l\u00e4nge"}?</label>
         <div class="chips" id="bkpre" style="margin-bottom:12px">
           ${(PRESETS[S.mode] || [1,2,3]).map(n => `<button class="chip ${b.qty === n ? "on" : ""}" data-n="${n}"
@@ -1679,7 +1678,7 @@ function renderBooking() {
 
     <div class="recap">
       <span class="ic">${kindIcon(s.kind, 22)}</span>
-      <div class="t"><b>${esc(s.nm)}</b><span>${S.mode === "timme" ? tidText(b.min || 135) : b.qty + " " + (b.qty === 1 ? one : word)} fr\u00e5n ${esc(b.date)}</span></div>
+      <div class="t"><b>${esc(s.nm)}</b><span>${S.mode === "timme" ? tidText(b.min || 60) : b.qty + " " + (b.qty === 1 ? one : word)} fr\u00e5n ${esc(b.date)}</span></div>
       <button class="btn btn-sm" onclick="bkStep(1)">\u00c4ndra</button>
     </div>
 
@@ -1739,13 +1738,13 @@ function bkStep(n) {
   const r = document.getElementById("regnr");  if (r) S.bk.reg = r.value;
   S.bk.step = n; renderBooking();
 }
-/* EasyPark-tidshjul: minuter i 15-min-steg, från 30 min till 12 tim. */
-const DUR_STEPS = (function () { const a = []; for (let mi = 30; mi <= 720; mi += 15) a.push(mi); return a; })();
+/* EasyPark-tidshjul: minutfint, snurra förbi 60 → 1 tim, 1 tim 1 min ... upp till 12 tim. */
+const DUR_STEPS = (function () { const a = []; for (let mi = 15; mi <= 720; mi += 1) a.push(mi); return a; })();
 function initTimeWheel() {
   const track = document.getElementById("twtrack"); if (!track) return;
   const opts = [...track.children], H = 44;
   const paint = i => opts.forEach((o, k) => o.classList.toggle("on", k === i));
-  let cur = DUR_STEPS.indexOf(S.bk.min || 135); if (cur < 0) cur = DUR_STEPS.indexOf(135);
+  let cur = DUR_STEPS.indexOf(S.bk.min || 60); if (cur < 0) cur = DUR_STEPS.indexOf(60);
   track.scrollTop = cur * H; paint(cur);
   const update = () => {
     const i = clamp(Math.round(track.scrollTop / H), 0, opts.length - 1);
@@ -1771,7 +1770,7 @@ function timeOptions(sel) {
 }
 function timeSpanText(b) {
   const [h, m] = (b.start || "09:00").split(":").map(Number);
-  const durMin = S.mode === "timme" ? (b.min || 135) : b.qty * 60;
+  const durMin = S.mode === "timme" ? (b.min || 60) : b.qty * 60;
   const end = new Date(2000, 0, 1, h, m + durMin);
   const endTxt = String(end.getHours()).padStart(2, "0") + ":" + String(end.getMinutes()).padStart(2, "0");
   const over = end.getDate() > 1 ? " (dagen efter)" : "";
