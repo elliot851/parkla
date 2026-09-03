@@ -369,6 +369,13 @@
 
         el.querySelector(".paysheet-x").onclick = function () { stang(null, true); };
 
+        function visaFel(msg) {
+          felruta.textContent = msg || "Betalningen gick inte igenom. Kontrollera kortuppgifterna och försök igen.";
+          felruta.hidden = false;
+          knapp.disabled = false;
+          knapp.textContent = "Betala";
+          try { felruta.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {}
+        }
         knapp.onclick = function () {
           knapp.disabled = true;
           knapp.textContent = "Betalar…";
@@ -378,14 +385,14 @@
             confirmParams: { return_url: location.href.split("#")[0] },
             redirect: "if_required"
           }).then(function (res) {
-            if (res.error) {
-              felruta.textContent = res.error.message || "Betalningen gick inte igenom";
-              felruta.hidden = false;
-              knapp.disabled = false;
-              knapp.textContent = "Betala";
-              return;
-            }
-            stang(res.paymentIntent);
+            /* Validerings- och kortfel kommer som res.error — visa dem, frys aldrig knappen. */
+            if (res.error) { visaFel(res.error.message); return; }
+            if (res.paymentIntent && res.paymentIntent.status === "succeeded") { stang(res.paymentIntent); return; }
+            /* requires_action/processing m.m. — betalningen slutfördes inte i rutan. */
+            visaFel("Betalningen slutfördes inte. Försök igen.");
+          }).catch(function (e) {
+            /* Utan detta .catch frös knappen på "Betalar…" om confirmPayment kastade. */
+            visaFel((e && e.message) || "Något gick fel med betalningen. Försök igen.");
           });
         };
       });
