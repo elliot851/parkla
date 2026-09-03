@@ -17,10 +17,18 @@
    inloggningen MASTE ha en egen nyckel, annars skriver de over varandra. */
   var SESSION = "parkla.v3.auth";
 
-  /* Sätts via inställningar i appen — inget behöver deployas om. */
+  /* Skarp config bakad i koden -> ALLA besökare når backend, ingen localStorage krävs.
+     Alla tre värden är publika (Supabase publishable + Stripe publishable) och hör hemma i appen.
+     localStorage.parkla.v3.cfg kan fortfarande överstyra (t.ex. test mot annan backend/nycklar).
+     OBS: pk är Stripe TESTLÄGE -> byt till pk_live_... här vid skarp betalning (efter företagsverifiering). */
+  var CFG_DEFAULT = {
+    url: "https://nzbgjxccaldhjwxllsma.supabase.co",
+    anon: "sb_publishable_0-AopBcKT_tiJ_k8wAMDbA_Gh2kH0fk",
+    pk: "pk_test_51UAscOR2PolOyeMIoIG7P50FrCoe5QN05XijNOijQAHZFTNI4Ya0hCqxkq3uRVkqEK98FcEjgTpTB25BtrwA5jSb00fOvLBv4C"
+  };
   function cfg() {
-    try { return JSON.parse(localStorage.getItem(NYCKLAR)) || {}; }
-    catch (e) { return {}; }
+    try { return Object.assign({}, CFG_DEFAULT, JSON.parse(localStorage.getItem(NYCKLAR)) || {}); }
+    catch (e) { return Object.assign({}, CFG_DEFAULT); }
   }
   function setCfg(c) {
     localStorage.setItem(NYCKLAR, JSON.stringify(c));
