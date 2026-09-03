@@ -238,7 +238,7 @@ function footerHTML() {
       <li><a href="#integritet" data-go="integritet">Integritetspolicy</a></li>
       <li>hej@parkla.se</li></ul></div>
   </div>
-  <div class="fbot"><span>Parkla · prototyp med demodata</span><span>v${VERSION}</span></div>
+  <div class="fbot"><span>Parkla${skarptPa() ? "" : " · prototyp med demodata"}</span><span>v${VERSION}</span></div>
 </div></footer>`;
 }
 function logoSVG(s) {
@@ -2561,10 +2561,9 @@ function viewTrygg() {
   <div class="panel pad-lg" style="margin-top:30px;border-color:var(--brass)" data-reveal>
     <div class="row"><span style="color:var(--brass)">${I("info", 22)}</span>
       <h3 style="margin:0">Parkla har inte öppnat än</h3></div>
-    <p class="dim" style="margin-top:10px;max-width:64ch">Det du ser nu är en förhandsvisning med påhittade
-      platser. Inga pengar rör sig. På den här sidan står bara sådant som faktiskt är byggt –
-      och, längre ner, exakt vad som byggs innan vi öppnar. Vi tycker det är rimligt att du
-      får veta skillnaden.</p>
+    <p class="dim" style="margin-top:10px;max-width:64ch">${skarptPa()
+      ? "Marknadsplatsen är öppen, men inga värdar har lagt upp platser än – därför är kartan tom just nu. Betalningar körs i testläge tills vi öppnar skarpt, så inga riktiga pengar rör sig ännu. På den här sidan står bara sådant som faktiskt är byggt – och, längre ner, exakt vad som byggs innan vi öppnar."
+      : "Det du ser nu är en förhandsvisning med påhittade platser. Inga pengar rör sig. På den här sidan står bara sådant som faktiskt är byggt – och, längre ner, exakt vad som byggs innan vi öppnar."} Vi tycker det är rimligt att du får veta skillnaden.</p>
   </div>
 
   <h2 style="margin:38px 0 4px" data-reveal>Det här finns i dag</h2>
@@ -3041,7 +3040,7 @@ function viewMer() {
 
   <div class="panel pad-lg" style="margin-top:34px">
     <h3>Om Parkla</h3>
-    <p class="dim small" style="margin-top:10px">Parkla är en prototyp och ett arbetsunderlag. All data i appen är påhittad. Version ${VERSION}.</p>
+    <p class="dim small" style="margin-top:10px">${skarptPa() ? `Parkla är i uppstart. Marknadsplatsen är skarp; betalningar körs i testläge tills lanseringen. Version ${VERSION}.` : `Parkla är en prototyp och ett arbetsunderlag. All data i appen är påhittad. Version ${VERSION}.`}</p>
     <div class="row wrap" style="margin-top:14px">
       <button class="btn btn-sm btn-p" onclick="startTour()">${I("play", 15)} Visa rundturen</button>
       <button class="btn btn-sm" data-go="installningar">${esc(t("settings"))}</button>
@@ -3346,7 +3345,7 @@ function tourSteps() {
       sel: mob ? '#tabbar button[data-go="mina"]' : '.nav a[data-go="mina"]', radius: 999, place: mob ? "top" : "bottom" },
     { title: "Och här är allt annat", body: "Inställningar, trygghet, priser, skatteregler och vanliga frågor. Du hittar alltid tillbaka hit.",
       sel: mob ? '#tabbar button[data-go="mer"]' : '.nav a[data-go="priser"]', radius: 999, place: mob ? "top" : "bottom" },
-    { title: "Nu kör vi", body: "Testa gärna att boka en plats – det kostar ingenting, allt i demon är påhittat.", sel: null }
+    { title: "Nu kör vi", body: skarptPa() ? "Nu är du redo. Hitta en plats, hyr ut din egen, eller bara titta dig omkring." : "Testa gärna att boka en plats – det kostar ingenting, allt i demon är påhittat.", sel: null }
   ];
 }
 function startTour() {
@@ -3817,6 +3816,6 @@ if (!LS.get("seen", false)) {
       <button class="btn btn-block btn-lg" onclick="closeSheet();go('sok')">${I("search", 18)} Jag letar efter parkering</button>
       <button class="btn btn-block" onclick="closeSheet()">Bara titta runt</button>
     </div>
-    <p class="muted small" style="margin-top:18px">Demo med påhittade platser. Du behöver inget konto.</p>
+    <p class="muted small" style="margin-top:18px">${skarptPa() ? "Titta runt fritt – du behöver inget konto. Konto behövs bara när du hyr ut eller bokar." : "Demo med påhittade platser. Du behöver inget konto."}</p>
   </div>`), 650);
 }
