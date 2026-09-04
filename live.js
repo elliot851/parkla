@@ -37,7 +37,9 @@
       area: r.omrade || SET.city,
       kind: r.typ === "pplats" ? "uppfart" : r.typ,
       nm: r.titel,
-      ad: r.adress,
+      /* platser_publik lämnar inte ut adress → använd området som underrad
+         (exakt adress visas först efter bokning via plats_detalj). */
+      ad: r.omrade || SET.city,
       type: r.typ.charAt(0).toUpperCase() + r.typ.slice(1),
       h: r.pris_timme_kr, d: r.pris_dag_kr, m: r.pris_manad_kr,
       w: Math.round(r.pris_dag_kr * 4.6 / 10) * 10,
@@ -193,6 +195,22 @@
     kravInlogg(function () {
       var iv = bokningsIntervall();
       PAPI.boka(id, iv.borjar, iv.slutar, iv.lage).then(function (r) {
+        /* Spegla bokningen lokalt så den syns under Mina bokningar (och i tab-badgen).
+           Utan detta betalade föraren men såg ingenting efteråt, och nådde ingen grindkod. */
+        var sp = allSpots().find(function (x) { return x.id === id; }) || {};
+        var o = function (v) { return (v != null) ? v / 100 : undefined; };
+        BOOKINGS.unshift({
+          id: Date.now(), spotId: id, dbId: r.booking_id,
+          spot: sp.nm || "Platsen", addr: sp.ad || sp.area || "", area: sp.area || "",
+          reg: reg.toUpperCase().trim(), mode: S.mode, qty: S.bk.qty, min: S.bk.min,
+          total: (r.total_ore != null ? r.total_ore / 100 : bkTotals().driverTotal),
+          base: o(r.bas_ore), service: o(r.avgift_forare_ore), trygg: o(r.trygg_ore),
+          host: sp.host || "Värd", date: S.bk.date || new Date().toISOString().slice(0, 10),
+          code: null, instr: sp.instr, pay: S.bk.pay,
+          status: r.godkannande ? "vantar" : "kommande", db: true
+        });
+        if (typeof persist === "function") persist();
+
         if (r.godkannande) {
           openSheet('<div class="sheet-b center" style="padding-top:36px">' +
             '<div class="tick" style="background:var(--brass)">' + I("clock", 32) + '</div>' +
@@ -241,7 +259,7 @@
       case "vecka":     slut.setDate(slut.getDate() + 7 * n); break;
       case "dygn":      slut.setDate(slut.getDate() + n); break;
       case "evenemang": slut.setHours(slut.getHours() + 6); break;
-      default:          slut.setMinutes(slut.getMinutes() + (S.bk.minuter || n * 60));
+      default:          slut.setMinutes(slut.getMinutes() + (S.bk.min || n * 60));
     }
     return { borjar: start.toISOString(), slutar: slut.toISOString(),
              lage: SERVERLAGE[S.mode] || "timme" };

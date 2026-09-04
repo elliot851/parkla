@@ -280,6 +280,13 @@
       ")&order=borjar.desc&limit=50");
   }
 
+  /* Exakt adress + portkod för en plats man faktiskt bokat.
+     Servern (plats_detalj, security definer) ger null till alla utan tillträde. */
+  function platsDetalj(listing_id) {
+    return rest("rpc/plats_detalj", { method: "POST", body: { p_listing: listing_id } })
+      .then(function (r) { return (r && r[0]) ? r[0] : null; });
+  }
+
   /* ── Stripe ───────────────────────────────────────────── */
 
   var stripeJs = null;
@@ -506,7 +513,7 @@
     platserIRutan: platserIRutan, minaPlatser: minaPlatser,
     sparaPlats: sparaPlats, taBortPlats: taBortPlats,
     blockeraDag: blockeraDag, sattDagspris: sattDagspris,
-    minaBokningar: minaBokningar, minSession: minSession,
+    minaBokningar: minaBokningar, minSession: minSession, platsDetalj: platsDetalj,
     boka: boka,
     korInStart: korInStart, korInAnlant: korInAnlant,
     korInAvbryt: korInAvbryt, korInAvsluta: korInAvsluta,

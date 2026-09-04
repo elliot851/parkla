@@ -2372,17 +2372,33 @@ function doExtend(id, unit) {
 }
 function openAccess(id) {
   const b = BOOKINGS.find(x => x.id === id); if (!b) return;
-  openSheet(sheetHead("Din plats") + `<div class="sheet-b center">
+  const draw = (adress, code, instr) => openSheet(sheetHead("Din plats") + `<div class="sheet-b center">
     <div class="tick" style="background:var(--pine)">${I("key", 28)}</div>
     <h3 style="font-family:var(--serif);font-size:1.5rem">${esc(b.spot)}</h3>
-    <p class="dim small" style="margin-top:6px">${esc(b.addr || "")}</p>
-    <div class="code" style="margin-top:22px">${esc(b.code)}</div>
+    <p class="dim small" style="margin-top:6px">${esc(adress || "")}</p>
+    <div class="code" style="margin-top:22px">${esc(code || "—")}</div>
     <p class="muted small" style="margin-top:10px">Koden till grinden, porten eller nyckelskåpet</p>
-    <div class="callout" style="margin-top:18px;text-align:left">${I("info", 16)} ${esc(b.instr || "")}</div>
+    <div class="callout" style="margin-top:18px;text-align:left">${I("info", 16)} ${esc(instr || "")}</div>
     ${typeof photoBlockHTML === "function" ? photoBlockHTML(b) : ""}
     <button class="btn btn-p btn-block btn-lg" style="margin-top:20px" onclick="toast('Grinden öppnas …','key')">${I("door", 18)} Öppna grinden</button>
     <button class="btn btn-block" style="margin-top:10px" onclick="closeSheet();go('meddelanden')">${I("message", 16)} Skriv till ${esc(b.host)}</button>
   </div>`);
+
+  /* Skarp bokning: exakt adress och portkod finns bara i databasen (plats_detalj),
+     inte i den lokala kopian. Visa arket direkt och fyll i koden när servern svarat. */
+  if (b.db && typeof skarptPa === "function" && skarptPa() && typeof PAPI !== "undefined" && PAPI.platsDetalj) {
+    draw(b.addr, "Hämtar koden …", b.instr);
+    PAPI.platsDetalj(b.spotId).then(d => {
+      if (d) { b.addr = d.adress || b.addr; b.code = d.grindkod || b.code; persist(); }
+      const box = document.querySelector(".sheet-b"); if (!box) return;
+      const codeEl = box.querySelector(".code");
+      if (codeEl) codeEl.textContent = (d && d.grindkod) || "Koden är inte satt av värden än";
+      const adrEl = box.querySelector("p.dim.small");
+      if (adrEl && d && d.adress) adrEl.textContent = d.adress;
+    }).catch(() => {});
+    return;
+  }
+  draw(b.addr, b.code, b.instr);
 }
 function receipt(id) {
   const b = BOOKINGS.find(x => x.id === id); if (!b) return;
