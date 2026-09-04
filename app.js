@@ -354,7 +354,7 @@ ${liveBanner()}
       <span class="l-best"><i></i>Billigast</span>
     </div>
   </div>
-  <p class="muted small center" style="margin-top:12px">Dra i kartan för att flytta den. Tryck på ett pris så ser du platsen.</p>
+  <p class="muted small center" style="margin-top:12px">Ett finger scrollar sidan – det finns mer nedanför. Två fingrar flyttar kartan. Tryck på ett pris så ser du platsen.</p>
 </div></section>
 
 <section class="snug"><div class="wrap">
@@ -769,7 +769,7 @@ function sokBodyHTML(list, area) {
       </div>
       <div id="mcard"></div>
     </div>
-    <p class="muted small center" style="margin-top:12px">Dra i kartan för att flytta den. Nyp med två fingrar för att zooma. Tryck på ett pris för att se platsen.</p>`;
+    <p class="muted small center" style="margin-top:12px">Ett finger scrollar sidan – det finns mer nedanför. Två fingrar flyttar och zoomar kartan. Tryck på ett pris för att se platsen.</p>`;
   }
   return `
   <div class="mapwrap short" style="margin-bottom:18px">
@@ -3353,7 +3353,7 @@ function tourSteps() {
   const mob = window.innerWidth < 981;
   return [
     { title: "Välkommen till Parkla", body: "Här hyr vanliga människor ut sin uppfart till andra som behöver parkera. Vi visar var allt finns – det tar 30 sekunder.", sel: null },
-    { title: "Här hittar du parkering", body: "Tryck här för att söka. Du kan dra i kartan, skriva en adress eller trycka på ett pris för att se platsen.",
+    { title: "Här hittar du parkering", body: "Tryck här för att söka. Flytta kartan med två fingrar (ett finger scrollar sidan), skriv en adress, eller tryck på ett pris för att se platsen.",
       sel: mob ? '#tabbar button[data-go="sok"]' : '.nav a[data-go="sok"]', route: null, radius: 999, place: mob ? "top" : "bottom" },
     { title: "Här räknar du ut vad din plats är värd", body: "Har du en uppfart, carport eller garageplats? Svara på tre frågor så säger vi vad du kan ta betalt.",
       sel: mob ? '#tabbar button[data-go="hyrut"]' : '.nav a[data-go="hyrut"]', radius: 999, place: mob ? "top" : "bottom" },
@@ -3825,12 +3825,20 @@ if (!LS.get("seen", false)) {
   setTimeout(() => openSheet(`<div class="sheet-b center" style="padding-top:34px">
     ${logoSVG(52)}
     <h3 style="font-family:var(--serif);font-size:1.9rem;margin-top:18px">Välkommen till Parkla</h3>
-    <p class="dim" style="margin-top:10px;max-width:34ch;margin-inline:auto">Här hyr vanliga människor ut sin uppfart till andra som behöver parkera.</p>
-    <div class="stack tight" style="margin-top:26px">
-      <button class="btn btn-p btn-block btn-lg" onclick="closeSheet();startTour()">${I("play", 18)} Visa mig hur det funkar</button>
-      <button class="btn btn-block btn-lg" onclick="closeSheet();go('hyrut')">${I("wallet", 18)} Jag har en plats att hyra ut</button>
-      <button class="btn btn-block btn-lg" onclick="closeSheet();go('sok')">${I("search", 18)} Jag letar efter parkering</button>
-      <button class="btn btn-block" onclick="closeSheet()">Bara titta runt</button>
+    <p class="dim" style="margin-top:10px;max-width:32ch;margin-inline:auto">Här hyr vanliga människor ut sin uppfart till andra som behöver parkera. Vad vill du göra?</p>
+    <div class="stack tight" style="margin-top:24px">
+      <button class="btn btn-p btn-block" style="display:block;height:auto;padding:15px 18px;text-align:left" onclick="closeSheet();go('sok')">
+        <span style="display:flex;align-items:center;gap:11px;font-weight:600;font-size:1.06rem">${I("search", 20)} Jag söker parkering</span>
+        <span style="display:block;margin-top:4px;font-weight:400;font-size:.84rem;opacity:.82">Hitta en ledig plats nära dig och boka på en minut</span>
+      </button>
+      <button class="btn btn-block" style="display:block;height:auto;padding:15px 18px;text-align:left" onclick="closeSheet();go('hyrut')">
+        <span style="display:flex;align-items:center;gap:11px;font-weight:600;font-size:1.06rem">${I("wallet", 20)} Jag vill hyra ut min plats</span>
+        <span style="display:block;margin-top:4px;font-weight:400;font-size:.84rem;color:var(--ink-45)">Se vad din uppfart kan ge dig – gratis att lägga upp</span>
+      </button>
+      <div class="row" style="gap:8px;margin-top:2px">
+        <button class="btn btn-block" onclick="closeSheet();startTour()">${I("play", 16)} Visa hur det funkar</button>
+        <button class="btn btn-block" onclick="closeSheet()">Bara titta runt</button>
+      </div>
     </div>
     <p class="muted small" style="margin-top:18px">${skarptPa() ? "Titta runt fritt – du behöver inget konto. Konto behövs bara när du hyr ut eller bokar." : "Demo med påhittade platser. Du behöver inget konto."}</p>
   </div>`), 650);

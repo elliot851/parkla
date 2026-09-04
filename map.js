@@ -92,10 +92,27 @@ const PMap = (function () {
   function init(el, center, zoom, opts) {
     opts = opts || {};
     destroy();
+    /* UMD-bygget av leaflet-gesture-handling auto-registrerar sig inte —
+       koppla in handlern på L.Map en gång innan första kartan skapas. */
+    if (window.leafletGestureHandling && !L.Map.prototype._parklaGH) {
+      L.Map.addInitHook("addHandler", "gestureHandling", window.leafletGestureHandling.GestureHandling);
+      L.Map.prototype._parklaGH = true;
+    }
     map = L.map(el, {
       center, zoom,
       zoomControl: false,
       attributionControl: true,
+      /* Ett finger scrollar SIDAN, två fingrar flyttar kartan (som inbäddad Google Maps).
+         Löser att man "fastnar" i kartan när man egentligen vill scrolla ner på sidan. */
+      gestureHandling: !!window.leafletGestureHandling,
+      gestureHandlingOptions: {
+        text: {
+          touch: "Använd två fingrar för att flytta kartan",
+          scroll: "Använd Ctrl + rulla för att zooma kartan",
+          scrollMac: "Använd ⌘ + rulla för att zooma kartan"
+        },
+        duration: 1500
+      },
       scrollWheelZoom: true,
       dragging: true,
       tap: true,
