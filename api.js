@@ -24,7 +24,7 @@
   var CFG_DEFAULT = {
     url: "https://nzbgjxccaldhjwxllsma.supabase.co",
     anon: "sb_publishable_0-AopBcKT_tiJ_k8wAMDbA_Gh2kH0fk",
-    pk: "pk_test_51UAscOR2PolOyeMIoIG7P50FrCoe5QN05XijNOijQAHZFTNI4Ya0hCqxkq3uRVkqEK98FcEjgTpTB25BtrwA5jSb00fOvLBv4C"
+    pk: "pk_live_51UAscOR2PolOyeMIBGGM7MMXIV7lfFx4oeJNPxOfMiSqtDEgUBBSs5Co7VshSKgvXOVsgDFnRrFmvVmG4AO7Ujjz00ocmCJuir"
   };
   function cfg() {
     try { return Object.assign({}, CFG_DEFAULT, JSON.parse(localStorage.getItem(NYCKLAR)) || {}); }
