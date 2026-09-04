@@ -3558,6 +3558,8 @@ function skickaBekraftelse(e) {
 function openSkapaKonto(efterat) {
   LOGIN_EFTER = typeof efterat === "function" ? efterat : null;
   openSheet(sheetHead("Skapa konto") + `<div class="sheet-b stack">
+    <input id="reg-hp" name="webbplats" type="text" tabindex="-1" autocomplete="off" aria-hidden="true"
+      style="position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none">
     <div class="field"><label>Namn</label>
       <input class="inp" id="reg-namn" autocomplete="name" placeholder="För- och efternamn"></div>
     <div class="field"><label>E-post</label>
@@ -3572,6 +3574,10 @@ function openSkapaKonto(efterat) {
 }
 
 function skapaKontoNu(knapp) {
+  /* Honungsfälla: fältet är dolt för människor. Har det ett värde är det en bot.
+     Skapa inget konto, ge ett neutralt fel (nollrisk för äkta användare). */
+  const hp = document.getElementById("reg-hp");
+  if (hp && hp.value.trim()) return loginFel("Något gick fel. Ladda om sidan och försök igen.");
   const namn = (document.getElementById("reg-namn").value || "").trim();
   const e = (document.getElementById("reg-epost").value || "").trim();
   const p = document.getElementById("reg-losen").value || "";
