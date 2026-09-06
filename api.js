@@ -287,6 +287,18 @@
       .then(function (r) { return (r && r[0]) ? r[0] : null; });
   }
 
+  /* Egen profil (namn + profilbild). RLS: bara ens egen rad. */
+  function minProfil() {
+    var u = jag(); if (!u) return Promise.resolve(null);
+    return rest("profiles?id=eq." + u.id + "&select=namn,avatar")
+      .then(function (r) { return (r && r[0]) ? r[0] : null; });
+  }
+  function sparaProfil(falt) {
+    var u = jag(); if (!u) return Promise.reject(new Error("Inte inloggad"));
+    return rest("profiles?id=eq." + u.id, { method: "PATCH", body: falt, retur: true })
+      .then(function (r) { return (r && r[0]) ? r[0] : falt; });
+  }
+
   /* ── Stripe ───────────────────────────────────────────── */
 
   var stripeJs = null;
@@ -518,6 +530,7 @@
     sparaPlats: sparaPlats, taBortPlats: taBortPlats,
     blockeraDag: blockeraDag, sattDagspris: sattDagspris,
     minaBokningar: minaBokningar, minSession: minSession, platsDetalj: platsDetalj,
+    minProfil: minProfil, sparaProfil: sparaProfil,
     boka: boka,
     korInStart: korInStart, korInAnlant: korInAnlant,
     korInAvbryt: korInAvbryt, korInAvsluta: korInAvsluta,
