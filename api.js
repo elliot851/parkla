@@ -416,9 +416,13 @@
 
   /* ── Boka i förväg ────────────────────────────────────── */
 
-  function boka(listing_id, borjar, slutar, lage) {
+  function boka(listing_id, borjar, slutar, lage, qty, extras) {
+    extras = extras || {};
     return fn("booking-intent", {
-      listing_id: listing_id, borjar: borjar, slutar: slutar, lage: lage
+      listing_id: listing_id, borjar: borjar, slutar: slutar, lage: lage,
+      qty: Math.max(1, Math.round(Number(qty) || 1)),
+      charge: !!extras.charge, extraCar: !!extras.extraCar,
+      code: (extras.code || "").toString().trim()
     }).then(function (r) {
       if (r.godkannande) return r;                 // värden ska säga ja först
       return betala(r.client_secret, "Bekräfta bokningen",
