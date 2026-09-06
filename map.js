@@ -190,6 +190,9 @@ const PMap = (function () {
   }
   function flyTo(ll, z) { if (map) map.flyTo(ll, z || 15, { duration: .55 }); }
   function invalidate() { if (map) setTimeout(() => map.invalidateSize(), 50); }
+  /* Synkron ommätning — anropas när containern nått sin slutliga storlek
+     (annars tror Leaflet att kartan är mindre och nålarna klumpar i mitten). */
+  function invalidateNow() { if (map) map.invalidateSize(); }
 
   function showMe(ll) {
     if (!map) return;
@@ -233,7 +236,7 @@ const PMap = (function () {
   }
   function alive() { return !!map; }
 
-  return { init, setMode, getMode, maxZoomNow, setSpots, fitSpots, flyTo, invalidate, locate, geocode, showMe, destroy, alive };
+  return { init, setMode, getMode, maxZoomNow, setSpots, fitSpots, flyTo, invalidate, invalidateNow, locate, geocode, showMe, destroy, alive };
 })();
 
 /* Avstånd i km mellan två koordinater */
