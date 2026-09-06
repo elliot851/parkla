@@ -148,6 +148,23 @@ function feeSplit(base, m) {
   const trygg = monthly ? FEES.tryggMonthly : FEES.tryggShort;
   return { base, service, trygg, hostFee, hostNet: base - hostFee, driverTotal: base + service + trygg };
 }
+/* Laddel: per timme × laddboxens effekt, tak = en full laddning per dygn.
+   Går HELT till värden (elkostnads-ersättning, ingen Parkla-avgift, ingen rabatt). */
+function laddAvgift(effekt, minuter) {
+  if (!effekt || minuter <= 0) return 0;
+  const kWh = Math.min(effekt * minuter / 60, FEES.laddTakKwh);   // tak = en full laddning per bokning
+  return Math.round(kWh * FEES.elPrisPerKwh);
+}
+/* Laddminuter för en bokning i valt läge (= bokningens längd). */
+function laddMinuter(mode, b) {
+  if (mode === "timme") return b.min || 60;
+  if (mode === "evenemang") return 360;
+  if (mode === "sasong") return ((typeof SEASON !== "undefined" && SEASON[S.season]) ? SEASON[S.season].months : 5) * 43200;
+  const per = mode === "dygn" ? 1440 : mode === "vecka" ? 10080 : 43200;
+  return (b.qty || 1) * per;
+}
+/* Ungefärlig laddavgift per timme, för att visa värden/föraren (effekt × elpris). */
+function laddPerTimme(effekt) { return Math.round((effekt || 11) * FEES.elPrisPerKwh); }
 function priceSuggest(city, type, walk, charger, gated) {
   const b = CITY_BASE[city] || CITY_BASE["Övrig stad/tätort"];
   const mult = TYPE_MULT[type] || 1;
@@ -452,7 +469,7 @@ function harledPriser(manad) {
 function listingToSpot(l) {
   const d = (l.egnaPriser && l.prisDygn) ? l.prisDygn : Math.max(20, Math.round(l.pris / 22 * 1.6));
   const feat = [];
-  if (l.charger) feat.push("Laddbox");
+  if (l.charger) feat.push("Laddbox " + (l.laddeffekt || 11) + " kW");
   if (l.gated) feat.push("Låst");
   if (l.cam) feat.push("Kamera");
   if (l.vinter) feat.push("Vinterförvar");
@@ -463,7 +480,7 @@ function listingToSpot(l) {
     w: (l.egnaPriser && l.prisVecka) ? l.prisVecka : Math.round(d * 4.6 / 10) * 10,
     m: l.pris, ev: (l.egnaPriser && l.prisMatch) ? l.prisMatch : Math.round(d * 1.9 / 10) * 10,
     rate: 5, n: 0, host: "Du", hostSince: new Date().getFullYear(),
-    charge: !!l.charger, feat: feat.length ? feat : ["Ny plats"], size: l.size || "Personbil",
+    charge: !!l.charger, laddeffekt: l.charger ? (l.laddeffekt || 11) : 0, feat: feat.length ? feat : ["Ny plats"], size: l.size || "Personbil",
     walk: 0, ll: l.ll || (AREAS.find(a => a.id === (l.area || SET.city)) || AREAS[0]).c,
     instr: l.info || "Instruktion saknas ännu.", paused: l.paused, grundare: !!l.grundare, photo: l.photo || null
   };
@@ -1570,22 +1587,23 @@ function startBooking(id) {
 function bkTotals() {
   const s = allSpots().find(x => x.id === S.bk.id), b = S.bk;
   const unit = priceOnDate(s, b.date, S.mode) || priceFor(s, S.mode) || s.d || s.m;
-  let base, chargeCost;
-  if (S.mode === "sasong") { base = unit; chargeCost = 0; }
-  else if (S.mode === "timme") {
-    /* Minutfint: du betalar för exakt den tid du snurrar in. Priset följer hjulet mjukt. */
-    const min = b.min || 60;
-    base = Math.round(unit * min / 60);
-    chargeCost = b.charge ? 55 * Math.ceil(min / 60) : 0;
-  } else {
-    base = unit * b.qty;
-    chargeCost = b.charge ? (S.mode === "manad" ? 380 : 55) * b.qty : 0;
-  }
+  let base;
+  if (S.mode === "sasong") base = unit;
+  else if (S.mode === "timme") base = Math.round(unit * (b.min || 60) / 60);  /* minutfint via hjulet */
+  else base = unit * b.qty;
+  /* Laddel: effekt-baserad, står UTANFÖR avgiftsbasen och går helt till värden. */
+  const chargeCost = (b.charge && s && s.charge)
+    ? laddAvgift(s.laddeffekt || 11, laddMinuter(S.mode, b)) : 0;
   const extraCost = b.extraCar ? Math.round(base * 0.6) : 0;
-  const sub = base + chargeCost + extraCost;
-  const råDisc = b.code.toUpperCase() === "PARKLA50" ? Math.round(sub * .5) : b.code.toUpperCase() === "GRANNE" ? 100 : 0;
-  const disc = Math.min(sub, råDisc);   /* aldrig under noll — en 23-kronorsparkering med GRANNE gav -77 kr */
-  return Object.assign({ unit, base, chargeCost, extraCost, disc }, feeSplit(sub - disc, S.mode));
+  /* Rabatt gäller parkeringen (base + extra bil), aldrig värdens el. */
+  const parkSub = base + extraCost;
+  const råDisc = b.code.toUpperCase() === "PARKLA50" ? Math.round(parkSub * .5) : b.code.toUpperCase() === "GRANNE" ? 100 : 0;
+  const disc = Math.min(parkSub, råDisc);   /* aldrig under noll */
+  const fs = feeSplit(parkSub - disc, S.mode);
+  return Object.assign({ unit, base, chargeCost, extraCost, disc }, fs, {
+    driverTotal: fs.driverTotal + chargeCost,   /* föraren betalar elen ovanpå parkeringen */
+    hostNet: fs.hostNet + chargeCost            /* värden får elen i sin helhet */
+  });
 }
 const PRESETS  = { timme:[1,2,4,8], dygn:[1,2,3,7], vecka:[1,2,4], manad:[1,3,6,12], evenemang:[1,2,3] };
 const QTY_WORD = { timme:"timmar", dygn:"dygn", vecka:"veckor", manad:"m\u00e5nader", sasong:"s\u00e4songer", evenemang:"platser" };
@@ -1703,7 +1721,7 @@ function renderBooking() {
       ${I("plus", 15)} Laddning, en bil till eller rabattkod</button>
     <div class="moreblock" id="bkmore" ${(b.charge || b.extraCar || b.code) ? "" : "hidden"}>
       ${s.charge ? `<div class="setrow"><span style="color:var(--green)">${I("bolt", 20)}</span>
-        <div class="t"><b>Ladda elbilen</b><span>${S.mode === "manad" ? kr(380) + " i m\u00e5naden" : kr(55) + " per g\u00e5ng"}</span></div>
+        <div class="t"><b>Ladda elbilen</b><span>~${kr(laddPerTimme(s.laddeffekt || 11))}/tim (${num(s.laddeffekt || 11)} kW) \u00b7 g\u00e5r till v\u00e4rden</span></div>
         <div class="switch ${b.charge ? "on" : ""}" role="switch" onclick="bkTog('charge',this)"></div></div>` : ""}
       <div class="setrow"><span style="color:var(--ink-45)">${I("car", 20)}</span>
         <div class="t"><b>En bil till</b><span>Om platsen rymmer tv\u00e5 fordon</span></div>
@@ -1806,7 +1824,7 @@ function bkMore(btn) {
 
 function bkSumHTML(T) {
   return `<div class="kv"><span>${num(T.unit)} ${sym()} × ${S.bk.qty}</span><b>${kr(T.base)}</b></div>
-    ${T.chargeCost ? `<div class="kv"><span>Laddning</span><b>${kr(T.chargeCost)}</b></div>` : ""}
+    ${T.chargeCost ? `<div class="kv"><span>Laddning <span class="dim">· till värden</span></span><b>${kr(T.chargeCost)}</b></div>` : ""}
     ${T.extraCost ? `<div class="kv"><span>En bil till</span><b>${kr(T.extraCost)}</b></div>` : ""}
     ${T.disc ? `<div class="kv"><span style="color:var(--green)">Rabatt</span><b style="color:var(--green)">−${kr(T.disc)}</b></div>` : ""}
     <div class="kv"><span>Serviceavgift</span><b>${kr(T.service)}</b></div>
@@ -2055,7 +2073,10 @@ function renderWizard() {
      ${[["charger", "bolt", "Laddbox", "Man kan ladda elbil"], ["gated", "lock", "Låst eller grind", "Port, bom eller grind"], ["cam", "camera", "Kamera", "Platsen är bevakad"], ["vinter", "moon", "Erbjud vinterförvar", "Kräver garage, carport, inhägnad tomt eller låst innergård"]]
        .map(([k, ic, tt, ss]) => `<div class="setrow"><span style="color:var(--ink-45)">${I(ic, 20)}</span>
          <div class="t"><b>${tt}</b><span>${ss}</span></div>
-         <div class="switch ${w[k] ? "on" : ""}" role="switch" onclick="S.wizard['${k}']=!S.wizard['${k}'];this.classList.toggle('on')"></div></div>`).join("")}`,
+         <div class="switch ${w[k] ? "on" : ""}" role="switch" onclick="wizTog('${k}')"></div></div>`).join("")}
+     ${w.charger ? `<div class="field"><label>Laddboxens effekt</label>
+       <select class="inp" id="w_laddeffekt">${LADD_EFFEKTER.map(e => `<option value="${e}" ${(+w.laddeffekt || 11) === e ? "selected" : ""}>${e} kW${e <= 3.7 ? " · vanligt uttag" : e >= 22 ? " · snabb" : ""}</option>`).join("")}</select>
+       <p class="muted small" style="margin-top:6px">Föraren betalar elen efter effekt (~${kr(laddPerTimme(+w.laddeffekt || 11))}/tim) och den går <b>helt till dig</b>.</p></div>` : ""}`,
     `<div class="field"><label>När får folk parkera?</label><select class="inp" id="w_tid">
        ${["Alltid", "Vardagar 08–17", "Kvällar och helger", "Bara vid matcher", "Bara långtid (månad)"].map(k => `<option ${k === w.tid ? "selected" : ""}>${k}</option>`).join("")}</select></div>
      <div class="setrow"><span style="color:var(--green)">${I("bolt", 20)}</span>
@@ -2132,10 +2153,13 @@ function wizEgnaPriser() {
   renderWizard();
 }
 function wizPrisMode(field, inp) { S.wizard["pris" + field] = +inp.value || 0; }
+/* Togglar en switch i wizarden och renderar om (så laddbox-effektväljaren dyker upp/försvinner). */
+function wizTog(k) { grabWizard(); S.wizard[k] = !S.wizard[k]; renderWizard(); }
 function grabWizard() {
   const g = id => (document.getElementById(id) || {}).value, w = S.wizard;
   if (w.step === 0 && g("w_ad") != null) w.ad = g("w_ad");
-  if (w.step === 1) { w.type = g("w_type") || w.type; w.size = g("w_size") || w.size; }
+  if (w.step === 1) { w.type = g("w_type") || w.type; w.size = g("w_size") || w.size;
+    if (g("w_laddeffekt")) w.laddeffekt = +g("w_laddeffekt"); }
   if (w.step === 2) { w.tid = g("w_tid") || w.tid; w.info = g("w_info") || w.info; }
   if (w.step === 3) {
     w.pris = +g("w_pris") || w.pris;
@@ -2160,7 +2184,7 @@ function saveListing() {
   const rec = { id: w.editId || Date.now(), ad: w.ad.trim(), type: w.type, size: w.size, pris: w.pris,
     egnaPriser: !!w.egnaPriser, prisTimme: w.prisTimme || 0, prisDygn: w.prisDygn || 0, prisVecka: w.prisVecka || 0, prisMatch: w.prisMatch || 0,
     photo: w.photo || null,
-    tid: w.tid, info: w.info, charger: w.charger, gated: w.gated, cam: w.cam, vinter: w.vinter, dyn: w.dyn,
+    tid: w.tid, info: w.info, charger: w.charger, laddeffekt: w.charger ? (w.laddeffekt || 11) : 0, gated: w.gated, cam: w.cam, vinter: w.vinter, dyn: w.dyn,
     instant: w.instant !== false,   /* vardens "boka direkt"-val ska foljas, inte bara lagras */
     /* Alla som lagger upp nu ar grundare. Behall flaggan vid redigering. */
     grundare: w.editId ? ((LISTINGS.find(x => x.id === w.editId) || {}).grundare !== false) : true,
