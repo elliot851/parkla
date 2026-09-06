@@ -24,7 +24,7 @@
   function dbTillSpot(r) {
     var f = r.funktioner || {};
     var feat = [];
-    if (f.laddbox) feat.push("Laddbox");
+    if (f.laddbox) feat.push("Laddbox " + (f.laddeffekt || 11) + " kW");
     if (f.grind) feat.push("Låst eller grind");
     if (f.kamera) feat.push("Kamera");
     if (f.tak) feat.push("Tak");
@@ -47,6 +47,7 @@
       rate: 5, n: 0,
       host: "Värd", hostSince: new Date(r.skapad).getFullYear(),
       charge: !!f.laddbox,
+      laddeffekt: f.laddbox ? (f.laddeffekt || 11) : 0,
       feat: feat.length ? feat : ["Ny plats"],
       size: f.storlek || "Personbil",
       walk: 0,
@@ -308,7 +309,7 @@
         direktbokning: w.instant !== false,
         korin: w.instant !== false,
         pausad: false,
-        funktioner: { laddbox: !!w.charger, grind: !!w.gated, kamera: !!w.cam, storlek: w.size || "Personbil" },
+        funktioner: { laddbox: !!w.charger, laddeffekt: w.charger ? (w.laddeffekt || 11) : null, grind: !!w.gated, kamera: !!w.cam, storlek: w.size || "Personbil" },
         grundare: true
       };
       PAPI.sparaPlats(db).then(function () {
