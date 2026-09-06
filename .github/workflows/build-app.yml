@@ -1,0 +1,59 @@
+name: Bygg Parkla-appen (Android + iOS)
+
+# Bygger den nativa appen i MOLNET — ingen Mac, inga lokala verktyg.
+# Android-jobbet ger en installerbar APK direkt (ladda ner under "Artifacts",
+# installera på valfri Android-telefon = riktig app, ingen butik behövs än).
+# iOS-jobbet bygger på Apples moln-runner (kräver Apple-signeringshemligheter
+# när du skapat Apple Developer-kontot).
+
+on:
+  workflow_dispatch:        # kör manuellt från GitHub -> Actions -> Run workflow
+  push:
+    paths: [ "app/**", "site/**", ".github/workflows/build-app.yml" ]
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - uses: actions/setup-java@v4
+        with: { distribution: "temurin", java-version: "21" }
+      - name: Installera och paketera sajten
+        working-directory: app
+        run: |
+          npm install
+          npm run build              # kopierar ../site -> www
+          npx cap add android || npx cap sync android
+      - name: Bygg debug-APK
+        working-directory: app/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+      - name: Ladda upp APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: parkla-android-apk
+          path: app/android/app/build/outputs/apk/debug/*.apk
+
+  ios:
+    runs-on: macos-14
+    # Aktiveras när Apple Developer-kontot finns + signeringshemligheter lagts som
+    # GitHub Secrets. Tills dess bygger den ett osignerat arkiv (verifierar att koden byggs).
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Installera och paketera sajten
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+          npx cap add ios || npx cap sync ios
+      - name: Bygg (osignerat) — verifierar kompilering
+        working-directory: app/ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App \
+            -configuration Debug -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO build || true
