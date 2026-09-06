@@ -1,0 +1,70 @@
+PARKLA — FRÅN PWA TILL RIKTIG APP (App Store + Google Play + Huawei)
+====================================================================
+Wrappern (Capacitor) tar exakt samma sajt som ligger på parkla.se och
+paketerar den som en nativ app. Ingen kod skrivs om. Samma app funkar på
+iPhone, Samsung, Huawei och alla andra Android-telefoner.
+
+VAD SOM REDAN ÄR KLART (den här mappen):
+  - capacitor.config.json  (appId se.parkla.app, namn Parkla, färger, plugins)
+  - package.json           (Capacitor 6 + iOS + Android + geo + push)
+  Sajten ligger i ../site och kopieras in automatiskt vid bygge.
+
+DET HÄR KRÄVER EN DATOR MED VERKTYG (går INTE att göra i den här miljön —
+saknar Node/Android Studio/Xcode). Kör på din dator:
+
+────────────────────────────────────────────────────────────────────
+STEG 0 — installera en gång
+  - Node.js 18+ (nodejs.org)
+  - Android: Android Studio (gratis)
+  - iOS: en Mac + Xcode (gratis, men KRÄVER macOS — går ej på Windows)
+
+STEG 1 — installera wrappern (i den här app-mappen)
+  npm install
+  npm run build            # kopierar ../site -> www
+  npx cap add android
+  npx cap add ios          # bara på Mac
+
+STEG 2 — ikoner + splash (behöver en 1024x1024 PNG som källa)
+  Lägg en 1024px-ikon i app/assets/icon.png + app/assets/splash.png
+  npx capacitor-assets generate
+
+STEG 3 — öppna och bygg
+  npx cap sync
+  npx cap open android     # bygger APK/AAB i Android Studio
+  npx cap open ios         # bygger i Xcode (Mac)
+
+────────────────────────────────────────────────────────────────────
+KONTON SOM KRÄVS (bara du kan skapa dem — riktig identitet/betalning):
+
+  GOOGLE PLAY
+    - Google Play Console: 25 USD engångsavgift
+    - Ladda upp .aab, fyll i butikslistning, åldersgräns, dataskydd
+    - Granskning: oftast timmar–några dagar. Tillåter web-wrapper.
+
+  APP STORE (Apple)
+    - Apple Developer Program: 99 USD/år
+    - Kräver Mac + Xcode för att bygga och ladda upp
+    - Granskning: 1–3 dagar. OBS regel 4.2: en app som BARA är en
+      inbäddad webbsida kan nekas. Därför har wrappern push-notiser +
+      geo inlagt (nativ funktionalitet) — det brukar räcka. Om Apple
+      krånglar: lägg till ett nativt inslag till (t.ex. dela-plats).
+
+  HUAWEI APPGALLERY
+    - Huawei Developer-konto (gratis, kräver ID-verifiering)
+    - Använder SAMMA Android .aab. Egen granskning.
+
+────────────────────────────────────────────────────────────────────
+VIKTIGT — DU BEHÖVER INTE VÄNTA PÅ BUTIKERNA FÖR ATT LANSERA:
+  Parkla är REDAN en installerbar app via webbläsaren idag:
+    - iPhone:  Safari -> Dela -> "Lägg till på hemskärmen"
+    - Android: Chrome -> meny -> "Installera app" / "Lägg till"
+  Då får man Parkla-ikon, helskärm, offline — precis som en butiks-app.
+  Butiksversionerna (Play/App Store/Huawei) är en TILLVÄXTKANAL som kan
+  komma veckan efter lansering. De stoppar inte starten.
+
+STORE-LISTNING (assets att ta fram — kan återanvända share.png + copy):
+  - Ikon 512 (finns) + 1024 (behöver skapas)
+  - Feature-grafik 1024x500 (Play)
+  - Skärmdumpar telefon (min 2, helst 4-6) — tas från appen
+  - Kort beskrivning (80 tecken) + lång beskrivning (finns copy att klippa)
+  - Integritetspolicy-URL: https://parkla.se/#integritet (finns)
