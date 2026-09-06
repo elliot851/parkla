@@ -3,7 +3,7 @@
    ============================================================ */
 "use strict";
 
-const VERSION = "2026-09-05.63";
+const VERSION = "2026-09-05.64";
 
 /* ---------- Avgiftsmodell ---------- */
 const FEES = {
@@ -14,8 +14,15 @@ const FEES = {
   schablon: 40000,
   garantiBelopp: 25000,
   refVard: 200, refForare: 100,
-  laddOrePerKwh: 10
+  laddOrePerKwh: 10,
+  /* Laddning: el debiteras per timme skalat efter laddboxens effekt, och går
+     HELT till värden (elkostnads-ersättning, ingen Parkla-avgift). Taket är en
+     full laddning (~stort elbilsbatteri) per dygn av bokningen. */
+  elPrisPerKwh: 3,     // kr/kWh, strax under publik AC-laddning
+  laddTakKwh: 80       // max debiterad energi per bokning (en full laddning)
 };
+/* Laddboxens effekt (kW) som värden väljer. 11 kW = vanligast hemma. */
+const LADD_EFFEKTER = [3.7, 7.4, 11, 22];
 
 /* ---------- Valutor (demokurser) ---------- */
 const CURRENCIES = {
