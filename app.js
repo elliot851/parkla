@@ -995,7 +995,13 @@ function mountMap(id, opts) {
   const list = baseList();
   PMap.setSpots(list, makeStateOf(list), S.selSpot);
   if (S.near) PMap.showMe(S.near);
-  if (opts.fit) setTimeout(() => PMap.fitSpots(list, opts.pad || 40), 140);
+  /* Vänta tills containern nått sin slutliga storlek innan vi mäter om
+     kartan och ramar in nålarna. Utan detta tror Leaflet att kartan är
+     mindre än den är → nålarna klumpar ihop i mitten (särskilt listvyns
+     korta karta). Två rAF fångar layouten, 200 ms är en säkerhetsbackup. */
+  const settle = () => { PMap.invalidateNow(); if (opts.fit) PMap.fitSpots(list, opts.pad || 40); };
+  requestAnimationFrame(() => requestAnimationFrame(settle));
+  setTimeout(settle, 200);
 }
 /* Startsidans karta: ett tryck på ett pris öppnar platsen direkt. */
 /* Var vill du parkera? Egen position, stad, och sedan stadsdel. */
@@ -1752,7 +1758,13 @@ function initTimeWheel() {
     const min = +opts[i].dataset.min;
     if (min !== S.bk.min) { S.bk.min = min; patchBkSum(); }
   };
-  track.addEventListener("scroll", () => { clearTimeout(track._t); track._t = setTimeout(update, 40); }, { passive: true });
+  track.addEventListener("scroll", () => {
+    /* Markera centrumvärdet DIREKT så det alltid är skarpt medan man sveper.
+       Priset (patchBkSum) uppdateras först när scrollen stannat, via update. */
+    const i = clamp(Math.round(track.scrollTop / H), 0, opts.length - 1);
+    paint(i);
+    clearTimeout(track._t); track._t = setTimeout(update, 40);
+  }, { passive: true });
 }
 function bkPreset(n) { S.bk.qty = n; patchBkSum(); }
 function pickSeason(id) { S.season = id; renderBooking(); }
