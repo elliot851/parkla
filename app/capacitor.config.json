@@ -1,0 +1,13 @@
+{
+  "appId": "se.parkla.app",
+  "appName": "Parkla",
+  "webDir": "www",
+  "backgroundColor": "#F5F7F6",
+  "plugins": {
+    "SplashScreen": { "backgroundColor": "#F5F7F6", "showSpinner": false, "launchAutoHide": true, "launchShowDuration": 600 },
+    "PushNotifications": { "presentationOptions": ["badge", "sound", "alert"] },
+    "StatusBar": { "style": "LIGHT", "backgroundColor": "#F5F7F6" }
+  },
+  "ios": { "contentInset": "always", "limitsNavigationsToAppBoundDomains": false },
+  "android": { "allowMixedContent": false }
+}
