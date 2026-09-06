@@ -194,7 +194,9 @@
 
     kravInlogg(function () {
       var iv = bokningsIntervall();
-      PAPI.boka(id, iv.borjar, iv.slutar, iv.lage).then(function (r) {
+      PAPI.boka(id, iv.borjar, iv.slutar, iv.lage, iv.qty, {
+        charge: !!S.bk.charge, extraCar: !!S.bk.extraCar, code: S.bk.code || ""
+      }).then(function (r) {
         /* Spegla bokningen lokalt så den syns under Mina bokningar (och i tab-badgen).
            Utan detta betalade föraren men såg ingenting efteråt, och nådde ingen grindkod. */
         var sp = allSpots().find(function (x) { return x.id === id; }) || {};
@@ -233,10 +235,11 @@
     });
   };
 
-  /* Appens sex lagen -> de tre servern prissatter. */
-  var SERVERLAGE = { timme: "timme", evenemang: "timme",
-                     dygn: "dag", vecka: "dag",
-                     manad: "manad", sasong: "manad" };
+  /* Appens sex lagen -> serverns lagen (server.util.ts prissatter vart och ett exakt likadant).
+     Foler: fel har gav vecka=7x, sasong tappade 15%, event fel pris. Nu 1:1. */
+  var SERVERLAGE = { timme: "timme", evenemang: "evenemang",
+                     dygn: "dag", vecka: "vecka",
+                     manad: "manad", sasong: "sasong" };
 
   /* Bokningsvyns val -> tva tidpunkter servern kan rakna pa.
      Faltet heter S.bk.start, inte .tid. Lagena heter timme/dygn/vecka/
@@ -252,17 +255,22 @@
     switch (S.mode) {
       case "manad":     slut.setMonth(slut.getMonth() + n); break;
       case "sasong": {
-        /* Vintersasong = 5 man (nov-mar), lang = 7 (okt-apr). Aldrig 6. */
+        /* Vintersasong = 5 man (nov-mar), lang = 7 (okt-apr). Aldrig 6.
+           Priset ar ALLTID en (1) hel sasong (bkTotals: base=unit, ej *qty) — sa
+           intervallet ska vara exakt sasongens langd, aldrig *n. Annars debiterar
+           servern n sasonger fast appen bara visar en. */
         var man = (typeof SEASON !== "undefined" && S.season === "lang") ? 7 : 5;
-        slut.setMonth(slut.getMonth() + man * n); break;
+        slut.setMonth(slut.getMonth() + man); break;
       }
       case "vecka":     slut.setDate(slut.getDate() + 7 * n); break;
       case "dygn":      slut.setDate(slut.getDate() + n); break;
       case "evenemang": slut.setHours(slut.getHours() + 6); break;
       default:          slut.setMinutes(slut.getMinutes() + (S.bk.min || n * 60));
     }
+    /* qty behovs server-sidan bara for evenemang (antal platser bar inte i 6h-intervallet).
+       For ovriga lagen laser servern antalet ur intervallet, men vi skickar det anda. */
     return { borjar: start.toISOString(), slutar: slut.toISOString(),
-             lage: SERVERLAGE[S.mode] || "timme" };
+             lage: SERVERLAGE[S.mode] || "timme", qty: n };
   }
 
   /* ── Värdens utbetalning ──────────────────────────────── */
@@ -310,6 +318,58 @@
     });
   };
 
+  /* ── Redirect-betalning (Klarna/Swish) kommer TILLBAKA hit ──
+     Stripe redirectar bort och åter till return_url med ?redirect_status=...
+     Betal-rutans .then() körde aldrig (sidan lämnades), så inget speglade
+     bokningen eller visade kvitto. Vi fångar returen här i stället. */
+  function redirectRetur() {
+    var rs;
+    try { rs = new URLSearchParams(location.search).get("redirect_status"); } catch (e) { rs = null; }
+    if (!rs) return false;
+    /* Städa bort Stripe-parametrarna så de inte ligger kvar vid omladdning. */
+    try { history.replaceState(null, "", location.pathname + location.hash); } catch (e) {}
+    if (rs === "failed") { toast("Betalningen gick inte igenom. Försök igen.", "info"); return true; }
+    /* succeeded / processing — webhooken markerar bokningen betald server-side. */
+    laddaMinaFranServer().then(function () {
+      if (typeof go === "function") go("mina");
+      toast("Betalningen är klar – din bokning finns under Mina bokningar", "check");
+    });
+    return true;
+  }
+
+  /* Hämtar förarens bokningar från servern och speglar in dem i BOOKINGS
+     (deduplicerat på dbId). Löser redirect-retur, och som bonus att en
+     bokning gjord på en annan enhet dyker upp. Bäst-effort: saknas platsen
+     i listan blir namnet "Platsen". */
+  function laddaMinaFranServer() {
+    if (!inne()) return Promise.resolve();
+    var mig = (PAPI.jag() || {}).id;
+    if (!mig) return Promise.resolve();
+    return PAPI.minaBokningar().then(function (rows) {
+      if (!Array.isArray(rows)) return;
+      var o = function (v) { return (v != null) ? v / 100 : undefined; };
+      var nya = 0;
+      rows.forEach(function (r) {
+        if (r.driver_id !== mig) return;                                   // bara mina egna (som förare)
+        if (BOOKINGS.some(function (b) { return b.dbId === r.id; })) return; // redan speglad
+        var sp = allSpots().find(function (x) { return x.id === r.listing_id; }) || {};
+        var st = r.status === "vantar_godkannande" ? "vantar"
+               : (r.status === "avbruten" || r.status === "misslyckad") ? "avbruten"
+               : "kommande";
+        BOOKINGS.push({
+          id: Date.now() + (nya++), spotId: r.listing_id, dbId: r.id,
+          spot: sp.nm || "Platsen", addr: sp.ad || sp.area || "", area: sp.area || "",
+          reg: "", mode: r.lage, qty: 1, min: null,
+          total: o(r.total_ore), base: o(r.bas_ore), service: o(r.avgift_forare_ore), trygg: o(r.trygg_ore),
+          host: sp.host || "Värd", date: (r.borjar || "").slice(0, 10),
+          code: null, status: st, db: true
+        });
+      });
+      if (nya && typeof persist === "function") persist();
+      if (nya && typeof render === "function") render();
+    }).catch(function () {});
+  }
+
   /* ── Vid start: hämta platser och ev. pågående parkering ── */
 
   function boot() {
@@ -330,6 +390,7 @@
       });
     }
     laddaPlatser();
+    redirectRetur();          // fånga ev. retur från Klarna/Swish-betalning
     if (!inne()) return;
 
     PAPI.minSession().then(function (s) {
