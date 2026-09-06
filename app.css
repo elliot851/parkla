@@ -602,3 +602,19 @@ footer a:hover{color:var(--green)}
 .card-more>summary::-webkit-details-marker{ display:none }
 .card-more[open]>summary{ opacity:.72 }
 .card-more .morewrap{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; width:100% }
+
+/* ── Profil-avatar (header + Min sida) ─────────────────────── */
+.profilebtn{ width:38px; height:38px; padding:0; border:none; background:none; cursor:pointer;
+  border-radius:50%; display:inline-flex; align-items:center; justify-content:center; }
+.avatar-sm, .avatar-lg{ display:inline-flex; align-items:center; justify-content:center; overflow:hidden;
+  border-radius:50%; background:var(--pine,#0b6b4f); color:#fff; font-weight:700; text-transform:uppercase;
+  box-shadow:0 0 0 2px var(--card,#fff); }
+.avatar-sm{ width:34px; height:34px; font-size:.92rem; }
+.avatar-lg{ width:72px; height:72px; font-size:1.7rem; }
+.avatar-sm img, .avatar-lg img{ width:100%; height:100%; object-fit:cover; display:block; }
+.profilebtn:hover .avatar-sm{ box-shadow:0 0 0 2px var(--pine,#0b6b4f); }
+.profilecard{ display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  margin-top:18px; padding:16px 18px; border-radius:18px;
+  background:var(--card,#fff); border:1px solid var(--line,rgba(0,0,0,.08)); }
+.profilecard .pc-name{ flex:1; min-width:120px; }
+.profilecard .pc-btn{ cursor:pointer; }
