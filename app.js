@@ -2205,6 +2205,16 @@ function viewMina() {
   <div class="spread"><h1 style="font-size:clamp(2rem,4.6vw,3rem)">Mitt</h1>
     <button class="btn btn-sm" data-go="installningar">${I("sliders", 15)} ${esc(t("settings"))}</button></div>
 
+  <div class="profilecard">
+    ${avatarHTML("avatar-lg")}
+    <div class="pc-name"><b>${esc(profilNamn() || "Din profil")}</b>
+      <div class="dim small">${skarptPa() && PAPI.jag()
+        ? esc((PAPI.jag().email) || "")
+        : "En bild på dig eller din uppfart – syns för värdar och förare"}</div></div>
+    <label class="btn btn-sm pc-btn">${I("camera", 15)} ${PROFIL.avatar ? "Byt bild" : "Lägg till bild"}
+      <input type="file" accept="image/*" hidden onchange="bytProfilbild(this)"></label>
+  </div>
+
   ${skarptPa() && LISTINGS.length ? `
   <div class="callout" style="margin-top:18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:space-between">
     <div><b>Få betalt</b><div class="dim small" style="margin-top:2px">Koppla din utbetalning hos Stripe, en gång, så landar hyran på ditt konto.</div></div>
@@ -3514,6 +3524,7 @@ function epostOk(e) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e); }
 function openLogin(efterat) {
   LOGIN_EFTER = typeof efterat === "function" ? efterat : null;
   openSheet(sheetHead("Logga in") + `<div class="sheet-b stack">
+    <p class="dim" style="margin-top:-6px">Logga in för att boka eller lägga upp din plats. <b>Nytt konto är gratis</b> – du betalar aldrig för att vara med.</p>
     <div class="field"><label>E-post</label>
       <input class="inp" id="log-epost" type="email" inputmode="email" autocomplete="email"
         placeholder="du@exempel.se" value="${esc(LOGIN_EPOST)}"></div>
@@ -3540,7 +3551,7 @@ function loggaInNu(knapp) {
   PAPI.loggaIn(e, p).then(() => {
     closeSheet(); toast("Inloggad", "check");
     const f = LOGIN_EFTER; LOGIN_EFTER = null;
-    render(); if (typeof f === "function") setTimeout(f, 120);
+    render(); laddaProfil(); if (typeof f === "function") setTimeout(f, 120);
   }).catch(err => {
     if (knapp) { knapp.disabled = false; knapp.textContent = "Logga in"; }
     if (/not confirmed/i.test(err.message)) {
@@ -3570,6 +3581,8 @@ function skickaBekraftelse(e) {
 function openSkapaKonto(efterat) {
   LOGIN_EFTER = typeof efterat === "function" ? efterat : null;
   openSheet(sheetHead("Skapa konto") + `<div class="sheet-b stack">
+    <div class="callout" style="margin-top:-4px;display:flex;gap:10px;align-items:flex-start">
+      ${I("check", 17)}<span><b>Gratis att gå med.</b> Du betalar aldrig för att skapa konto eller lägga upp din plats – vi tar bara en liten avgift när du faktiskt får en bokning.</span></div>
     <input id="reg-hp" name="webbplats" type="text" tabindex="-1" autocomplete="off" aria-hidden="true"
       style="position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none">
     <div class="field"><label>Namn</label>
@@ -3689,6 +3702,47 @@ function kravInlogg(fortsatt) {
   openLogin(fortsatt);
 }
 
+/* ── Profil: namn + profilbild (avatar i hörnet, på Min sida, som värd) ── */
+var PROFIL = {};
+function laddaProfil() {
+  if (!skarptPa() || !PAPI.jag()) { updateProfilBtn(); return; }
+  PAPI.minProfil().then(function (p) { if (p) PROFIL = p; updateProfilBtn(); render(); }).catch(function () {});
+}
+function profilNamn() {
+  var u = PAPI.jag();
+  return PROFIL.namn || (u && u.user_metadata && u.user_metadata.namn) || (u && u.email) || "";
+}
+function avatarHTML(cls) {
+  if (PROFIL.avatar) return '<span class="' + cls + '"><img src="' + PROFIL.avatar + '" alt=""></span>';
+  var n = (profilNamn() || "?").trim();
+  return '<span class="' + cls + '">' + esc((n ? n[0] : "?").toUpperCase()) + '</span>';
+}
+function updateProfilBtn() {
+  var el = document.getElementById("profilAvatar"); if (!el) return;
+  if (PROFIL.avatar) { el.innerHTML = '<img src="' + PROFIL.avatar + '" alt="">'; }
+  else { var n = (profilNamn() || "?").trim(); el.textContent = (n ? n[0] : "?").toUpperCase(); }
+}
+/* Läser bilden, beskär till kvadrat och krymper till 256px (liten base64) innan den sparas. */
+function bytProfilbild(input) {
+  var f = input && input.files && input.files[0]; if (!f) return;
+  if (!/^image\//.test(f.type)) return toast("Välj en bildfil", "info");
+  var img = new Image();
+  img.onload = function () {
+    var s = 256, c = document.createElement("canvas"); c.width = c.height = s;
+    var ctx = c.getContext("2d"), m = Math.min(img.width, img.height);
+    ctx.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, s, s);
+    var data = c.toDataURL("image/jpeg", 0.82);
+    PROFIL.avatar = data; updateProfilBtn(); render();
+    if (skarptPa() && PAPI.jag()) {
+      PAPI.sparaProfil({ avatar: data })
+        .then(function () { toast("Profilbild sparad", "check"); })
+        .catch(function (e) { toast(e.message || "Kunde inte spara bilden", "info"); });
+    } else { toast("Profilbild uppdaterad", "check"); }
+  };
+  img.onerror = function () { toast("Kunde inte läsa bilden", "info"); };
+  var rd = new FileReader(); rd.onload = function (e) { img.src = e.target.result; }; rd.readAsDataURL(f);
+}
+
 
 /* ============================================================
    JURIDIK — utkast, granskas juridiskt innan skarp lansering.
@@ -3766,6 +3820,7 @@ function render() {
   tickSession();
   const dot = document.getElementById("notisDot");
   if (dot) dot.classList.toggle("on", NOTIS.some(n => n.unread));
+  updateProfilBtn();
   document.documentElement.lang = SET.lang;
   observeReveals();
   countUps();
