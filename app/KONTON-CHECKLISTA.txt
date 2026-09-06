@@ -1,0 +1,81 @@
+PARKLA — SKAPA DE TRE UTVECKLARKONTONA (steg för steg)
+=======================================================
+Företagsuppgifter du använder överallt (spara dessa nära):
+  Juridiskt namn:   Westros Digital Retail AB
+  Org.nr:           559499-1035
+  Adress:           Slakterigatan 10, 721 32 Västerås
+  Telefon:          070-552 52 14
+  Support-e-post:   hej@parkla.se
+  Din e-post:       elliot@westrosdigitalretail.se
+  Webbplats:        https://parkla.se
+  App-namn:         Parkla
+  App-ID (bundle):  se.parkla.app
+  Integritetspolicy: https://parkla.se/#integritet
+  Användarvillkor:   https://parkla.se/#villkor
+
+⚠️ GÖR DETTA ALLRA FÖRST — D-U-N-S-NUMMER (annars fastnar du i dagar)
+--------------------------------------------------------------------
+BÅDE Apple (företagskonto) OCH Google Play (organisationskonto) kräver
+ett D-U-N-S-nummer för AB:et. Det är GRATIS men kan ta 1–5 arbetsdagar.
+  1. Kolla om Westros redan har ett:
+     https://developer.apple.com/enroll/duns-lookup/
+     (skriv in Westros Digital Retail AB + adress)
+  2. Har ni inget → begär via samma sida (gratis). Vänta på mejl.
+  Har ni redan ett D-U-N-S går allt nedan mycket snabbare.
+
+================================================================
+1) GOOGLE PLAY  (Play Store + underlag till Huawei)  —  25 USD engång
+================================================================
+  URL:  https://play.google.com/console/signup
+  Kontotyp: VÄLJ "Organisation" (inte personligt — appen ska stå i
+            företagets namn).
+  Fyll i:
+    - Organisationens juridiska namn: Westros Digital Retail AB
+    - D-U-N-S-nummer (från steget ovan)
+    - Adress + telefon + e-post enligt topplistan
+    - Webbplats: https://parkla.se
+  Betala 25 USD (engång, kort).
+  Efter konto (gör INTE nu, jag guidar när appen är byggd):
+    - Skapa app "Parkla", språk svenska
+    - Integritetspolicy-URL, Data safety-formulär, innehållsklassning
+    - Ladda upp .aab (jag bygger den i molnet)
+  Verifiering av organisation kan ta några dagar — starta tidigt.
+
+================================================================
+2) APPLE DEVELOPER  (App Store, iPhone/iPad)  —  99 USD/år
+================================================================
+  URL:  https://developer.apple.com/programs/enroll/
+  KRÄVER: ett Apple-ID (skapa på appleid.apple.com om du saknar) med
+          tvåfaktor på, OCH D-U-N-S-numret ovan.
+  Enrollment-typ: "Company / Organization" (publiceras som
+                  "Westros Digital Retail AB" — mer trovärdigt än ditt namn).
+    - Du intygar att du får teckna firma för AB:et.
+    - Legal entity name: Westros Digital Retail AB
+    - D-U-N-S, adress, telefon (måste matcha D-U-N-S-registret exakt)
+  Betala 99 USD/år.
+  OBS: Apple ringer/mejlar ibland för att verifiera företaget — svara.
+  Mac behövs INTE av dig: iOS byggs i molnet (GitHub Actions macOS-runner
+  är redan uppsatt). Signeringscertifikat skapas i Apple-kontot sen — jag
+  guidar det steget.
+
+================================================================
+3) HUAWEI DEVELOPER  (AppGallery)  —  gratis
+================================================================
+  URL:  https://developer.huawei.com/consumer/en/  ->  Register
+  Kontotyp: Enterprise (företag) — laddar upp företagsintyg
+            (registreringsbevis för AB:et, hämtas gratis hos Bolagsverket).
+  Fyll i samma företagsuppgifter.
+  Använder EXAKT samma Android-fil (.aab) som Google Play — inget extra bygge.
+  Verifiering kan ta några dagar.
+
+================================================================
+ORDNING & TIDER (så inget blir liggande):
+  DAG 1:  begär D-U-N-S (gratis)  +  skapa/förbered Apple-ID
+  Medan D-U-N-S bearbetas: skapa Huawei-konto (behöver ej D-U-N-S)
+  När D-U-N-S kommit:  Google Play (25 USD)  +  Apple Developer (99 USD/år)
+  Summa pengar: 25 USD engång + 99 USD/år. Huawei gratis.
+
+Vad JAG gör när kontona finns:
+  - Bygger signerade release-filer i molnet (ingen Mac, inga lokala verktyg)
+  - Kopplar signeringen, laddar upp underlag, förbereder butikslistningarna
+  - Du trycker bara "Publicera" i varje butik.
