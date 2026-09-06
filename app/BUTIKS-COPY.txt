@@ -1,0 +1,58 @@
+PARKLA — BUTIKSLISTNING (Google Play + App Store)
+==================================================
+Återanvänds vid uppladdning. Svensk primär, lätt att översätta senare.
+
+APP-NAMN:            Parkla
+UNDERTITEL (App Store, max 30 tecken):
+    Hyr ut din uppfart
+
+KORT BESKRIVNING (Google Play, max 80 tecken):
+    Hyr ut din uppfart eller hitta parkering hos en granne. Enkelt och tryggt.
+
+KAMPANJTEXT (App Store, max 170 tecken):
+    Din uppfart står tom 22 timmar om dygnet. Hyr ut den till grannar och
+    besökare - eller hitta en plats nära dig på minuter. Betala i appen, tryggt.
+
+LÅNG BESKRIVNING (båda):
+    Parkla är Sveriges marknadsplats för privata parkeringsplatser.
+
+    HITTA PARKERING
+    Se lediga platser på kartan nära dig. Boka i förväg eller kör in direkt
+    och betala bara för tiden du står. Adress och eventuell portkod visas när
+    din bokning är aktiv.
+
+    HYR UT DIN PLATS
+    Har du en uppfart, carport, garage eller tomt som står tom? Lägg upp den
+    på minuter och tjäna en extra slant. Du sätter priset - vi sköter betalning
+    och utbetalning automatiskt.
+
+    TRYGGT HELA VÄGEN
+    - All betalning sker säkert i appen
+    - Parkla Trygg: vår trygghetsgaranti täcker skador en förare orsakar
+    - Du hyr ut en yta, aldrig ditt fordon - du lämnar aldrig ifrån dig nycklar
+
+    SÅ FUNKAR DET
+    1. Sök eller lägg upp en plats
+    2. Boka och betala i appen
+    3. Kör in - klart
+
+    Parkla drivs av Westros Digital Retail AB. Frågor? hej@parkla.se
+
+NYCKELORD (App Store, max 100 tecken, kommaseparerat):
+    parkering,uppfart,p-plats,hyr ut,garage,carport,boka parkering,granne,
+    p-plats hyra,vinterförvar
+
+KATEGORI:      Resor  (sekundär: Verktyg / Livsstil)
+ÅLDERSGRÄNS:   4+ / alla åldrar (ingen olämplig content)
+INTEGRITETSPOLICY-URL:  https://parkla.se/#integritet
+
+"NYHETER I DENNA VERSION" (första release):
+    Första versionen av Parkla. Hitta och hyr ut parkering enkelt och tryggt.
+
+SKÄRMDUMPAR SOM BEHÖVS (tas från appen när den kör på telefon):
+    1. Kartan med lediga platser
+    2. En platsannons (pris + boka-knapp)
+    3. Bokningsvyn / betalning
+    4. "Hyr ut din plats"-vyn
+    5. Mina bokningar / grindkod
+    (Play: min 2, App Store: min 3 per enhetsstorlek. 1080x1920 funkar.)
