@@ -392,6 +392,7 @@
     laddaPlatser();
     redirectRetur();          // fånga ev. retur från Klarna/Swish-betalning
     if (!inne()) return;
+    if (typeof laddaProfil === "function") laddaProfil();  // profilbild + namn i hörnet
 
     PAPI.minSession().then(function (s) {
       if (!s) return;
