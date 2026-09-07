@@ -1,0 +1,141 @@
+# ============================================================
+#  Parkla — molnbygge (Codemagic) för App Store + Google Play + Huawei
+#  Wrappern (Capacitor) ligger i app/. Webben ligger i repo-roten och
+#  kopieras in i app/www vid bygget. Ingen lokal dator/verktyg behövs.
+#
+#  Utgivare: EEFS AB (org.nr 559585-9694). appId se.parkla.app.
+#
+#  Workflows:
+#   • android-debug   — osignerad debug-APK. Kräver INGA konton. Bevisar
+#                       att appen bygger + kör. Kör denna först.
+#   • android-release — signerad AAB för Google Play + Huawei. Kräver att
+#                       en Android-keystore laddats upp i Codemagic (se nedan).
+#   • ios-release     — signerad IPA för App Store. Kräver App Store Connect-
+#                       integration i Codemagic (när Apple godkänt EEFS AB).
+# ============================================================
+
+definitions:
+  scripts:
+    - &copy_web |
+      # Kopiera webben (repo-roten) in i app/www. Uteslut app/, git, moduler.
+      set -e
+      cd "$CM_BUILD_DIR"
+      rm -rf app/www
+      mkdir -p app/www
+      rsync -a \
+        --exclude 'app' \
+        --exclude '.git' \
+        --exclude '.github' \
+        --exclude 'node_modules' \
+        --exclude 'codemagic.yaml' \
+        ./ app/www/
+      echo "www innehåll:" && ls app/www | head
+    - &npm_install |
+      set -e
+      cd "$CM_BUILD_DIR/app"
+      npm install
+
+workflows:
+  # ----------------------------------------------------------
+  android-debug:
+    name: Parkla Android (debug, osignerad)
+    max_build_duration: 45
+    instance_type: linux_x2
+    environment:
+      node: 20
+      java: 21
+    scripts:
+      - *copy_web
+      - *npm_install
+      - name: Lägg till Android-plattformen
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/app"
+          npx cap add android || npx cap sync android
+          npx cap sync android
+      - name: Bygg debug-APK
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/app/android"
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+    artifacts:
+      - app/android/app/build/outputs/**/*.apk
+
+  # ----------------------------------------------------------
+  android-release:
+    name: Parkla Android (release AAB — Play + Huawei)
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      node: 20
+      java: 21
+      groups:
+        - google_play          # I Codemagic: lägg keystore + lösenord i denna grupp
+      vars:
+        PACKAGE_NAME: "se.parkla.app"
+    scripts:
+      - *copy_web
+      - *npm_install
+      - name: Lägg till Android-plattformen
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/app"
+          npx cap add android || npx cap sync android
+          npx cap sync android
+      - name: Skriv keystore från Codemagic-variabler
+        script: |
+          set -e
+          # CM_KEYSTORE (base64), CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS, CM_KEY_PASSWORD
+          # laddas upp i Codemagic UI (Code signing identities -> Android).
+          echo "$CM_KEYSTORE" | base64 --decode > "$CM_BUILD_DIR/app/android/parkla.keystore"
+          cat >> "$CM_BUILD_DIR/app/android/key.properties" <<EOF
+          storeFile=parkla.keystore
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          keyPassword=$CM_KEY_PASSWORD
+          EOF
+      - name: Bygg signerad AAB
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/app/android"
+          chmod +x ./gradlew
+          ./gradlew bundleRelease --no-daemon
+    artifacts:
+      - app/android/app/build/outputs/**/*.aab
+
+  # ----------------------------------------------------------
+  ios-release:
+    name: Parkla iOS (release IPA — App Store)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: parkla_asc   # skapas i Codemagic när Apple godkänt EEFS AB
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: "se.parkla.app"
+    scripts:
+      - *copy_web
+      - *npm_install
+      - name: Lägg till iOS-plattformen
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/app"
+          npx cap add ios || npx cap sync ios
+          npx cap sync ios
+      - name: Kod-signering (automatisk via App Store Connect)
+        script: |
+          set -e
+          xcode-project use-profiles
+      - name: Bygg IPA
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/app/ios/App"
+          xcode-project build-ipa \
+            --workspace "App.xcworkspace" \
+            --scheme "App"
+    artifacts:
+      - build/ios/ipa/*.ipa
