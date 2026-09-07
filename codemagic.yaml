@@ -40,7 +40,7 @@ workflows:
   android-debug:
     name: Parkla Android (debug, osignerad)
     max_build_duration: 45
-    instance_type: linux_x2
+    instance_type: mac_mini_m2
     environment:
       node: 20
       java: 21
@@ -66,7 +66,7 @@ workflows:
   android-release:
     name: Parkla Android (release AAB — Play + Huawei)
     max_build_duration: 60
-    instance_type: linux_x2
+    instance_type: mac_mini_m2
     environment:
       node: 20
       java: 21
