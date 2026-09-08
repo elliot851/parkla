@@ -37,6 +37,34 @@ definitions:
 
 workflows:
   # ----------------------------------------------------------
+  # ENGÅNGS: genererar app-signeringsnyckeln (upload key) för Google Play.
+  # Lösenord/alias läses från den krypterade gruppen "signing" (Codemagic UI).
+  # Nyckeln laddas ner som artefakt och läggs sedan i Codemagics keystore-valv.
+  # Ta bort denna workflow när nyckeln är genererad och uppladdad.
+  generate-keystore:
+    name: Generera signeringsnyckel (engångs)
+    max_build_duration: 20
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - signing
+    scripts:
+      - name: keytool genkeypair
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR"
+          keytool -genkeypair -v \
+            -keystore parkla-upload.keystore \
+            -alias "$KEY_ALIAS" \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD" \
+            -dname "CN=EEFS AB, O=EEFS AB, L=Vasteras, ST=Vastmanland, C=SE"
+          echo "=== Nyckel skapad ==="
+          keytool -list -v -keystore parkla-upload.keystore -storepass "$KEYSTORE_PASSWORD" | head -20
+    artifacts:
+      - parkla-upload.keystore
+
+  # ----------------------------------------------------------
   android-debug:
     name: Parkla Android (debug, osignerad)
     max_build_duration: 45
