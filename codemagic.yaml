@@ -37,34 +37,6 @@ definitions:
 
 workflows:
   # ----------------------------------------------------------
-  # ENGÅNGS: genererar app-signeringsnyckeln (upload key) för Google Play.
-  # Lösenord/alias läses från den krypterade gruppen "signing" (Codemagic UI).
-  # Nyckeln laddas ner som artefakt och läggs sedan i Codemagics keystore-valv.
-  # Ta bort denna workflow när nyckeln är genererad och uppladdad.
-  generate-keystore:
-    name: Generera signeringsnyckel (engångs)
-    max_build_duration: 20
-    instance_type: mac_mini_m2
-    environment:
-      groups:
-        - signing
-    scripts:
-      - name: keytool genkeypair
-        script: |
-          set -e
-          cd "$CM_BUILD_DIR"
-          keytool -genkeypair -v \
-            -keystore parkla-upload.keystore \
-            -alias "$KEY_ALIAS" \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD" \
-            -dname "CN=EEFS AB, O=EEFS AB, L=Vasteras, ST=Vastmanland, C=SE"
-          echo "=== Nyckel skapad ==="
-          keytool -list -v -keystore parkla-upload.keystore -storepass "$KEYSTORE_PASSWORD" | head -20
-    artifacts:
-      - parkla-upload.keystore
-
-  # ----------------------------------------------------------
   android-debug:
     name: Parkla Android (debug, osignerad)
     max_build_duration: 45
@@ -92,14 +64,16 @@ workflows:
 
   # ----------------------------------------------------------
   android-release:
-    name: Parkla Android (release AAB — Play + Huawei)
+    name: Parkla Android (release AAB — Play)
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
+      # Keystore "parkla_upload" ligger i Codemagics valv. android_signing gör den
+      # tillgänglig som $CM_KEYSTORE_PATH / $CM_KEYSTORE_PASSWORD / $CM_KEY_ALIAS / $CM_KEY_PASSWORD.
+      android_signing:
+        - parkla_upload
       node: 20
       java: 21
-      groups:
-        - google_play          # I Codemagic: lägg keystore + lösenord i denna grupp
       vars:
         PACKAGE_NAME: "se.parkla.app"
     scripts:
@@ -111,26 +85,24 @@ workflows:
           cd "$CM_BUILD_DIR/app"
           npx cap add android || npx cap sync android
           npx cap sync android
-      - name: Skriv keystore från Codemagic-variabler
-        script: |
-          set -e
-          # CM_KEYSTORE (base64), CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS, CM_KEY_PASSWORD
-          # laddas upp i Codemagic UI (Code signing identities -> Android).
-          echo "$CM_KEYSTORE" | base64 --decode > "$CM_BUILD_DIR/app/android/parkla.keystore"
-          cat >> "$CM_BUILD_DIR/app/android/key.properties" <<EOF
-          storeFile=parkla.keystore
-          storePassword=$CM_KEYSTORE_PASSWORD
-          keyAlias=$CM_KEY_ALIAS
-          keyPassword=$CM_KEY_PASSWORD
-          EOF
-      - name: Bygg signerad AAB
+      - name: Bygg release-AAB (osignerad)
         script: |
           set -e
           cd "$CM_BUILD_DIR/app/android"
           chmod +x ./gradlew
           ./gradlew bundleRelease --no-daemon
+      - name: Signera AAB med upload-nyckeln
+        script: |
+          set -e
+          AAB=$(find "$CM_BUILD_DIR/app/android" -name "*.aab" | head -1)
+          echo "Signerar $AAB"
+          jarsigner -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore "$CM_KEYSTORE_PATH" \
+            -storepass "$CM_KEYSTORE_PASSWORD" -keypass "$CM_KEY_PASSWORD" \
+            "$AAB" "$CM_KEY_ALIAS"
+          jarsigner -verify "$AAB" && echo "AAB signerad OK"
     artifacts:
-      - app/android/app/build/outputs/**/*.aab
+      - app/android/**/*.aab
 
   # ----------------------------------------------------------
   ios-release:
