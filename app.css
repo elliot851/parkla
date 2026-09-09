@@ -415,6 +415,10 @@ ul.numlist{padding:0;margin:0}
 .kv{display:flex;justify-content:space-between;gap:16px;padding:11px 0;font-size:.93rem;border-bottom:1px solid var(--rule)}
 .kv:last-of-type{border-bottom:0}
 .kv b{font-family:var(--mono);font-size:.88rem;font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums}
+/* Juridik-sidornas "Ändamål / Laglig grund"-tabell har långa värden — låt dem radbryta
+   istället för att spränga skärmen i sidled (rör inte prisradernas korta nowrap-värden). */
+.legalbody .kv{align-items:flex-start}
+.legalbody .kv b{white-space:normal;text-align:right;min-width:0;font-family:inherit}
 .tot{display:flex;justify-content:space-between;gap:16px;align-items:baseline;
   padding-top:15px;margin-top:6px;border-top:1.5px solid var(--ink)}
 .tot span:first-child{font-weight:600}
