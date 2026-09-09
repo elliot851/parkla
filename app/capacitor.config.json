@@ -2,6 +2,10 @@
   "appId": "se.parkla.app",
   "appName": "Parkla",
   "webDir": "www",
+  "server": {
+    "url": "https://parkla.se",
+    "cleartext": false
+  },
   "backgroundColor": "#F5F7F6",
   "plugins": {
     "SplashScreen": { "backgroundColor": "#F5F7F6", "showSpinner": false, "launchAutoHide": true, "launchShowDuration": 600 },
