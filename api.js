@@ -192,11 +192,14 @@
         method: opt.method || "GET",
         headers: h,
         body: opt.body ? JSON.stringify(opt.body) : undefined
+      }).catch(function () {
+        /* fetch() sjalvt kastar bara vid natverksfel — visa svenska, inte "Failed to fetch". */
+        throw new Error("Ingen anslutning – kontrollera nätet och försök igen.");
       });
     }).then(function (r) {
       if (r.status === 204) return null;
-      return r.json().then(function (j) {
-        if (!r.ok) throw new Error(j.message || j.hint || "Databasfel");
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) throw new Error(j.message || j.hint || "Något gick fel, försök igen.");
         return j;
       });
     });
@@ -216,10 +219,12 @@
           "Content-Type": "application/json"
         },
         body: JSON.stringify(kropp || {})
+      }).catch(function () {
+        throw new Error("Ingen anslutning – kontrollera nätet och försök igen.");
       });
     }).then(function (r) {
-      return r.json().then(function (j) {
-        if (!r.ok) throw new Error(j.fel || "Något gick fel");
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) throw new Error(j.fel || "Något gick fel, försök igen.");
         return j;
       });
     });
