@@ -498,6 +498,8 @@ ul.numlist{padding:0;margin:0}
 .bankid .ring{width:52px;height:52px;margin:0 auto 20px;border-radius:50%;
   border:2px solid var(--rule);border-top-color:var(--green);animation:spin .85s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.empty .ring{width:34px;height:34px;margin:0 auto 14px;border-radius:50%;
+  border:2px solid var(--rule);border-top-color:var(--green);animation:spin .85s linear infinite}
 
 /* ---------- 19. Bottenmeny ---------- */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:flex;
