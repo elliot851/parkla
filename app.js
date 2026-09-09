@@ -3798,7 +3798,7 @@ function bytProfilbild(input) {
    ============================================================ */
 function legalPage(title, body) {
   return `
-<section class="tight"><div class="wrap" style="max-width:820px">
+<section class="tight"><div class="wrap legalbody" style="max-width:820px">
   <span class="kicker" data-reveal>Juridik</span>
   <h1 style="margin:14px 0 18px;font-size:clamp(1.9rem,4.4vw,3rem)">${title}</h1>
   ${body}
