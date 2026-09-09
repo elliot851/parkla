@@ -87,6 +87,10 @@
     return DBSPOTS || [];
   };
 
+  /* Sant medan platserna fortfarande hamtas fran servern (forsta laddningen).
+     Da ska tom-vyn visa "hamtar..." och INTE det falska "inga platser an". */
+  window.platserLaddar = function () { return pa() && DBSPOTS === null; };
+
   /* ── Kör in utan bokning ──────────────────────────────── */
 
   var demoStart = window.startNow;
