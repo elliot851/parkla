@@ -839,6 +839,13 @@ function spotRow(s, mode) {
   </button>`;
 }
 function emptyHTML() {
+  /* Platserna hämtas fortfarande — visa "hämtar", inte "inga platser än".
+     Annars blinkar det falska tomläget förbi på ett långsamt nät. */
+  if (typeof platserLaddar === "function" && platserLaddar()) {
+    return `<div class="empty"><div class="ring"></div>
+      <h3>Hämtar platser nära dig…</h3>
+      <p class="dim small" style="margin-top:8px">Ett ögonblick.</p></div>`;
+  }
   /* Står användaren där Parkla inte finns är det inte filtren som är fel.
      Då ska appen säga var vi faktiskt finns – inte "inga platser matchar". */
   if (S.utanfor && S.utanfor.omrade && S.near) {
