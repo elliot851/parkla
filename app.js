@@ -193,6 +193,7 @@ function openSheet(html) {
   const sh = document.getElementById("sheet");
   sh.classList.add("on"); document.getElementById("scrim").classList.add("on");
   sh.scrollTop = 0;
+  if (typeof syncA11ySwitches === "function") syncA11ySwitches(document.getElementById("sheetContent"));
 }
 function closeSheet() {
   document.getElementById("sheet").classList.remove("on");
@@ -3862,6 +3863,7 @@ function render() {
   if (dot) dot.classList.toggle("on", NOTIS.some(n => n.unread));
   updateProfilBtn();
   document.documentElement.lang = SET.lang;
+  if (typeof syncA11ySwitches === "function") syncA11ySwitches();
   observeReveals();
   countUps();
   renderConsent();
@@ -3893,6 +3895,26 @@ function rip(el, e) {
 }
 document.getElementById("scrim").addEventListener("click", closeSheet);
 document.getElementById("btnNotis").addEventListener("click", openNotis);
+
+/* Tillganglighet: switcharna ar <div role=switch> med bara onclick — inte natbara
+   med tangentbord och utan aria-checked. Gor dem fokuserbara + toggla med Enter/Space,
+   och hall aria-checked i takt med .on-klassen. Globalt, sa vi slipper rora varje mall. */
+function syncA11ySwitches(root) {
+  (root || document).querySelectorAll('[role="switch"],[role="checkbox"]').forEach(el => {
+    if (!el.hasAttribute("tabindex")) el.tabIndex = 0;
+    el.setAttribute("aria-checked", el.classList.contains("on") ? "true" : "false");
+  });
+}
+document.addEventListener("keydown", e => {
+  if ((e.key === " " || e.key === "Enter" || e.key === "Spacebar")
+      && e.target && e.target.matches && e.target.matches('[role="switch"],[role="checkbox"]')) {
+    e.preventDefault(); e.target.click();
+  }
+});
+document.addEventListener("click", e => {
+  const sw = e.target.closest && e.target.closest('[role="switch"],[role="checkbox"]');
+  if (sw) sw.setAttribute("aria-checked", sw.classList.contains("on") ? "true" : "false");
+});
 
 /* Alltid en väg till hjälpen, oavsett var man är. */
 (function helpFab() {
