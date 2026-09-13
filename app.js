@@ -277,7 +277,7 @@ function viewStart() {
 ${liveBanner()}
 <div class="hero"><div class="wrap"><div class="hero-grid">
   <div>
-    <h1 data-reveal style="--d:60ms">Din uppfart står tom.<br>Den kan ge dig <em>${num(FEES.schablon)} ${sym()}</em> om året.</h1>
+    <h1 data-reveal style="--d:60ms">Din uppfart står tom.<br>Den kan ge dig <em>upp till ${num(FEES.schablon)} ${sym()}</em> om året.</h1>
     <p class="lede" style="margin-top:26px" data-reveal>Har du en ledig plats framför huset? Lägg upp den. Någon som behöver parkera betalar dig varje månad. Vi sköter pengarna, legitimeringen och tryggheten.</p>
     <div class="hero-cta" data-reveal style="--d:120ms">
       <button class="btn btn-p btn-lg" data-go="hyrut">${I("wallet", 18)}Se vad min plats är värd${I("arrow", 17, "arw")}</button>
@@ -285,7 +285,7 @@ ${liveBanner()}
     </div>
     <div class="trustrow" data-reveal style="--d:150ms">
       <span>${I("shield", 16)} BankID vid lansering</span>
-      <span>${I("swish", 16)} Betala med Swish</span>
+      <span>${I("wallet", 16)} Trygg betalning i appen</span>
       <button class="asbtn" data-go="trygg">${I("lock", 16)} Vi ersätter skador på din plats
         <b>upp till ${num(FEES.garantiBelopp)} ${sym()}</b> ${I("chevron", 13)}</button>
     </div>
