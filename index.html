@@ -2,6 +2,24 @@
 <html lang="sv">
 <head>
 <meta charset="utf-8">
+<!-- BUTIKSVIDARESTYRNING (print-QR). Vid app-lansering: fyll i STORE.ios och STORE.android nedan.
+     Tomma strängar = ingen vidarestyrning, besökaren ser webbappen som vanligt.
+     Bara besökare som kommer via en tryckt QR (utm_source=flyer/visitkort/tshirt/affisch) och är på
+     mobil skickas vidare. Vanliga/desktop-besökare påverkas aldrig. Den tryckta QR:en behöver aldrig göras om. -->
+<script>
+(function(){
+  try{
+    var STORE = { ios: "", android: "" };   /* <-- fyll i vid lansering, t.ex. https://apps.apple.com/... och https://play.google.com/store/apps/details?id=se.parkla.app */
+    var src = (new URLSearchParams(location.search).get("utm_source") || "").toLowerCase();
+    if(["flyer","visitkort","tshirt","affisch","kort"].indexOf(src) === -1) return;
+    var ua = navigator.userAgent || "";
+    var dest = /iphone|ipad|ipod/i.test(ua) ? STORE.ios
+             : /android/i.test(ua)          ? STORE.android
+             : "";
+    if(dest){ location.replace(dest); }
+  }catch(e){}
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1">
 <meta name="theme-color" content="#F5F7F6">
 <meta name="description" content="Parkla – hyr ut din uppfart eller p-plats till grannar och besökare. Tjäna upp till 40 000 kr skattefritt om året, utan krångel.">
