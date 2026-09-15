@@ -180,7 +180,8 @@ body.harsession .helpfab{bottom:calc(148px + env(safe-area-inset-bottom))}
 .helpfab:hover{transform:translateY(-2px)}
 .helpfab:active{transform:scale(.96)}
 @media(min-width:981px){.helpfab{bottom:24px}}
-@media(max-width:420px){.helpfab span{display:none}.helpfab{padding:14px;border-radius:50%}}
+/* Etiketten "Hjalp" visas alltid — en ensam (i)-ikon forvaxlas latt med profilknappen. */
+@media(max-width:420px){.helpfab{padding:12px 16px}}
 
 .helpcard{display:flex;align-items:center;gap:16px;width:100%;text-align:left;padding:18px;
   border:1.5px solid var(--rule);border-radius:var(--r-md);background:var(--card);
