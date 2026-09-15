@@ -71,7 +71,8 @@ const ICON_PATHS = {
   courtyard:  '<rect x="3.5" y="6.5" width="17" height="14" rx="1.5"/><path d="M8 20.5v-4a4 4 0 0 1 8 0v4"/><path d="M12 3.5v3"/>',
   swish:      '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 14.5c1.5 1.5 5.5 1.5 7 0s-.5-3-3.5-3-5-1.5-3.5-3 5.5-1.5 7 0"/>',
   card:       '<rect x="2.8" y="5.5" width="18.4" height="13" rx="2"/><path d="M2.8 10h18.4"/><path d="M6.5 14.5h3"/>',
-  eye:        '<path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="3"/>'
+  eye:        '<path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="3"/>',
+  user:       '<circle cx="12" cy="8.3" r="3.8"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>'
 };
 
 /* Returnerar en inline-SVG. size i px, valfri extra klass. */
