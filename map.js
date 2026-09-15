@@ -5,7 +5,7 @@
 "use strict";
 
 const PMap = (function () {
-  let map = null, markers = {}, layers = {}, mode = "satellit", meMarker = null, onPick = null;
+  let map = null, markers = {}, layers = {}, mode = "karta", meMarker = null, onPick = null;
 
   const TILES = {
     karta: {
@@ -131,7 +131,7 @@ const PMap = (function () {
     });
     layers.base = baseFor(mode).addTo(map);
     map.setMaxZoom((mode === "satellit" && !satKey()) ? 18 : 21);
-    L.control.zoom({ position: "bottomright" }).addTo(map);
+    L.control.zoom({ position: "bottomleft" }).addTo(map);
     map.attributionControl.setPrefix("");
     onPick = opts.onPick || null;
     setTimeout(() => map && map.invalidateSize(), 60);
