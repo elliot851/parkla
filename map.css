@@ -69,7 +69,7 @@
 .maplegend .l-free i{background:var(--green-lift)}
 .maplegend .l-busy i{background:var(--ink-25)}
 .maplegend .l-best i{background:var(--green)}
-@media(max-width:560px){.maplegend{gap:10px;padding:6px 11px;font-size:.74rem}.maplegend .l-best{display:none}}
+@media(max-width:560px){.maplegend{gap:10px;padding:6px 11px;font-size:.8rem}.maplegend .l-best{display:none}}
 .leaflet-marker-icon{background:transparent!important;border:0!important}
 
 /* ---------- min position ---------- */
@@ -86,8 +86,11 @@
 .msearch{max-width:420px}
 /* Pa smala skarmar hamnar lagervaljara annars OVANPA sokfaltet */
 @media(max-width:760px){ .mapui.tr{top:70px} }
+/* Zoomknapparna ligger nere till vanster, ovanfor teckenforklaringen, sa att den fasta
+   Hjalp-knappen nere till hoger aldrig hamnar ovanpa dem. */
+.leaflet-bottom.leaflet-left{bottom:48px}
 /* Platskortet ska inte tacka zoomknapparna */
-.mapwrap.has-card .leaflet-bottom.leaflet-right{bottom:110px}
+.mapwrap.has-card .leaflet-bottom.leaflet-left{bottom:120px}
 .mapui.bl{left:12px;bottom:12px}
 .mapui.tr{top:12px;right:12px;display:flex;flex-direction:column;gap:9px}
 
@@ -110,7 +113,7 @@
 .mres button:hover{background:var(--paper-2)}
 .mres .ic{color:var(--ink-25);flex:0 0 auto}
 .mres b{display:block;font-size:.9rem;font-weight:600}
-.mres span{display:block;font-size:.76rem;color:var(--ink-45);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mres span{display:block;font-size:.82rem;color:var(--ink-45);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .mbtn{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;
   background:color-mix(in srgb,var(--card) 96%,transparent);backdrop-filter:blur(12px);
@@ -137,11 +140,11 @@
 .mcard .thumb{width:62px;height:56px;border-radius:var(--r-sm);display:grid;place-items:center;
   background:var(--paper-2);border:1px solid var(--rule);color:var(--green)}
 .mcard .nm{font-size:.95rem;font-weight:600;letter-spacing:-.012em}
-.mcard .ad{font-size:.78rem;color:var(--ink-45);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mcard .ad{font-size:.84rem;color:var(--ink-45);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mcard .tags{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
 .mcard .pr{text-align:right;white-space:nowrap}
 .mcard .pr b{display:block;font-family:var(--display);font-weight:600;font-size:1.18rem;letter-spacing:-.026em;line-height:1.1}
-.mcard .pr span{display:block;font-size:.76rem;color:var(--ink-45);margin-top:2px}
+.mcard .pr span{display:block;font-size:.82rem;color:var(--ink-45);margin-top:2px}
 @media(max-width:520px){
   .mcard{grid-template-columns:52px 1fr auto;padding:12px;gap:11px}
   .mcard .thumb{width:52px;height:48px}
