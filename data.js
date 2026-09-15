@@ -3,7 +3,7 @@
    ============================================================ */
 "use strict";
 
-const VERSION = "2026-09-05.69";
+const VERSION = "2026-09-16.70";
 
 /* ---------- Avgiftsmodell ---------- */
 const FEES = {
@@ -263,7 +263,7 @@ const I18N = {
   sv: {
     nav_find:"Hitta parkering", nav_rent:"Hyr ut", nav_trust:"Trygghet", nav_price:"Priser",
     nav_me:"Min sida", nav_cta:"Sök plats", nav_more:"Mer", nav_events:"Evenemang",
-    tab_start:"Start", tab_search:"Sök", tab_rent:"Hyr ut", tab_me:"Mitt", tab_more:"Mer",
+    tab_start:"Start", tab_search:"Sök", tab_rent:"Hyr ut", tab_me:"Min sida", tab_more:"Mer",
     hour:"Timme", day:"Dygn", month:"Månad", event:"Match", week:"Vecka",
     per_hour:"per timme", per_day:"per dygn", per_month:"per månad", per_event:"per gång", per_week:"per vecka",
     u_hour:"/tim", u_day:"/dygn", u_month:"/mån", u_event:"/gång", u_week:"/vecka",
@@ -276,7 +276,7 @@ const I18N = {
   en: {
     nav_find:"Find parking", nav_rent:"Rent out", nav_trust:"Safety", nav_price:"Pricing",
     nav_me:"My page", nav_cta:"Find a spot", nav_more:"More", nav_events:"Events",
-    tab_start:"Home", tab_search:"Search", tab_rent:"Rent out", tab_me:"Mine", tab_more:"More",
+    tab_start:"Home", tab_search:"Search", tab_rent:"Rent out", tab_me:"My page", tab_more:"More",
     hour:"Hour", day:"Day", month:"Month", event:"Event", week:"Week",
     per_hour:"per hour", per_day:"per day", per_month:"per month", per_event:"per event", per_week:"per week",
     u_hour:"/hr", u_day:"/day", u_month:"/mo", u_event:"/event", u_week:"/wk",
