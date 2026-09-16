@@ -26,8 +26,9 @@ if (!LS.get("migr70", false)) {
   LS.set("settings", SET); LS.set("migr70", true);
 }
 SET.notis = Object.assign({}, DEFAULT_SETTINGS.notis, SET.notis || {});
-/* Engångsflytt: satellit blev standard, och typsnittet är nu valbart. */
-if (!SET.v5) { SET.v5 = 1; SET.mapMode = "satellit"; SET.font = SET.font || "instrument"; LS.set("settings", SET); }
+/* Engångsflytt v5: typsnittet blev valbart. (Tvingade tidigare även satellit som standard — borttaget 2026-09-16,
+   ljus gatukarta är standard igen, den är lättare att läsa för äldre ögon.) */
+if (!SET.v5) { SET.v5 = 1; SET.font = SET.font || "instrument"; LS.set("settings", SET); }
 function setFont(k) { SET.font = k; saveSettings(); render(); toast("Typsnitt: " + k, "eye"); }
 /* Skarpt läge: inga påhittade platser går att boka, bara intresseanmälan. */
 const isLive = () => !!SET.live;
