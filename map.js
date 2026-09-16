@@ -8,13 +8,16 @@ const PMap = (function () {
   let map = null, markers = {}, layers = {}, mode = "karta", meMarker = null, onPick = null;
 
   const TILES = {
+    /* CARTO:s gratisrutor kräver numera API-nyckel och vattenstämplas annars "API KEY REQUIRED" över hela
+       kartan. Esris gatukarta är nyckelfri, samma leverantör som flygbilderna, och tydlig för äldre ögon.
+       (En riktigt mörk basemap i mörkt läge kräver nyckel, t.ex. Mapbox/MapTiler — tills dess ljus karta även där.) */
     karta: {
-      url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-      attr: '&copy; OpenStreetMap &copy; CARTO', max: 20, sub: "abcd"
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      attr: '&copy; Esri, HERE, Garmin, OpenStreetMap', max: 19
     },
     morker: {
-      url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-      attr: '&copy; OpenStreetMap &copy; CARTO', max: 20, sub: "abcd"
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      attr: '&copy; Esri, HERE, Garmin, OpenStreetMap', max: 19
     },
     satellit: {
       url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
