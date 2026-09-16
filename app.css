@@ -497,6 +497,9 @@ ul.numlist{padding:0;margin:0}
   border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:14px}
 .sheet-h h3{flex:1;font-size:1.06rem}
 .sheet-b{padding:22px 24px 26px}
+/* Sekundära knappar på ett ark: fyll med en synlig yta så de inte tonas bort mot den mörka
+   arkbottnen (låg kontrast i mörkt läge). Primärvarianterna behåller sin egen färg. */
+.sheet-b .btn:not([class*="btn-p"]):not([class*="btn-g"]):not([class*="btn-c"]):not([class*="btn-d"]){background:var(--paper-2)}
 @media(max-width:560px){.sheet-h{padding:18px 18px 14px}.sheet-b{padding:18px}}
 .x{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--ink-45);
   border:1px solid var(--rule);flex:0 0 auto;transition:all .2s}
