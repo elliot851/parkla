@@ -252,6 +252,14 @@ input[type=range]{width:100%;accent-color:var(--green);height:30px}
   white-space:nowrap;transition:color .2s,background .25s var(--ease)}
 .seg button:hover{color:var(--ink)}
 .seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--lift)}
+/* Tidsväljaren på Sök: RADBRYTER i stället för att scrolla i sidled (inget "Mato…"-klipp),
+   stora knappar som är lätta att träffa. En vald i taget, tydligt grön. */
+.modegrid{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.modegrid button{flex:1 1 auto;min-width:96px;min-height:48px;padding:11px 14px;border-radius:var(--r-sm);
+  border:1px solid var(--rule-2);background:var(--card);font-size:.98rem;font-weight:600;color:var(--ink-70);
+  transition:border-color .2s,color .2s,background .2s}
+.modegrid button:hover{border-color:var(--ink-25);color:var(--ink)}
+.modegrid button.on{background:var(--green);color:#fff;border-color:transparent}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:3px 0;scrollbar-width:none;scroll-snap-type:x proximity}
 .chips::-webkit-scrollbar{display:none}
 .chip{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;
