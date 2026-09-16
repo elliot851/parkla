@@ -18,6 +18,13 @@ const DEFAULT_SETTINGS = {
   bigText: false
 };
 let SET = Object.assign({}, DEFAULT_SETTINGS, LS.get("settings", {}));
+/* Engångsmigrering v70: gamla standardvärden (Stockholm + satellit) var aldrig ett aktivt val — flytta
+   befintliga användare till de nya standardvärdena (Västerås + ljus gatukarta) en gång. Egna val därefter respekteras. */
+if (!LS.get("migr70", false)) {
+  if (SET.city === "sthlm") SET.city = "vasteras";
+  if (SET.mapMode === "satellit") SET.mapMode = "karta";
+  LS.set("settings", SET); LS.set("migr70", true);
+}
 SET.notis = Object.assign({}, DEFAULT_SETTINGS.notis, SET.notis || {});
 /* Engångsflytt: satellit blev standard, och typsnittet är nu valbart. */
 if (!SET.v5) { SET.v5 = 1; SET.mapMode = "satellit"; SET.font = SET.font || "instrument"; LS.set("settings", SET); }
