@@ -721,40 +721,24 @@ function viewSok() {
   const nf = activeFilterCount();
   return `
 <div class="wrap" style="padding-top:16px">
-  <div class="row" style="gap:10px;margin-bottom:12px">
+  <div class="row" style="gap:10px;margin-bottom:16px">
     <button class="placebtn" onclick="openPlacePicker()">${I("pin", 19)}<span>${esc(placeLabel())}</span>${I("chevron", 16, "flip90")}</button>
     <button class="btn" onclick="usePlacePos()" title="Nära mig" aria-label="Nära mig">${I("target", 18)}</button>
-  </div>
-  <div class="spread" style="gap:12px;flex-wrap:wrap">
-    <div class="seg" style="max-width:230px;flex:1">
-      <button class="${S.view === "karta" ? "on" : ""}" onclick="setView('karta')">${I("map", 15)} ${esc(t("map"))}</button>
-      <button class="${S.view === "lista" ? "on" : ""}" onclick="setView('lista')">${I("list", 15)} ${esc(t("list"))}</button>
-    </div>
-    <div class="row" style="gap:8px">
-      <button class="btn btn-sm" onclick="openFilters()">${I("filter", 15)} ${esc(t("filters"))}${nf ? ` <b class="mono">${nf}</b>` : ""}</button>
-      <select class="inp sortsel" style="min-height:38px;padding:6px 30px 6px 12px;width:auto"
-        onchange="S.sort=this.value;refreshResults()">
-        <option value="pris" ${S.sort === "pris" ? "selected" : ""}>${esc(t("sort_price"))}</option>
-        <option value="betyg" ${S.sort === "betyg" ? "selected" : ""}>${esc(t("sort_rating"))}</option>
-        <option value="avstand" ${S.sort === "avstand" ? "selected" : ""}>${esc(t("sort_dist"))}</option>
-      </select>
-    </div>
   </div>
 
   <div class="askrow"><b>Hur länge behöver du plats?</b>
     <button class="helplink" onclick="startTour()">${I("info", 15)} Visa hur appen funkar</button></div>
-  <div class="seg" style="margin-top:10px" id="modeSeg">
+  <div class="modegrid" id="modeSeg">
     ${[["timme", t("hour")], ["dygn", t("day")], ["vecka", t("week")], ["manad", t("month")], ["evenemang", t("event")], ["sasong", "Vinterförvar"]]
       .map(([k, l]) => `<button data-mode="${k}" class="${S.mode === k ? "on" : ""}" onclick="setMode('${k}')">${esc(l)}</button>`).join("")}
   </div>
 
-  <div class="chips" style="margin-top:11px">
-    <button class="chip ${S.fNu ? "on" : ""}" onclick="tog('fNu',this)">${I("car", 15)} Ledig nu</button>
-    <button class="chip ${S.fCharge ? "on" : ""}" onclick="tog('fCharge',this)">${I("bolt", 15)} Laddbox</button>
-    <button class="chip ${S.fGarage ? "on" : ""}" onclick="tog('fGarage',this)">${I("garage", 15)} Tak eller garage</button>
-    <button class="chip ${S.fSecure ? "on" : ""}" onclick="tog('fSecure',this)">${I("lock", 15)} Låst</button>
-    <button class="chip ${S.fBig ? "on" : ""}" onclick="tog('fBig',this)">${I("truck", 15)} Stor bil</button>
-    ${nf ? `<button class="chip" onclick="clearFilters()">${I("close", 14)} ${esc(t("clear"))}</button>` : ""}
+  <div class="row" style="gap:10px;margin-top:16px;align-items:center">
+    <div class="seg" style="flex:1;max-width:240px">
+      <button class="${S.view === "karta" ? "on" : ""}" onclick="setView('karta')">${I("map", 15)} ${esc(t("map"))}</button>
+      <button class="${S.view === "lista" ? "on" : ""}" onclick="setView('lista')">${I("list", 15)} ${esc(t("list"))}</button>
+    </div>
+    <button class="btn btn-sm" style="margin-left:auto" onclick="openFilters()">${I("filter", 15)} ${esc(t("filters"))}${nf ? ` <b class="mono">${nf}</b>` : ""}</button>
   </div>
 </div>
 
@@ -1237,6 +1221,9 @@ function openFilters() {
     <div class="field"><label>Var vill du parkera?</label>
       <button class="placebtn" onclick="openPlacePicker()">${I("pin", 19)}<span>${esc(placeLabel())}</span>${I("chevron", 16, "flip90")}</button>
     </div>
+    <div class="setrow"><span style="color:var(--green)">${I("car", 20)}</span>
+      <div class="t"><b>Bara lediga just nu</b><span>Platser du kan köra in på direkt</span></div>
+      <div class="switch ${S.fNu ? "on" : ""}" role="switch" onclick="S.fNu=!S.fNu;this.classList.toggle('on')"></div></div>
     <div class="slider">
       <div class="top"><span class="lbl">Högsta pris ${esc(unitLong(S.mode))}</span>
         <span class="val" id="mpv">${num(cur)} ${sym()}</span></div>
@@ -1253,6 +1240,13 @@ function openFilters() {
       .map(([k, ic, tt, ss]) => `<div class="setrow"><span style="color:var(--ink-45)">${I(ic, 20)}</span>
         <div class="t"><b>${tt}</b><span>${ss}</span></div>
         <div class="switch ${S[k] ? "on" : ""}" role="switch" onclick="S['${k}']=!S['${k}'];this.classList.toggle('on')"></div></div>`).join("")}
+    <div class="rule"></div>
+    <div class="field"><label>Sortera platserna</label>
+      <select class="inp" onchange="S.sort=this.value">
+        <option value="pris" ${S.sort === "pris" ? "selected" : ""}>${esc(t("sort_price"))}</option>
+        <option value="betyg" ${S.sort === "betyg" ? "selected" : ""}>${esc(t("sort_rating"))}</option>
+        <option value="avstand" ${S.sort === "avstand" ? "selected" : ""}>${esc(t("sort_dist"))}</option>
+      </select></div>
     <button class="btn btn-p btn-block btn-lg" onclick="closeSheet();render()">Visa platserna</button>
     <button class="btn btn-block" onclick="clearFilters();closeSheet()">${esc(t("clear"))} allt</button>
   </div>`);
