@@ -3895,6 +3895,9 @@ function render() {
   tickSession();
   const dot = document.getElementById("notisDot");
   if (dot) dot.classList.toggle("on", NOTIS.some(n => n.unread));
+  /* Ingen klocka utan aviseringar — en klocka som bara leder till en tom lista förvirrar. */
+  const bell = document.getElementById("btnNotis");
+  if (bell) bell.style.display = NOTIS.length ? "" : "none";
   updateProfilBtn();
   document.documentElement.lang = SET.lang;
   if (typeof syncA11ySwitches === "function") syncA11ySwitches();
