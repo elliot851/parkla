@@ -74,7 +74,9 @@ const PMap = (function () {
       ]);
     }
     const t = isDark() ? TILES.morker : TILES.karta;
-    return L.tileLayer(t.url, { maxZoom: 21, maxNativeZoom: t.max, subdomains: t.sub,
+    /* OBS: ett explicit `subdomains: undefined` skriver över Leaflets standard ("abc") och kraschar
+       i _getSubdomain ("reading 'length'") även när URL:en saknar {s}. Fall alltid tillbaka på "abc". */
+    return L.tileLayer(t.url, { maxZoom: 21, maxNativeZoom: t.max, subdomains: t.sub || "abc",
       attribution: t.attr, detectRetina: true });
   }
 
