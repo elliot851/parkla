@@ -20,7 +20,8 @@
   /* Skarp config bakad i koden -> ALLA besökare når backend, ingen localStorage krävs.
      Alla tre värden är publika (Supabase publishable + Stripe publishable) och hör hemma i appen.
      localStorage.parkla.v3.cfg kan fortfarande överstyra (t.ex. test mot annan backend/nycklar).
-     OBS: pk är Stripe TESTLÄGE -> byt till pk_live_... här vid skarp betalning (efter företagsverifiering). */
+     OBS: pk (pk_live_...) är Stripe SKARPT LÄGE = riktiga betalningar. Vill man testa utan riktiga pengar,
+     byt till en pk_test_...-nyckel här (eller via localStorage.parkla.v3.cfg). */
   var CFG_DEFAULT = {
     url: "https://nzbgjxccaldhjwxllsma.supabase.co",
     anon: "sb_publishable_0-AopBcKT_tiJ_k8wAMDbA_Gh2kH0fk",
