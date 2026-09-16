@@ -2546,14 +2546,18 @@ function kickCar() {
    VY: EVENEMANG
    ============================================================ */
 function viewEvenemang() {
+  const area = AREAS.find(a => a.id === S.area) || AREAS[0];
+  /* I skarpt läge visar vi bara evenemang på den valda orten – annars skulle en Västerås-användare
+     mötas av Stockholmsmatcher. Finns inga än, visar vi ett ärligt "kommer snart"-läge. */
+  const evs = skarptPa() ? EVENTS.filter(e => e.area === S.area) : EVENTS;
   return `
 <section class="tight"><div class="wrap">
   <span class="kicker" data-reveal>Evenemang</span>
   <h1 style="margin:14px 0 0;font-size:clamp(2.1rem,5vw,3.6rem)" data-reveal>Parkera nära.<br><em>Kom hem först.</em></h1>
   <p class="lede" style="margin-top:16px" data-reveal>Arenaparkeringen kostar 250–400 kr och du står 40 minuter i kö ut. En uppfart 400 meter bort kostar mindre – och du är hemma före alla andra.</p>
 
-  <div class="stack" style="margin-top:34px">
-    ${EVENTS.map((e, k) => {
+  ${evs.length ? `<div class="stack" style="margin-top:34px">
+    ${evs.map((e, k) => {
       const near = allSpots().filter(s => s.area === e.area && s.ev > 0);
       const from = near.length ? Math.min.apply(null, near.map(s => s.ev)) : 0;
       return `<div class="panel pad" data-reveal style="--d:${k * 50}ms">
@@ -2572,7 +2576,12 @@ function viewEvenemang() {
         </div>
       </div>`;
     }).join("")}
-  </div>
+  </div>` : `<div class="panel pad-lg" style="margin-top:34px" data-reveal>
+    <div class="row"><span style="color:var(--green)">${I("ticket", 24)}</span>
+      <h3>Inga evenemang i ${esc(area.name)} än</h3></div>
+    <p class="dim" style="margin-top:12px;max-width:60ch">Vi lägger till matcher och konserter här efter hand som Parkla växer på orten. Bor du nära en arena eller ett evenemangsområde? Lägg upp din plats nu, så är du först när det drar igång.</p>
+    <button class="btn btn-p" style="margin-top:18px" data-go="hyrut">Se vad din plats är värd${I("arrow", 16, "arw")}</button>
+  </div>`}
 
   <div class="panel pad-lg" style="margin-top:26px;background:var(--green-wash);border-color:transparent" data-reveal>
     <h3>Bor du nära en arena?</h3>
@@ -3100,8 +3109,8 @@ function viewMer() {
   const unread = NOTIS.filter(n => n.unread).length;
   const links = [
     ["installningar", "sliders", t("settings"), "Utseende, språk, valuta, aviseringar"],
-    ["evenemang", "ticket", "Evenemang", "Matcher och konserter nära dig"],
-    ["vinterforvar", "moon", "Vinterförvar", "Ställ undan bilen över vintern"],
+    ["evenemang", "ticket", "Evenemang", "Matcher och konserter nära dig", true],
+    ["vinterforvar", "moon", "Vinterförvar", "Ställ undan bilen över vintern", true],
     ["meddelanden", "message", "Meddelanden", "Skriv till värdar och förare"],
     ["trygg", "shield", t("nav_trust"), "BankID, skadegaranti, flytta bilen"],
     ["priser", "wallet", t("nav_price"), "Exakt vad vi tar, och varför"],
@@ -3130,9 +3139,9 @@ function viewMer() {
     <span class="t"><b>Aviseringar</b><span>${unread ? unread + " olästa" : "Inget nytt"}</span></span>
     ${unread ? `<span class="tag clay">${unread}</span>` : `<span class="arw">${I("chevron", 17)}</span>`}
   </button>
-  ${links.map(([r, ic, tt, ss]) => `<button class="linkrow" data-go="${r}">
+  ${links.map(([r, ic, tt, ss, snart]) => `<button class="linkrow" data-go="${r}">
     <span class="ic">${I(ic, 22)}</span><span class="t"><b>${tt}</b><span>${ss}</span></span>
-    <span class="arw">${I("chevron", 17)}</span></button>`).join("")}
+    ${snart && skarptPa() ? `<span class="tag brass" style="margin-right:8px">Snart</span>` : ""}<span class="arw">${I("chevron", 17)}</span></button>`).join("")}
 
   <h2 style="margin:46px 0 8px">Vanliga frågor</h2>
   <div>${faq.map(([q, a]) => `<details class="faq"><summary>${esc(q)}</summary><div class="a">${a}</div></details>`).join("")}</div>
