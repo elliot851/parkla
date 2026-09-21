@@ -797,6 +797,7 @@ function sokBodyHTML(list, area) {
     <h3>${list.length} ${esc(t("free_spots"))}</h3>
     <span class="tag brass">${esc(area.ref)}</span>
   </div>
+  ${thinSupplyHTML(list, area)}
   ${list.length ? prisnotisHTML() : ""}
   <div class="spotlist">${list.length ? list.map(spotRow).join("") : emptyHTML()}</div>
   ${savingsHTML(list, area)}
@@ -836,6 +837,20 @@ function spotRow(s, mode) {
       aria-label="Spara">${fav ? IF("heart", 17) : I("heart", 17)}</span>
   </button>`;
 }
+/* Fatt men RIKTIGT utbud (1-4 platser): visa aldrig detta som "dott".
+   Paminn att fler ar pa vag, och lat anvandaren bevaka omradet. Gommer
+   ALDRIG platser - de listas som vanligt under bannern. */
+function thinSupplyHTML(list, area) {
+  if (!list.length || list.length >= 5) return "";
+  if (typeof platserLaddar === "function" && platserLaddar()) return "";
+  const bevakad = WATCH.includes(area.id);
+  return `<div class="hint" style="margin-bottom:12px">${I("info", 17)}
+    <div><b>Vi bygger upp ${esc(area.name)} just nu.</b> Fler platser tillkommer varje vecka.
+    <button class="btn btn-sm ${bevakad ? "" : "btn-p"}" style="margin-top:9px" onclick="bevakaHar()">
+      ${I("bell", 15)} ${bevakad ? "Du bevakar redan" : "Fa besked om nya platser har"}</button></div>
+  </div>`;
+}
+
 function emptyHTML() {
   /* Platserna hämtas fortfarande — visa "hämtar", inte "inga platser än".
      Annars blinkar det falska tomläget förbi på ett långsamt nät. */
