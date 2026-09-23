@@ -3,7 +3,7 @@
    ============================================================ */
 "use strict";
 
-const VERSION = "2026-09-23.83";
+const VERSION = "2026-09-23.84";
 
 /* ---------- Avgiftsmodell ---------- */
 const FEES = {
@@ -13,7 +13,7 @@ const FEES = {
   overtidPerTimme: 150,
   schablon: 40000,
   garantiBelopp: 25000,
-  refVard: 200, refForare: 100,
+  refVard: 50, refForare: 50,
   laddOrePerKwh: 10,
   /* Laddning: el debiteras per timme skalat efter laddboxens effekt, och går
      HELT till värden (elkostnads-ersättning, ingen Parkla-avgift). Taket är en
