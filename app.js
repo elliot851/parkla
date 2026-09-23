@@ -3068,7 +3068,8 @@ function viewInstallningar() {
   </div>
 
   ${adminPa() ? `<h2 style="font-size:1.05rem;margin:34px 0 -4px;color:var(--ink-45)">Avancerat · för dig som driver Parkla</h2>
-  ${skarptPanelHTML()}` : ""}
+  ${skarptPanelHTML()}
+  ${adminScansPanelHTML()}` : ""}
 
   <div class="panel pad-lg" style="margin-top:18px">
     <h3>Om appen</h3>
@@ -3306,10 +3307,30 @@ function saveVisitorEmail() {
   const mail = ((document.getElementById("wv_mail") || {}).value || "").trim();
   if (!mail || mail.indexOf("@") < 1) { toast("Fyll i din e-post", "info"); return; }
   const a = AREAS.find(x => x.id === S.area) || AREAS[0];
-  LEADS.unshift({ typ: "besokare", mail, omrade: a.id, tid: new Date().toISOString() });
+  const rec = { mail: mail, omrade: a.id, tid: new Date().toISOString() };
+  LEADS.unshift(Object.assign({ typ: "besokare" }, rec));
   LS.set("leads", LEADS);
+  skickaLead("besokare", rec);
   closeSheet();
   toast("Tack! Vi hor av oss", "check");
+}
+
+/* ---------- QR-skanning: logga varje gang nagon oppnar via ett tryckt material ----------
+   Kors EN gang per sidladdning (inte vid hash-byten i SPA:n). Kraver ingen inloggning,
+   anon-insert mot "qr_scans" (se SQL i chatten). Tyst fel om tabellen saknas an. */
+function loggaQrSkanning() {
+  try {
+    const src = (new URLSearchParams(location.search).get("utm_source") || "").toLowerCase();
+    if (["flyer", "visitkort", "tshirt", "affisch", "kort"].indexOf(src) === -1) return;
+    const c = (typeof PAPI !== "undefined") ? PAPI.cfg() : null;
+    if (!c || !c.url || !c.anon) return;
+    fetch(c.url + "/rest/v1/qr_scans", {
+      method: "POST",
+      headers: { "apikey": c.anon, "Authorization": "Bearer " + c.anon,
+                 "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify({ kalla: src, omrade: S.area || "" })
+    }).catch(() => {});
+  } catch (e) {}
 }
 
 /* ---------- anmalan: jag soker parkering ---------- */
@@ -3328,6 +3349,22 @@ function openLeadDriver() {
   </div>`);
 }
 
+/* Postar en lead direkt till Supabase-tabellen "leads" (anon-insert, se SQL i
+   CLAUDE.md/chatten). Fire-and-forget, fel stoppar aldrig anvandarens flode -
+   raden ligger kvar lokalt (LEADS/LS) som backup oavsett. */
+function skickaLead(typ, data) {
+  try {
+    const c = (typeof PAPI !== "undefined") ? PAPI.cfg() : null;
+    if (!c || !c.url || !c.anon) return Promise.resolve(false);
+    return fetch(c.url + "/rest/v1/leads", {
+      method: "POST",
+      headers: { "apikey": c.anon, "Authorization": "Bearer " + c.anon,
+                 "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify({ typ: typ, data: data })
+    }).then(r => r.ok).catch(() => false);
+  } catch (e) { return Promise.resolve(false); }
+}
+
 function saveLead(typ) {
   const v = id => ((document.getElementById(id) || {}).value || "").trim();
   const rec = typ === "vard"
@@ -3341,17 +3378,15 @@ function saveLead(typ) {
   LEADS.unshift(rec); LS.set("leads", LEADS);
   pixelLead(typ);   /* konvertering för annonsoptimering */
 
-  /* FormData + Accept = "enkel" CORS-request utan preflight. Funkar med
-     Formspree, Tally, Google Forms m.fl. — JSON tvingar fram en preflight
-     som en del endpoints inte svarar rätt på och POST:en blockeras. */
-  const skicka = SET.formUrl
-    ? (function () {
-        const fd = new FormData();
-        Object.keys(rec).forEach(k => fd.append(k, rec[k]));
-        return fetch(SET.formUrl, { method: "POST", headers: { "Accept": "application/json" }, body: fd })
-          .then(r => r.ok).catch(() => false);
-      })()
-    : Promise.resolve(null);
+  /* Skickas ALLTID till Supabase leads-tabellen (rad-for-rad, se skickaLead()).
+     formUrl (Formspree/Tally) kan fortfarande kopplas som extra kanal i Installningar. */
+  const skicka = skickaLead(typ, rec).then(supaOk => {
+    if (!SET.formUrl) return supaOk;
+    const fd = new FormData();
+    Object.keys(rec).forEach(k => fd.append(k, rec[k]));
+    return fetch(SET.formUrl, { method: "POST", headers: { "Accept": "application/json" }, body: fd })
+      .then(r => r.ok).catch(() => false);
+  });
 
   skicka.then(ok => {
     closeSheet();
@@ -3532,6 +3567,88 @@ function adminTap() {
     toast(LS.get("admin", false) ? "Avancerade inställningar visas" : "Avancerade inställningar dolda", "check");
     render();
   }
+}
+
+/* VAPID public key for webbpush - genererad 2026-09-23, privat nyckel ligger
+   ENDAST i Supabase edge function-secrets, aldrig i klienten. */
+const VAPID_PUBLIC_KEY = "BFEB3Vf2LpdrfqW2ORpO4hBVCS9EjqQenzZNOyUamLw_mGDeU6Ymu4tCYZE0kSS2fdaTxifcYai2oNz4_SJxHy0";
+
+function adminScansPanelHTML() {
+  const pushPa = (typeof Notification !== "undefined") && Notification.permission === "granted" && LS.get("push_ok", false);
+  return `
+  <div class="panel pad-lg" style="margin-top:18px">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:14px">
+      <div><h3>QR-skanningar</h3>
+        <p class="dim small" style="margin-top:6px">Tryckta flygblad, visitkort, tröjor - varje öppning loggas.</p></div>
+      <span class="tag ${pushPa ? "green" : ""}">${pushPa ? "Notiser på" : "Notiser av"}</span>
+    </div>
+    <div id="scanStatsBox" class="grid g3" style="margin-top:16px;gap:1px;background:var(--rule);border-radius:var(--r-sm);overflow:hidden">
+      <div style="background:var(--card);padding:14px"><div class="muted small">Senaste timmen</div><div class="mono" style="font-size:1.4rem;margin-top:4px" id="scanH">…</div></div>
+      <div style="background:var(--card);padding:14px"><div class="muted small">Senaste dygnet</div><div class="mono" style="font-size:1.4rem;margin-top:4px" id="scanD">…</div></div>
+      <div style="background:var(--card);padding:14px"><div class="muted small">Totalt</div><div class="mono" style="font-size:1.4rem;margin-top:4px" id="scanT">…</div></div>
+    </div>
+    <div id="scanRecentBox" class="dim small" style="margin-top:14px">Laddar senaste skanningarna…</div>
+    <div class="row wrap" style="margin-top:16px">
+      <button class="btn btn-sm ${pushPa ? "" : "btn-p"}" onclick="aktiveraPush()">${I("bell", 15)} ${pushPa ? "Notiser är på" : "Slå på notiser vid skanning"}</button>
+      <button class="btn btn-sm" onclick="laddaSkanStatistik()">${I("refresh", 15)} Uppdatera</button>
+    </div>
+  </div>`;
+}
+
+function laddaSkanStatistik() {
+  const c = (typeof PAPI !== "undefined") ? PAPI.cfg() : null;
+  const box = document.getElementById("scanStatsBox");
+  if (!box || !c || !c.url || !c.anon) return;
+  const h = new Date(Date.now() - 3600e3).toISOString();
+  const d = new Date(Date.now() - 86400e3).toISOString();
+  const heads = { "apikey": c.anon, "Authorization": "Bearer " + c.anon, "Prefer": "count=exact" };
+  const rang = r => { const m = /\/(\d+)$/.exec(r.headers.get("content-range") || ""); return m ? +m[1] : 0; };
+  Promise.all([
+    fetch(c.url + "/rest/v1/qr_scans?select=id&tid=gte." + encodeURIComponent(h), { headers: heads }).then(r => rang(r)).catch(() => "?"),
+    fetch(c.url + "/rest/v1/qr_scans?select=id&tid=gte." + encodeURIComponent(d), { headers: heads }).then(r => rang(r)).catch(() => "?"),
+    fetch(c.url + "/rest/v1/qr_scans?select=id", { headers: heads }).then(r => rang(r)).catch(() => "?")
+  ]).then(([hh, dd, tt]) => {
+    const $ = id => document.getElementById(id);
+    if ($("scanH")) $("scanH").textContent = hh; if ($("scanD")) $("scanD").textContent = dd; if ($("scanT")) $("scanT").textContent = tt;
+  });
+  fetch(c.url + "/rest/v1/qr_scans?select=kalla,omrade,tid&order=tid.desc&limit=8", { headers: { "apikey": c.anon, "Authorization": "Bearer " + c.anon } })
+    .then(r => r.ok ? r.json() : [])
+    .then(rows => {
+      const el = document.getElementById("scanRecentBox");
+      if (!el) return;
+      if (!rows.length) { el.textContent = "Inga skanningar loggade än."; return; }
+      el.innerHTML = rows.map(r => {
+        const t = new Date(r.tid); const kl = t.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+        return `<div style="padding:4px 0">${esc(r.kalla)} · ${esc(r.omrade || "")} · ${kl}</div>`;
+      }).join("");
+    }).catch(() => {});
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64); const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+/* Ber om lov, prenumererar via webblasarens push-tjanst, sparar prenumerationen
+   i Supabase (push_subscriptions) sa edge-funktionen kan skicka dit en notis
+   nar en ny rad landar i qr_scans. */
+function aktiveraPush() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) { toast("Webblasaren stodjer inte push", "info"); return; }
+  const c = (typeof PAPI !== "undefined") ? PAPI.cfg() : null;
+  if (!c || !c.url || !c.anon) { toast("Koppla skarpt lage forst", "info"); return; }
+  Notification.requestPermission().then(perm => {
+    if (perm !== "granted") { toast("Notiser nekades", "info"); return; }
+    navigator.serviceWorker.ready.then(reg => reg.pushManager.subscribe({
+      userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    })).then(sub => fetch(c.url + "/rest/v1/push_subscriptions", {
+      method: "POST",
+      headers: { "apikey": c.anon, "Authorization": "Bearer " + c.anon, "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify({ sub: sub.toJSON() })
+    })).then(() => { LS.set("push_ok", true); toast("Notiser pa - klart", "check"); render(); })
+      .catch(() => toast("Kunde inte slå på notiser just nu", "info"));
+  });
 }
 
 function skarptPanelHTML() {
@@ -3955,6 +4072,7 @@ function render() {
   countUps();
   renderConsent();
   if (S.route === "hem") setTimeout(() => { mountMap("lmap", { fit: true, pad: 40 }); autoLocateHem(); }, 40);
+  if (S.route === "installningar" && adminPa()) setTimeout(() => { if (typeof laddaSkanStatistik === "function") laddaSkanStatistik(); }, 60);
   if (S.route === "sok") setTimeout(() => mountMap("lmap", { fit: S.view === "lista", pad: 30 }), 40);
   if (S.route === "start") setTimeout(() => mountMap("hmap", { fit: true, pad: 46, onPick: openSpot }), 60);
   if (typeof Tour !== "undefined" && Tour.active()) setTimeout(Tour.place, 120);
@@ -4042,6 +4160,7 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
 applyTheme();
 initMetaPixel();
 render();
+loggaQrSkanning();
 setTimeout(function () {
   if (!LS.get("valkomstruta_visad", false)) {
     LS.set("valkomstruta_visad", true);

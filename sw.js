@@ -3,7 +3,7 @@
    NÄTET FÖRST, cache bara som reserv. Då kan man aldrig fastna
    på en gammal version, men appen funkar ändå utan täckning.
    ============================================================ */
-const CACHE = "parkla-v81";
+const CACHE = "parkla-v82";
 const SHELL = [
   "./", "./index.html", "./app.css", "./map.css", "./tour.css", "./book.css", "./flows.css",
   "./icons.js", "./data.js", "./map.js", "./tour.js", "./api.js", "./app.js", "./flows.js", "./live.js",
@@ -13,6 +13,29 @@ const SHELL = [
 self.addEventListener("install", e => {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).catch(() => {})));
+});
+
+/* Pushnotiser (endast för admin som aktiverat dem i Installningar).
+   Payload skickas av en Supabase edge function vid ny rad i qr_scans. */
+self.addEventListener("push", e => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (err) { data = { title: "Parkla", body: e.data ? e.data.text() : "" }; }
+  const title = data.title || "Parkla";
+  const opts = {
+    body: data.body || "Någon skannade en QR-kod",
+    icon: "./icon-180.png",
+    badge: "./icon-180.png",
+    data: { url: data.url || "./#installningar" }
+  };
+  e.waitUntil(self.registration.showNotification(title, opts));
+});
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || "./";
+  e.waitUntil(clients.matchAll({ type: "window" }).then(list => {
+    for (const c of list) if ("focus" in c) return c.focus();
+    if (clients.openWindow) return clients.openWindow(url);
+  }));
 });
 
 self.addEventListener("activate", e => {
