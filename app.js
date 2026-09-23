@@ -3287,6 +3287,32 @@ function openLeadHost() {
 }
 
 /* ---------- anmälan: jag söker parkering ---------- */
+/* ---------- valkomstruta: engangs, forsta besoket, mejl-signup ----------
+   Visas EN gang per enhet (LS-flagga), nagra sekunder efter forsta sidladdning,
+   INTE vid varje oppning. Icke-blockerande (finns "Inte nu"), later folk
+   se appen forst. Sparas i samma LEADS-lista som ovriga anmalningar. */
+function openWelcomeCapture() {
+  const a = AREAS.find(x => x.id === S.area) || AREAS[0];
+  openSheet(sheetHead("Valkommen till Parkla") + `<div class="sheet-b stack">
+    <p class="dim">Vi oppnar omrade for omrade i ${esc(a.name)}. Lamna din mejl sa hor vi av
+      oss nar det hander nara dig, oavsett om du soker en plats eller har en egen uppfart.</p>
+    <div class="field"><label>E-post</label><input class="inp" type="email" id="wv_mail" placeholder="du@exempel.se"></div>
+    <div class="hint">${I("lock", 17)}<div>Bara for att hora av oss om Parkla. Du kan nar som helst be oss radera uppgifterna.</div></div>
+    <button class="btn btn-p btn-block btn-lg" onclick="saveVisitorEmail()">Hall mig uppdaterad</button>
+    <button class="btn btn-block" onclick="closeSheet()">Inte nu, tack</button>
+  </div>`);
+}
+function saveVisitorEmail() {
+  const mail = ((document.getElementById("wv_mail") || {}).value || "").trim();
+  if (!mail || mail.indexOf("@") < 1) { toast("Fyll i din e-post", "info"); return; }
+  const a = AREAS.find(x => x.id === S.area) || AREAS[0];
+  LEADS.unshift({ typ: "besokare", mail, omrade: a.id, tid: new Date().toISOString() });
+  LS.set("leads", LEADS);
+  closeSheet();
+  toast("Tack! Vi hor av oss", "check");
+}
+
+/* ---------- anmalan: jag soker parkering ---------- */
 function openLeadDriver() {
   openSheet(sheetHead("Säg till när det finns platser") + `<div class="sheet-b stack">
     <p class="dim">Skriv var du behöver parkera så hör vi av oss när vi öppnar där.</p>
@@ -4016,6 +4042,12 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
 applyTheme();
 initMetaPixel();
 render();
+setTimeout(function () {
+  if (!LS.get("valkomstruta_visad", false)) {
+    LS.set("valkomstruta_visad", true);
+    if (typeof openWelcomeCapture === "function") openWelcomeCapture();
+  }
+}, 3500);
 if (!LS.get("seen", false)) {
   LS.set("seen", true);
   setTimeout(() => openSheet(`<div class="sheet-b center" style="padding-top:34px">
