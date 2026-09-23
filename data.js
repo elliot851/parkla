@@ -3,7 +3,7 @@
    ============================================================ */
 "use strict";
 
-const VERSION = "2026-09-23.79";
+const VERSION = "2026-09-23.80";
 
 /* ---------- Avgiftsmodell ---------- */
 const FEES = {
@@ -237,6 +237,7 @@ const CITY_BASE = {
   "Malmö":               { m:1200, d:95,  h:21 },
   "Uppsala":             { m:1150, d:90,  h:19 },
   "Lund":                { m:1050, d:85,  h:17 },
+  "Västerås":            { m:750,  d:62,  h:13 },
   "Nära flygplats":      { m:1400, d:65,  h:0  },
   "Nära arena":          { m:1100, d:95,  h:20 },
   "Övrig stad/tätort":   { m:650,  d:60,  h:12 }

@@ -119,7 +119,7 @@ let S = {
   fNu: false, fCharge: false, fGarage: false, fSecure: false, fBig: false,
   sort: "pris", selSpot: null,
   season: "kort", blockFor: null, calMode: "stang",
-  calc: { city: "Övrig stad/tätort", type: "Uppfart", walk: 5, charger: false, gated: false, dyn: true },
+  calc: { city: "Västerås", type: "Uppfart", walk: 5, charger: false, gated: false, dyn: true },
   wizard: null, bk: null
 };
 
