@@ -3106,8 +3106,9 @@ function viewInstallningar() {
     <p class="dim small" style="margin-top:8px">Utan nyckel använder vi Esris öppna flygbilder. De räcker till zoom 18 – i svenska bostadsområden är de ungefär en meter per bildpunkt, så vi stannar där i stället för att visa uppskalad gröt.</p>
     <p class="dim small" style="margin-top:8px">Med en egen <b>Mapbox-nyckel</b> blir bilderna skarpa hela vägen till zoom 22 och du kan se enskilda uppfarter. Mapbox har 50 000 kartvisningar i månaden gratis. Skapa ett konto på mapbox.com, kopiera din <i>public access token</i> och klistra in den här.</p>
     <div class="field" style="margin-top:14px"><label>Mapbox access token (frivilligt)</label>
-      <input class="inp mono" id="satkey" placeholder="pk.eyJ1Ijoi…"
-        value="${esc(SET.satKey || "")}"></div>
+      <div class="pwwrap"><input class="inp mono" id="satkey" type="password" placeholder="pk.eyJ1Ijoi…"
+        value="${esc(SET.satKey || "")}">
+        <button type="button" class="pweye" aria-label="Visa nyckeln" onclick="togglaLosen('satkey', this)">${I("eye", 18)}</button></div></div>
     <div class="row" style="margin-top:12px">
       <button class="btn btn-p btn-sm" onclick="saveSatKey()">Spara nyckel</button>
       ${SET.satKey ? `<button class="btn btn-sm" onclick="SET.satKey='';saveSettings();render();toast('Nyckeln är borttagen','close')">Ta bort</button>` : ""}
@@ -3832,9 +3833,12 @@ function skarptPanelHTML() {
     <div class="field" style="margin-top:16px"><label>Supabase URL</label>
       <input class="inp mono" id="cfg-url" placeholder="https://xxxxxxxx.supabase.co" value="${esc(c.url || "")}"></div>
     <div class="field" style="margin-top:12px"><label>Supabase anon key</label>
-      <input class="inp mono" id="cfg-anon" placeholder="eyJhbGciOi…" value="${esc(c.anon || "")}"></div>
+      <div class="pwwrap"><input class="inp mono" id="cfg-anon" type="password" placeholder="eyJhbGciOi…" value="${esc(c.anon || "")}">
+        <button type="button" class="pweye" aria-label="Visa nyckeln" onclick="togglaLosen('cfg-anon', this)">${I("eye", 18)}</button></div></div>
     <div class="field" style="margin-top:12px"><label>Stripe publishable key</label>
-      <input class="inp mono" id="cfg-pk" placeholder="pk_test_…" value="${esc(c.pk || "")}"></div>
+      <div class="pwwrap"><input class="inp mono" id="cfg-pk" type="password" placeholder="pk_test_…" value="${esc(c.pk || "")}">
+        <button type="button" class="pweye" aria-label="Visa nyckeln" onclick="togglaLosen('cfg-pk', this)">${I("eye", 18)}</button></div></div>
+    <p class="muted small" style="margin-top:8px">Dolda som standard så att ingen råkar se dem över axeln – de är i sig ofarliga att visa (byggda för att vara publika, precis som en Google Maps-nyckel), men syns onödigt privata i ett formulär.</p>
     <div class="paysheet-fel" id="cfg-fel" hidden></div>
 
     <div class="row wrap" style="margin-top:14px">
