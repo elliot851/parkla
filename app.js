@@ -2633,25 +2633,91 @@ ${footerHTML()}`;
 function msgHTML() {
   return MSGS.map(m => `<div class="msg ${m.me ? "me" : ""}"><div class="bub">${esc(m.t)}</div><span class="tm">${esc(m.tm)}</span></div>`).join("");
 }
+const MEDDELANDE_KORRESPONDENT = { id: "demo-lena", namn: "Lena" };
 function viewMeddelanden() {
+  const kor = MEDDELANDE_KORRESPONDENT, blockerad = BLOCKED.includes(kor.id);
   return `
 <section class="tight"><div class="wrap" style="max-width:720px">
   <h1 style="font-size:clamp(2rem,4.6vw,3rem)">Meddelanden</h1>
   <p class="dim small" style="margin-top:8px">Exempel, så att du ser hur det kommer att se ut – riktiga meddelanden med värdar och förare byggs innan vi öppnar.</p>
   <div class="panel pad" style="margin-top:22px">
-    <div class="row" style="padding-bottom:14px;border-bottom:1px solid var(--rule)">
-      <span style="width:38px;height:38px;border-radius:50%;background:var(--pine);color:var(--on-dark);display:grid;place-items:center;font-weight:600">L</span>
-      <div><b>Lena <span class="tag" style="margin-left:4px">Exempel</span></b><div class="muted small">Uppfart i Märsta · svarar oftast inom 10 minuter</div></div>
+    <div class="spread" style="padding-bottom:14px;border-bottom:1px solid var(--rule)">
+      <div class="row">
+        <span style="width:38px;height:38px;border-radius:50%;background:var(--pine);color:var(--on-dark);display:grid;place-items:center;font-weight:600">${esc(kor.namn[0])}</span>
+        <div><b>${esc(kor.namn)} <span class="tag" style="margin-left:4px">Exempel</span></b><div class="muted small">Uppfart i Märsta · svarar oftast inom 10 minuter</div></div>
+      </div>
+      <button class="btn btn-sm" onclick="meddelandeMeny()" aria-label="Mer">${I("dots", 16)}</button>
     </div>
+    ${blockerad ? `
+    <div class="callout" style="margin-top:18px">
+      <b>Du har blockerat ${esc(kor.namn)}</b>
+      <p class="dim small" style="margin-top:6px">Ni kan inte skicka meddelanden till varandra så länge blockeringen ligger kvar.</p>
+      <button class="btn btn-sm" style="margin-top:10px" onclick="avblockeraKorrespondent('${kor.id}')">Ta bort blockeringen</button>
+    </div>` : `
     <div id="msgbox" style="padding-top:18px;max-height:46vh;overflow-y:auto">${msgHTML()}</div>
     <div class="row" style="margin-top:16px">
       <input class="inp" id="msginp" placeholder="Skriv något …" onkeydown="if(event.key==='Enter')sendMsg()">
       <button class="btn btn-p" onclick="sendMsg()" aria-label="Skicka">${I("arrow", 18)}</button>
-    </div>
+    </div>`}
   </div>
   <div class="hint" style="margin-top:18px">${I("lock", 17)}<div>All kontakt sker här i appen. Vi lämnar aldrig ut ditt telefonnummer, och blir det tvist har vi hela historiken.</div></div>
 </div></section>
 ${footerHTML()}`;
+}
+function meddelandeMeny() {
+  const kor = MEDDELANDE_KORRESPONDENT;
+  openSheet(sheetHead(kor.namn) + `<div class="sheet-b stack">
+    <button class="btn btn-block" onclick="closeSheet();rapporteraStart('${kor.id}','${kor.namn}','meddelanden')">${I("shield", 18)} Rapportera</button>
+    <button class="btn btn-block" style="color:var(--clay)" onclick="closeSheet();blockeraStart('${kor.id}','${kor.namn}')">${I("close", 18)} Blockera</button>
+    <button class="btn btn-block" onclick="closeSheet()">${esc(t("cancel"))}</button>
+  </div>`);
+}
+function blockeraStart(id, namn) {
+  openSheet(sheetHead("Blockera " + namn + "?") + `<div class="sheet-b stack">
+    <p class="dim">Ni kan inte längre skicka meddelanden till varandra. Du kan ångra blockeringen när som helst.</p>
+    <button class="btn btn-block btn-lg" style="background:var(--clay);color:#fff" onclick="blockeraBekrafta('${id}','${namn}')">${I("close", 18)} Blockera ${esc(namn)}</button>
+    <button class="btn btn-block" onclick="closeSheet()">${esc(t("cancel"))}</button>
+  </div>`);
+}
+function blockeraBekrafta(id, namn) {
+  if (!(skarptPa() && PAPI.jag())) { toast("Logga in först", "info"); closeSheet(); return; }
+  PAPI.blockera(id, namn).then(() => {
+    if (!BLOCKED.includes(id)) BLOCKED.push(id);
+    closeSheet(); toast(namn + " är blockerad", "check"); render();
+  }).catch(() => toast("Kunde inte blockera just nu", "info"));
+}
+function avblockeraKorrespondent(id) {
+  PAPI.avblockera(id).then(() => {
+    BLOCKED = BLOCKED.filter(x => x !== id);
+    toast("Blockeringen borttagen", "check"); render();
+  }).catch(() => toast("Kunde inte ta bort blockeringen", "info"));
+}
+function rapporteraStart(id, namn, kontext) {
+  openSheet(sheetHead("Rapportera " + namn) + `<div class="sheet-b stack">
+    <p class="dim">Vad gäller det?</p>
+    <div class="row wrap" id="rap-anledning" style="gap:8px">
+      ${["Trakasserier", "Bedrägeriförsök", "Olämpligt innehåll", "Falsk profil", "Annat"]
+        .map(a => `<button type="button" class="chip" data-val="${esc(a)}" onclick="valjAnledning(this)">${esc(a)}</button>`).join("")}
+    </div>
+    <textarea class="inp" id="rap-detaljer" placeholder="Beskriv gärna vad som hände (frivilligt)" style="margin-top:10px;min-height:80px"></textarea>
+    <button class="btn btn-p btn-block btn-lg" style="margin-top:6px" onclick="rapporteraSkicka('${id}','${namn}','${kontext}')">${I("check", 18)} Skicka rapport</button>
+    <button class="btn btn-block" onclick="closeSheet()">${esc(t("cancel"))}</button>
+  </div>`);
+}
+function valjAnledning(btn) {
+  document.querySelectorAll("#rap-anledning .chip").forEach(b => b.classList.remove("on"));
+  btn.classList.add("on");
+}
+function rapporteraSkicka(id, namn, kontext) {
+  if (!(skarptPa() && PAPI.jag())) { toast("Logga in först", "info"); closeSheet(); return; }
+  const vald = document.querySelector("#rap-anledning .chip.on");
+  if (!vald) { toast("Välj en anledning", "info"); return; }
+  const detaljer = (document.getElementById("rap-detaljer") || {}).value || "";
+  const anledning = vald.dataset.val;
+  PAPI.rapportera({ reported_id: id, reported_namn: namn, anledning, detaljer, kontext }).then(() => {
+    skickaLead("rapport", { reported_id: id, reported_namn: namn, anledning, detaljer, kontext });
+    closeSheet(); toast("Rapporten är skickad, vi tittar på det", "check");
+  }).catch(() => toast("Kunde inte skicka rapporten just nu", "info"));
 }
 function sendMsg() {
   const el = document.getElementById("msginp"), v = (el.value || "").trim();
@@ -4043,9 +4109,11 @@ function kravInlogg(fortsatt) {
 
 /* ── Profil: namn + profilbild (avatar i hörnet, på Min sida, som värd) ── */
 var PROFIL = {};
+var BLOCKED = [];
 function laddaProfil() {
   if (!skarptPa() || !PAPI.jag()) { updateProfilBtn(); return; }
   PAPI.minProfil().then(function (p) { if (p) PROFIL = p; updateProfilBtn(); render(); }).catch(function () {});
+  PAPI.minaBlockeringar().then(function (list) { BLOCKED = (list || []).map(function (x) { return x.blocked_id; }); if (S.route === "meddelanden") render(); }).catch(function () {});
 }
 function profilNamn() {
   var u = PAPI.jag();
@@ -4259,6 +4327,7 @@ initMetaPixel();
 render();
 loggaQrSkanning();
 kollaBankIDaterkomst();
+laddaProfil();
 setTimeout(function () {
   if (!LS.get("valkomstruta_visad", false)) {
     LS.set("valkomstruta_visad", true);

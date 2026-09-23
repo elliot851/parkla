@@ -162,6 +162,28 @@
 
   function loggaUt() { setSess(null); }
 
+  /* ── Blockera & rapportera (Apple App Store-krav 1.2 för användargenererat innehåll) ── */
+  function minaBlockeringar() {
+    if (!jag()) return Promise.resolve([]);
+    return rest("blocked_users?select=blocked_id,blocked_namn").catch(function () { return []; });
+  }
+  function blockera(id, namn) {
+    if (!jag()) return Promise.reject(new Error("Inte inloggad"));
+    return rest("blocked_users", { method: "POST", body: { blocker_id: jag().id, blocked_id: id, blocked_namn: namn || null } });
+  }
+  function avblockera(id) {
+    if (!jag()) return Promise.reject(new Error("Inte inloggad"));
+    return rest("blocked_users?blocked_id=eq." + encodeURIComponent(id), { method: "DELETE" });
+  }
+  function rapportera(falt) {
+    if (!jag()) return Promise.reject(new Error("Inte inloggad"));
+    return rest("reports", { method: "POST", body: {
+      reporter_id: jag().id, reporter_epost: jag().email || null,
+      reported_id: falt.reported_id, reported_namn: falt.reported_namn || null,
+      anledning: falt.anledning, detaljer: falt.detaljer || null, kontext: falt.kontext || null
+    } });
+  }
+
   function jag() {
     var s = sess();
     return s ? s.user : null;
@@ -538,6 +560,7 @@
     registrera: registrera, loggaIn: loggaIn, glomtLosen: glomtLosen,
     sattNyttLosen: sattNyttLosen, skickaBekraftelseIgen: skickaBekraftelseIgen,
     setSessRaw: setSess, hamtaMig: hamtaMig, token: token,
+    minaBlockeringar: minaBlockeringar, blockera: blockera, avblockera: avblockera, rapportera: rapportera,
     platserIRutan: platserIRutan, minaPlatser: minaPlatser,
     sparaPlats: sparaPlats, taBortPlats: taBortPlats,
     blockeraDag: blockeraDag, sattDagspris: sattDagspris,
