@@ -3556,9 +3556,9 @@ function skarptPa() { return typeof PAPI !== "undefined" && PAPI.pa(); }
 function inloggad()  { return skarptPa() && PAPI.jag(); }
 
 /* Avancerade inställningar (nycklar, lanseringsläge, satellit, typsnitt) visas bara för den som driver Parkla.
-   Slås på/av genom att trycka 7 gånger på versionsnumret under Inställningar → Om appen, eller ?admin=1 i adressen.
-   Vanliga användare ska aldrig se Mapbox-nycklar och Meta-pixlar när de letar efter "större text". */
-function adminPa() { return !!LS.get("admin", false) || /[?&]admin=1/.test(location.search); }
+   Slås på/av genom att trycka 7 gånger på versionsnumret under Inställningar → Om appen. Ingen URL-genväg
+   med flit: bara Elliot och Eddie ska hitta hit, aldrig en vanlig besökare som råkar gissa en parameter. */
+function adminPa() { return !!LS.get("admin", false); }
 let _adminTaps = 0, _adminTimer = null;
 function adminTap() {
   _adminTaps++; clearTimeout(_adminTimer); _adminTimer = setTimeout(() => { _adminTaps = 0; }, 2500);
