@@ -2286,6 +2286,15 @@ function viewMina() {
       <input type="file" accept="image/*" hidden onchange="bytProfilbild(this)"></label>
   </div>
 
+  ${bankidTillganglig() ? (PROFIL.bankid_klar ? `
+  <div class="callout" style="margin-top:14px;display:flex;gap:12px;align-items:center">
+    ${I("shield", 18)} <div><b>Legitimerad med BankID</b><div class="dim small" style="margin-top:2px">${esc(PROFIL.bankid_namn || "")}</div></div>
+  </div>` : (skarptPa() && PAPI.jag() ? `
+  <div class="callout" style="margin-top:14px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:space-between">
+    <div><b>Legitimera dig</b><div class="dim small" style="margin-top:2px">Andra känner sig tryggare med en BankID-verifierad granne.</div></div>
+    <button class="btn btn-sm btn-p" onclick="bankidStart()">${I("shield", 15)} Legitimera med BankID</button>
+  </div>` : "")) : ""}
+
   ${skarptPa() && LISTINGS.length ? `
   <div class="callout" style="margin-top:18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:space-between">
     <div><b>Få betalt</b><div class="dim small" style="margin-top:2px">Koppla din utbetalning hos Stripe, en gång, så landar hyran på ditt konto.</div></div>
@@ -3634,6 +3643,56 @@ function urlBase64ToUint8Array(base64String) {
 /* Ber om lov, prenumererar via webblasarens push-tjanst, sparar prenumerationen
    i Supabase (push_subscriptions) sa edge-funktionen kan skicka dit en notis
    nar en ny rad landar i qr_scans. */
+/* ── BankID-legitimering (via Criipto, se supabase-edge-function-bankid-exchange.ts) ──
+   Domän + client-id är publika (bakade i api.js CFG_DEFAULT, tomma tills Elliot kopplat in
+   ett Criipto-konto). Client-secreten ligger BARA som en secret på edge-funktionen. */
+function bankidTillganglig() {
+  const c = (typeof PAPI !== "undefined") ? PAPI.cfg() : null;
+  return !!(c && c.bankidDomain && c.bankidClientId);
+}
+function bankidRedirectUri() { return location.origin + location.pathname; }
+
+function bankidStart() {
+  if (!bankidTillganglig()) { toast("BankID kopplas in snart", "info"); return; }
+  if (!(skarptPa() && PAPI.jag())) { toast("Logga in först", "info"); return; }
+  const c = PAPI.cfg();
+  const state = Math.random().toString(36).slice(2);
+  LS.set("bankid_state", state);
+  const p = new URLSearchParams({
+    client_id: c.bankidClientId,
+    response_type: "code",
+    scope: "openid",
+    redirect_uri: bankidRedirectUri(),
+    state,
+    acr_values: "urn:grn:authn:se:bankid:same-device"
+  });
+  location.href = `https://${c.bankidDomain}/oauth2/authorize?${p.toString()}`;
+}
+
+/* Körs vid varje sidladdning — om vi precis kom tillbaka från BankID finns ?code=&state= i adressen. */
+function kollaBankIDaterkomst() {
+  const q = new URLSearchParams(location.search);
+  const code = q.get("code"), state = q.get("state");
+  if (!code || !state) return;
+  const vantat = LS.get("bankid_state", null);
+  history.replaceState(null, "", location.pathname + location.hash);
+  if (!vantat || state !== vantat) return;
+  LS.set("bankid_state", null);
+  if (!(skarptPa() && PAPI.jag())) return;
+  PAPI.token().then(t => {
+    if (!t) return toast("Sessionen gick ut, försök igen", "info");
+    const c = PAPI.cfg();
+    return fetch(c.url + "/functions/v1/bankid-exchange", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
+      body: JSON.stringify({ code, redirect_uri: bankidRedirectUri() })
+    }).then(r => r.json()).then(j => {
+      if (j.ok) { toast("Legitimerad som " + j.namn, "check"); PAPI.minProfil().then(p => { if (p) PROFIL = p; render(); }); }
+      else toast(j.fel || "BankID-legitimeringen misslyckades", "info");
+    });
+  }).catch(() => toast("BankID-legitimeringen misslyckades", "info"));
+}
+
 function aktiveraPush() {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) { toast("Webblasaren stodjer inte push", "info"); return; }
   const c = (typeof PAPI !== "undefined") ? PAPI.cfg() : null;
@@ -4161,6 +4220,7 @@ applyTheme();
 initMetaPixel();
 render();
 loggaQrSkanning();
+kollaBankIDaterkomst();
 setTimeout(function () {
   if (!LS.get("valkomstruta_visad", false)) {
     LS.set("valkomstruta_visad", true);

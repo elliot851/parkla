@@ -25,7 +25,13 @@
   var CFG_DEFAULT = {
     url: "https://nzbgjxccaldhjwxllsma.supabase.co",
     anon: "sb_publishable_0-AopBcKT_tiJ_k8wAMDbA_Gh2kH0fk",
-    pk: "pk_live_51UAscOR2PolOyeMIBGGM7MMXIV7lfFx4oeJNPxOfMiSqtDEgUBBSs5Co7VshSKgvXOVsgDFnRrFmvVmG4AO7Ujjz00ocmCJuir"
+    pk: "pk_live_51UAscOR2PolOyeMIBGGM7MMXIV7lfFx4oeJNPxOfMiSqtDEgUBBSs5Co7VshSKgvXOVsgDFnRrFmvVmG4AO7Ujjz00ocmCJuir",
+    /* BankID-legitimering (via Criipto, se supabase-edge-function-bankid-exchange.ts).
+       Tomma tills Elliot skapat ett Criipto-konto och gett oss domän + client-id (publika,
+       inga hemligheter). Sa länge de är tomma visas ingen "Legitimera med BankID"-knapp —
+       hellre ingen knapp alls än en trasig en för riktiga besökare. */
+    bankidDomain: "",
+    bankidClientId: ""
   };
   function cfg() {
     try { return Object.assign({}, CFG_DEFAULT, JSON.parse(localStorage.getItem(NYCKLAR)) || {}); }
@@ -296,7 +302,7 @@
   /* Egen profil (namn + profilbild). RLS: bara ens egen rad. */
   function minProfil() {
     var u = jag(); if (!u) return Promise.resolve(null);
-    return rest("profiles?id=eq." + u.id + "&select=namn,avatar")
+    return rest("profiles?id=eq." + u.id + "&select=namn,avatar,bankid_klar,bankid_namn")
       .then(function (r) { return (r && r[0]) ? r[0] : null; });
   }
   function sparaProfil(falt) {
@@ -531,7 +537,7 @@
     skickaKod: skickaKod, verifieraKod: verifieraKod, loggaUt: loggaUt, jag: jag,
     registrera: registrera, loggaIn: loggaIn, glomtLosen: glomtLosen,
     sattNyttLosen: sattNyttLosen, skickaBekraftelseIgen: skickaBekraftelseIgen,
-    setSessRaw: setSess, hamtaMig: hamtaMig,
+    setSessRaw: setSess, hamtaMig: hamtaMig, token: token,
     platserIRutan: platserIRutan, minaPlatser: minaPlatser,
     sparaPlats: sparaPlats, taBortPlats: taBortPlats,
     blockeraDag: blockeraDag, sattDagspris: sattDagspris,
