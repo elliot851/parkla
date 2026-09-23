@@ -614,7 +614,7 @@ footer a:hover{color:var(--green)}
 }
 .lnk:hover{ color:var(--pine); text-decoration-color:currentColor }
 .lnk:active{ opacity:.7 }
-:root[data-theme="dark"] .lnk{ color:var(--green-lift) }
+:root[data-theme="dark"] .lnk{ color:var(--green) }
 
 /* Plats-kortets "Mer"-meny (döljer sällananvända åtgärder bakom ett klick) */
 .card-more{ position:relative }

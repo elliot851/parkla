@@ -3293,12 +3293,12 @@ function openLeadHost() {
    se appen forst. Sparas i samma LEADS-lista som ovriga anmalningar. */
 function openWelcomeCapture() {
   const a = AREAS.find(x => x.id === S.area) || AREAS[0];
-  openSheet(sheetHead("Valkommen till Parkla") + `<div class="sheet-b stack">
-    <p class="dim">Vi oppnar omrade for omrade i ${esc(a.name)}. Lamna din mejl sa hor vi av
-      oss nar det hander nara dig, oavsett om du soker en plats eller har en egen uppfart.</p>
+  openSheet(sheetHead("Välkommen till Parkla") + `<div class="sheet-b stack">
+    <p class="dim">Vi öppnar område för område i ${esc(a.name)}. Lämna din mejl så hör vi av
+      oss när det händer nära dig, oavsett om du söker en plats eller har en egen uppfart.</p>
     <div class="field"><label>E-post</label><input class="inp" type="email" id="wv_mail" placeholder="du@exempel.se"></div>
-    <div class="hint">${I("lock", 17)}<div>Bara for att hora av oss om Parkla. Du kan nar som helst be oss radera uppgifterna.</div></div>
-    <button class="btn btn-p btn-block btn-lg" onclick="saveVisitorEmail()">Hall mig uppdaterad</button>
+    <div class="hint">${I("lock", 17)}<div>Bara för att höra av oss om Parkla. Du kan när som helst be oss radera uppgifterna.</div></div>
+    <button class="btn btn-p btn-block btn-lg" onclick="saveVisitorEmail()">Håll mig uppdaterad</button>
     <button class="btn btn-block" onclick="closeSheet()">Inte nu, tack</button>
   </div>`);
 }
