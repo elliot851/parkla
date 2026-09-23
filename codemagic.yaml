@@ -126,6 +126,23 @@ workflows:
           cd "$CM_BUILD_DIR/app"
           npx cap add ios || npx cap sync ios
           npx cap sync ios
+      - name: Behörighetstexter i Info.plist (annars nekar Apple appen direkt)
+        script: |
+          # Utan dessa strängar kraschar/nekas appen så fort den rör kartan
+          # (geolocation-pluginet) eller "Lägg till bild" (kamera/bildbank via
+          # webbens <input type=file>). ITSAppUsesNonExemptEncryption=false
+          # slipper vi exportcompliance-frågan varje inskick (bara vanlig HTTPS).
+          set -e
+          PLIST="$CM_BUILD_DIR/app/ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'Parkla visar lediga parkeringsplatser nära dig på kartan.'" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :NSLocationWhenInUseUsageDescription 'Parkla visar lediga parkeringsplatser nära dig på kartan.'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'Parkla behöver kameran för att du ska kunna ta en profilbild eller bild på din parkeringsplats.'" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'Parkla behöver kameran för att du ska kunna ta en profilbild eller bild på din parkeringsplats.'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'Parkla behöver tillgång till dina bilder för att du ska kunna välja en profilbild eller bild på din parkeringsplats.'" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription 'Parkla behöver tillgång till dina bilder för att du ska kunna välja en profilbild eller bild på din parkeringsplats.'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$PLIST"
+          echo "Info.plist patchad:" && /usr/libexec/PlistBuddy -c "Print" "$PLIST" | grep -A1 -E "NSLocation|NSCamera|NSPhotoLibrary|ITSApp"
       - name: Kod-signering (automatisk via App Store Connect)
         script: |
           set -e

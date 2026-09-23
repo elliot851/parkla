@@ -1,12 +1,14 @@
 PARKLA — SKAPA DE TRE UTVECKLARKONTONA (steg för steg)
 =======================================================
 Företagsuppgifter du använder överallt (spara dessa nära):
-  Juridiskt namn:   Westros Digital Retail AB
-  Org.nr:           559499-1035
+  Juridiskt namn:   EEFS AB
+  Org.nr:           559585-9694
   Adress:           Slakterigatan 10, 721 32 Västerås
   Telefon:          070-552 52 14
-  Support-e-post:   hej@parkla.se
+  Support-e-post:   info@parkla.se
   Din e-post:       elliot@westrosdigitalretail.se
+  (Bekräftat 2026-09-23: Apple Developer-kontot står redan korrekt på EEFS AB —
+   den här filen hette tidigare fel bolag/org.nr, nu rättat.)
   Webbplats:        https://parkla.se
   App-namn:         Parkla
   App-ID (bundle):  se.parkla.app
@@ -17,9 +19,9 @@ Företagsuppgifter du använder överallt (spara dessa nära):
 --------------------------------------------------------------------
 BÅDE Apple (företagskonto) OCH Google Play (organisationskonto) kräver
 ett D-U-N-S-nummer för AB:et. Det är GRATIS men kan ta 1–5 arbetsdagar.
-  1. Kolla om Westros redan har ett:
+  1. Kolla om EEFS AB redan har ett:
      https://developer.apple.com/enroll/duns-lookup/
-     (skriv in Westros Digital Retail AB + adress)
+     (skriv in EEFS AB + adress)
   2. Har ni inget → begär via samma sida (gratis). Vänta på mejl.
   Har ni redan ett D-U-N-S går allt nedan mycket snabbare.
 
@@ -30,7 +32,7 @@ ett D-U-N-S-nummer för AB:et. Det är GRATIS men kan ta 1–5 arbetsdagar.
   Kontotyp: VÄLJ "Organisation" (inte personligt — appen ska stå i
             företagets namn).
   Fyll i:
-    - Organisationens juridiska namn: Westros Digital Retail AB
+    - Organisationens juridiska namn: EEFS AB
     - D-U-N-S-nummer (från steget ovan)
     - Adress + telefon + e-post enligt topplistan
     - Webbplats: https://parkla.se
@@ -48,9 +50,9 @@ ett D-U-N-S-nummer för AB:et. Det är GRATIS men kan ta 1–5 arbetsdagar.
   KRÄVER: ett Apple-ID (skapa på appleid.apple.com om du saknar) med
           tvåfaktor på, OCH D-U-N-S-numret ovan.
   Enrollment-typ: "Company / Organization" (publiceras som
-                  "Westros Digital Retail AB" — mer trovärdigt än ditt namn).
+                  "EEFS AB" — mer trovärdigt än ditt namn).
     - Du intygar att du får teckna firma för AB:et.
-    - Legal entity name: Westros Digital Retail AB
+    - Legal entity name: EEFS AB
     - D-U-N-S, adress, telefon (måste matcha D-U-N-S-registret exakt)
   Betala 99 USD/år.
   OBS: Apple ringer/mejlar ibland för att verifiera företaget — svara.

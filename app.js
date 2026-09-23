@@ -40,6 +40,11 @@ function saveSettings() { LS.set("settings", SET); applyTheme(); }
    – uppdatera integritetspolicyn och lägg en samtyckesruta innan
    du kör skarpt (se not i koden och i FACEBOOK-ANNONSER.md). */
 function initMetaPixel() {
+  /* Aldrig i den nativa appen (Capacitor): Apple kräver App Tracking Transparency
+     för all tredjeparts-spårning i appar, och det har vi inte byggt. En webbcookie-
+     samtyckesruta räcker inte som ersättning där - det är App Store-avstängning värt
+     att strunta i. Pixeln är alltså BARA för webbläsarversionen av parkla.se. */
+  if (window.Capacitor) return;
   const id = (SET.metaPixel || "").trim();
   if (!/^\d{6,20}$/.test(id) || window.__fbqLoaded) return;
   if (CONSENT !== "yes") return;   /* ingen spårning utan samtycke */
@@ -2346,7 +2351,7 @@ function viewMina() {
           <div class="morewrap">
             <button class="btn btn-sm" onclick="openBlockCal(${l.id})">${I("calendar", 15)} Dagar och priser</button>
             <button class="btn btn-sm" onclick="openSchedule(${l.id})">${I("clock", 15)} Veckotider</button>
-            <button class="btn btn-sm btn-d" onclick="kickCar()">${I("door", 15)} Flytta bilen</button>
+            <button class="btn btn-sm btn-d" onclick="kickCar(${l.id}, '${esc(l.ad).replace(/'/g, "\\'")}')">${I("door", 15)} Flytta bilen</button>
           </div>
         </details>
       </div>
@@ -2552,18 +2557,24 @@ function toggleDay(id, i, el) {
   l.sched[i].on = !l.sched[i].on; el.classList.toggle("on");
   el.parentElement.querySelector(".t span").textContent = l.sched[i].on ? "Ledig hela dagen" : "Stängd";
 }
-function kickCar() {
+function kickCar(platsId, adress) {
   openSheet(sheetHead("Bilen står kvar") + `<div class="sheet-b stack">
-    <p class="dim">Tryck på knappen så tar vi över. Du behöver inte prata med någon.</p>
+    <p class="dim">Automatisk uppringning är inte byggd än – tryck på knappen så skickas en anmälan till Parklas team, som hör av sig så fort vi kan.</p>
     <ul class="numlist">
-      ${[["Vi ringer föraren", "Inom 60 sekunder, dygnet runt."],
-         ["Parkeringen avslutas direkt", "Tiden stoppas på sekunden – du väntar inte på någon."],
+      ${[["Din anmälan skickas till oss", "Vi tar över kontakten med föraren manuellt tills vidare."],
+         ["Parkeringstiden stoppas när vi hunnit", "Vi bekräftar med dig så fort det är löst."],
          ["Efter fyrtiofem minuter börjar övertid löpa", `${kr(FEES.overtidPerTimme)} per påbörjad timme, hela beloppet till dig.`]]
         .map(([a, b], k) => `<li><span class="n">0${k + 1}</span><div><b>${a}</b><p>${b}</p></div></li>`).join("")}
     </ul>
-    <button class="btn btn-c btn-block btn-lg" onclick="closeSheet();toast('Vi ringer föraren nu','door')">${I("door", 18)} Kontakta föraren nu</button>
+    <button class="btn btn-c btn-block btn-lg" onclick="skickaOvertidsanmalan(${platsId}, '${(adress || "").replace(/'/g, "\\'")}')">${I("door", 18)} Skicka anmälan</button>
     <button class="btn btn-block" onclick="closeSheet()">${esc(t("cancel"))}</button>
   </div>`);
+}
+function skickaOvertidsanmalan(platsId, adress) {
+  const namn = (typeof PAPI !== "undefined" && PAPI.jag() && PAPI.jag().email) || "";
+  skickaLead("overtid", { plats_id: platsId, adress: adress, host: namn });
+  closeSheet();
+  toast("Anmälan skickad – vi hör av oss snart", "door");
 }
 
 /* ============================================================
@@ -2626,10 +2637,11 @@ function viewMeddelanden() {
   return `
 <section class="tight"><div class="wrap" style="max-width:720px">
   <h1 style="font-size:clamp(2rem,4.6vw,3rem)">Meddelanden</h1>
+  <p class="dim small" style="margin-top:8px">Exempel, så att du ser hur det kommer att se ut – riktiga meddelanden med värdar och förare byggs innan vi öppnar.</p>
   <div class="panel pad" style="margin-top:22px">
     <div class="row" style="padding-bottom:14px;border-bottom:1px solid var(--rule)">
       <span style="width:38px;height:38px;border-radius:50%;background:var(--pine);color:var(--on-dark);display:grid;place-items:center;font-weight:600">L</span>
-      <div><b>Lena</b><div class="muted small">Uppfart i Märsta · svarar oftast inom 10 minuter</div></div>
+      <div><b>Lena <span class="tag" style="margin-left:4px">Exempel</span></b><div class="muted small">Uppfart i Märsta · svarar oftast inom 10 minuter</div></div>
     </div>
     <div id="msgbox" style="padding-top:18px;max-height:46vh;overflow-y:auto">${msgHTML()}</div>
     <div class="row" style="margin-top:16px">
@@ -3643,6 +3655,29 @@ function urlBase64ToUint8Array(base64String) {
 /* Ber om lov, prenumererar via webblasarens push-tjanst, sparar prenumerationen
    i Supabase (push_subscriptions) sa edge-funktionen kan skicka dit en notis
    nar en ny rad landar i qr_scans. */
+/* ── Radera konto (Apple App Store-krav 5.1.1(ix): måste gå att göra inifrån appen) ── */
+function raderaKontoStart() {
+  if (!(skarptPa() && PAPI.jag())) return;
+  openSheet(sheetHead("Radera ditt konto?") + `<div class="sheet-b stack">
+    <p class="dim">Det här tar bort ditt konto och din profildata permanent. Det går inte att ångra.
+      Aktiva bokningar eller uthyrningar bör avslutas innan du raderar.</p>
+    <button class="btn btn-block btn-lg" style="background:var(--clay);color:#fff" onclick="raderaKontoBekrafta()">${I("close", 18)} Ja, radera mitt konto</button>
+    <button class="btn btn-block" onclick="closeSheet()">${esc(t("cancel"))}</button>
+  </div>`);
+}
+function raderaKontoBekrafta() {
+  const c = PAPI.cfg();
+  PAPI.token().then(tok => {
+    if (!tok) throw new Error("Ingen session");
+    return fetch(c.url + "/functions/v1/delete-account", {
+      method: "POST", headers: { "Authorization": "Bearer " + tok }
+    });
+  }).then(r => r.json()).then(j => {
+    if (j.ok) { PAPI.loggaUt(); closeSheet(); toast("Kontot är raderat", "check"); go("hem"); }
+    else toast(j.fel || "Kunde inte radera kontot, försök igen", "info");
+  }).catch(() => toast("Kunde inte radera kontot, försök igen", "info"));
+}
+
 /* ── BankID-legitimering (via Criipto, se supabase-edge-function-bankid-exchange.ts) ──
    Domän + client-id är publika (bakade i api.js CFG_DEFAULT, tomma tills Elliot kopplat in
    ett Criipto-konto). Client-secreten ligger BARA som en secret på edge-funktionen. */
@@ -3744,7 +3779,10 @@ function skarptPanelHTML() {
     ${pa ? `<div style="margin-top:18px;border-top:1px solid var(--rule);padding-top:16px">
       ${u ? `<div class="setrow"><span style="color:var(--green)">${I("check", 20)}</span>
           <div class="t"><b>Inloggad</b><span>${esc(u.email || "")}</span></div>
-          <button class="btn btn-sm" onclick="PAPI.loggaUt();render()">Logga ut</button></div>`
+          <button class="btn btn-sm" onclick="PAPI.loggaUt();render()">Logga ut</button></div>
+        <div class="setrow" style="margin-top:10px"><span style="color:var(--clay)">${I("close", 20)}</span>
+          <div class="t"><b>Radera mitt konto</b><span>Tar bort kontot och all din profildata permanent</span></div>
+          <button class="btn btn-sm" onclick="raderaKontoStart()">Radera</button></div>`
         : `<div class="setrow"><span style="color:var(--ink-45)">${I("users", 20)}</span>
           <div class="t"><b>Inte inloggad</b><span>Krävs för att boka och hyra ut</span></div>
           <div class="row" style="gap:8px">
