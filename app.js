@@ -12,7 +12,7 @@ const LS = {
 
 const DEFAULT_SETTINGS = {
   theme: "system", lang: "sv", currency: "SEK", font: "instrument",
-  live: false, formUrl: "", metaPixel: "",
+  live: true, formUrl: "", metaPixel: "",
   city: "vasteras", mapMode: "karta",
   notis: { bokning: true, betalning: true, pris: true, evenemang: true, nyheter: false },
   bigText: false
@@ -340,7 +340,7 @@ ${liveBanner()}
       <span class="d">Hitta en plats nära dig. Från ${kr(12)} i timmen.</span>
       <span class="go">Visa lediga platser ${I("arrow", 17, "arw")}</span>
     </button>
-    <button class="door alt" onclick="${'isLive() ? openLeadHost() : go(\'hyrut\')'}">
+    <button class="door alt" onclick="go('hyrut')">
       <span class="ic">${I("wallet", 30)}</span>
       <b>Jag har en plats att hyra ut</b>
       <span class="d">Se vad din uppfart eller ditt garage kan ge dig.</span>
