@@ -311,7 +311,7 @@ ${liveBanner()}
     <div class="figures" data-reveal style="--d:210ms">
       <div><b><span class="countup" data-count="${Math.round(sug.month * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(sug.month)}</span><i class="u">${sym()}</i></b><span>i snitt per månad i Stockholm</span></div>
       <div><b><span class="countup" data-count="${Math.round(FEES.schablon * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(FEES.schablon)}</span><i class="u">${sym()}</i></b><span>får du tjäna skattefritt varje år</span></div>
-      <div><b class="countup" data-count="${SPOTS.length}">${SPOTS.length}</b><span>platser i ${AREAS.length} områden</span></div>
+      <div><b class="countup" data-count="${AREAS.length}">${AREAS.length}</b><span>områden redo för din plats</span></div>
     </div>
   </div>
   <div data-reveal style="--d:240ms">
@@ -3348,8 +3348,8 @@ function liveBanner() {
   if (!isLive()) return "";
   return `<div class="livebar">
     ${I("spark", 17)}
-    <div><b>Parkla öppnar snart</b>
-    <span>Vi bygger upp utbudet område för område. Anmäl din plats eller ditt intresse så hör vi av oss innan vi öppnar.</span></div>
+    <div><b>Vi samlar värdar just nu</b>
+    <span>Lägg upp din plats idag. När vi drar igång stor lansering till förare får de som anmält sig tidigt först in i kön.</span></div>
   </div>`;
 }
 function demoBadge() {
@@ -3383,11 +3383,13 @@ function openLeadHost() {
 function openWelcomeCapture() {
   const a = AREAS.find(x => x.id === S.area) || AREAS[0];
   openSheet(sheetHead("Välkommen till Parkla") + `<div class="sheet-b stack">
-    <p class="dim">Vi öppnar område för område i ${esc(a.name)}. Lämna din mejl så hör vi av
-      oss när det händer nära dig, oavsett om du söker en plats eller har en egen uppfart.</p>
+    <p class="dim">Vi samlar värdar i ${esc(a.name)} just nu, inför en stor lansering till förare.
+      Har du en egen uppfart? Lägg upp den idag. Söker du bara en plats? Lämna din mejl så hör vi
+      av oss så fort det finns platser nära dig.</p>
     <div class="field"><label>E-post</label><input class="inp" type="email" id="wv_mail" placeholder="du@exempel.se"></div>
     <div class="hint">${I("lock", 17)}<div>Bara för att höra av oss om Parkla. Du kan när som helst be oss radera uppgifterna.</div></div>
     <button class="btn btn-p btn-block btn-lg" onclick="saveVisitorEmail()">Håll mig uppdaterad</button>
+    <button class="btn btn-block" onclick="closeSheet();go('hyrut')">Jag har en plats – lägg upp den nu</button>
     <button class="btn btn-block" onclick="closeSheet()">Inte nu, tack</button>
   </div>`);
 }
@@ -4342,16 +4344,16 @@ if (!LS.get("seen", false)) {
   LS.set("seen", true);
   setTimeout(() => openSheet(`<div class="sheet-b center" style="padding-top:34px">
     ${logoSVG(52)}
-    <h3 style="font-family:var(--serif);font-size:1.9rem;margin-top:18px">Välkommen till Parkla</h3>
-    <p class="dim" style="margin-top:10px;max-width:32ch;margin-inline:auto">Här hyr vanliga människor ut sin uppfart till andra som behöver parkera. Vad vill du göra?</p>
+    <h3 style="font-family:var(--serif);font-size:1.9rem;margin-top:18px">Vi samlar värdar just nu</h3>
+    <p class="dim" style="margin-top:10px;max-width:32ch;margin-inline:auto">Lägg upp din plats idag. Snart gör vi en stor lansering till förare i hela Sverige, och de som anmält sig tidigt går först i kön.</p>
     <div class="stack tight" style="margin-top:24px">
-      <button class="btn btn-p btn-block" style="display:block;height:auto;padding:15px 18px;text-align:left" onclick="closeSheet();go('sok')">
-        <span style="display:flex;align-items:center;gap:11px;font-weight:600;font-size:1.06rem">${I("search", 20)} Jag söker parkering</span>
-        <span style="display:block;margin-top:4px;font-weight:400;font-size:.84rem;opacity:.82">Hitta en ledig plats nära dig och boka på en minut</span>
+      <button class="btn btn-p btn-block" style="display:block;height:auto;padding:15px 18px;text-align:left" onclick="closeSheet();go('hyrut')">
+        <span style="display:flex;align-items:center;gap:11px;font-weight:600;font-size:1.06rem">${I("wallet", 20)} Jag har en plats att hyra ut</span>
+        <span style="display:block;margin-top:4px;font-weight:400;font-size:.84rem;opacity:.82">Se vad din uppfart kan ge dig – gratis att lägga upp</span>
       </button>
-      <button class="btn btn-block" style="display:block;height:auto;padding:15px 18px;text-align:left" onclick="closeSheet();go('hyrut')">
-        <span style="display:flex;align-items:center;gap:11px;font-weight:600;font-size:1.06rem">${I("wallet", 20)} Jag vill hyra ut min plats</span>
-        <span style="display:block;margin-top:4px;font-weight:400;font-size:.84rem;color:var(--ink-45)">Se vad din uppfart kan ge dig – gratis att lägga upp</span>
+      <button class="btn btn-block" style="display:block;height:auto;padding:15px 18px;text-align:left" onclick="closeSheet();go('sok')">
+        <span style="display:flex;align-items:center;gap:11px;font-weight:600;font-size:1.06rem">${I("search", 20)} Jag söker parkering</span>
+        <span style="display:block;margin-top:4px;font-weight:400;font-size:.84rem;color:var(--ink-45)">Se lediga platser nära dig</span>
       </button>
       <div class="row" style="gap:8px;margin-top:2px">
         <button class="btn btn-block" onclick="closeSheet();startTour()">${I("play", 16)} Visa hur det funkar</button>
