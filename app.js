@@ -3157,7 +3157,8 @@ function viewInstallningar() {
 
   ${adminPa() ? `<h2 style="font-size:1.05rem;margin:34px 0 -4px;color:var(--ink-45)">Avancerat · för dig som driver Parkla</h2>
   ${skarptPanelHTML()}
-  ${adminScansPanelHTML()}` : ""}
+  ${adminScansPanelHTML()}
+  ${adminLeadsPanelHTML()}` : ""}
 
   <div class="panel pad-lg" style="margin-top:18px">
     <h3>Om appen</h3>
@@ -3733,6 +3734,64 @@ function adminScansPanelHTML() {
   </div>`;
 }
 
+/* Anmälningar (leads): värdar/förare/besökare som lämnat uppgifter. Läses bara med inloggat admin-konto. */
+let ADMIN_LEADS = null;
+function adminLeadsPanelHTML() {
+  return `
+  <div class="panel pad-lg" style="margin-top:18px">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:14px">
+      <div><h3>Anmälningar</h3>
+        <p class="dim small" style="margin-top:6px">Värdar som anmält sig via QR-sidan, plus förare och besökare. Syns bara när du är inloggad som admin.</p></div>
+    </div>
+    <div id="leadsBox" class="dim small" style="margin-top:14px">Laddar…</div>
+    <div class="row wrap" style="margin-top:16px">
+      <button class="btn btn-sm" onclick="laddaAnmalningar()">${I("refresh", 15)} Uppdatera</button>
+      <button class="btn btn-sm" onclick="kopieraLeadMejl()">Kopiera mejl</button>
+      <button class="btn btn-sm" onclick="laddaNerLeadsCsv()">Ladda ner CSV</button>
+    </div>
+  </div>`;
+}
+function laddaAnmalningar() {
+  const box = document.getElementById("leadsBox"); if (!box) return;
+  if (!(typeof PAPI !== "undefined" && PAPI.jag())) {
+    box.innerHTML = `Logga in med ditt admin-konto för att se anmälningarna. <button class="btn btn-sm btn-p" style="margin-left:8px" onclick="openLogin(function(){render()})">Logga in</button>`;
+    return;
+  }
+  box.textContent = "Laddar…";
+  PAPI.anmalningar().then(rows => {
+    ADMIN_LEADS = rows || [];
+    if (!ADMIN_LEADS.length) { box.textContent = "Inga anmälningar än."; return; }
+    const n = t => ADMIN_LEADS.filter(r => r.typ === t).length;
+    const cell = "padding:8px 10px;border-top:1px solid var(--rule);vertical-align:top";
+    box.innerHTML = `<div style="margin-bottom:10px"><b>${n("vard")}</b> värdar · <b>${n("forare")}</b> förare · <b>${n("besokare")}</b> besökare</div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.86rem">
+      <tr class="muted small"><th style="text-align:left;padding:6px 10px">Typ</th><th style="text-align:left;padding:6px 10px">Namn</th><th style="text-align:left;padding:6px 10px">Mejl</th><th style="text-align:left;padding:6px 10px">Telefon</th><th style="text-align:left;padding:6px 10px">Adress / område</th><th style="text-align:left;padding:6px 10px">Källa</th><th style="text-align:left;padding:6px 10px">Tid</th></tr>
+      ${ADMIN_LEADS.map(r => { const d = r.data || {}; const tid = new Date(d.tid || r.tid).toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" });
+        return `<tr><td style="${cell}">${esc(r.typ)}</td><td style="${cell}">${esc(d.namn || "")}</td>
+          <td style="${cell}">${d.mail ? `<a href="mailto:${esc(d.mail)}">${esc(d.mail)}</a>` : ""}</td>
+          <td style="${cell}">${d.tel ? `<a href="tel:${esc(d.tel)}">${esc(d.tel)}</a>` : ""}</td>
+          <td style="${cell}">${esc(d.ad || d.omrade || "")}</td><td style="${cell}">${esc(d.kalla || "")}</td><td style="${cell}">${esc(tid)}</td></tr>`; }).join("")}
+      </table></div>`;
+  }).catch(e => {
+    box.textContent = (e && e.message === "inte_inloggad") ? "Logga in för att se anmälningarna."
+      : "Kunde inte hämta anmälningarna. Det här kontot saknar behörighet, eller så är admin-läsning inte påslagen i databasen än.";
+  });
+}
+function kopieraLeadMejl() {
+  const m = [...new Set((ADMIN_LEADS || []).map(r => (r.data || {}).mail).filter(Boolean))];
+  if (!m.length) { toast("Inga mejl att kopiera", "info"); return; }
+  navigator.clipboard.writeText(m.join(", ")).then(() => toast(m.length + " mejladresser kopierade", "check")).catch(() => toast("Kunde inte kopiera", "info"));
+}
+function laddaNerLeadsCsv() {
+  if (!(ADMIN_LEADS || []).length) { toast("Inget att ladda ner", "info"); return; }
+  const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+  const rows = [["typ", "namn", "mejl", "telefon", "adress_omrade", "kalla", "tid"].join(",")].concat(ADMIN_LEADS.map(r => { const d = r.data || {};
+    return [r.typ, d.namn, d.mail, d.tel, d.ad || d.omrade, d.kalla, d.tid || r.tid].map(q).join(","); }));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + rows.join("\n")], { type: "text/csv;charset=utf-8" }));
+  a.download = "parkla-anmalningar.csv"; a.click();
+}
+
 function laddaSkanStatistik() {
   const c = (typeof PAPI !== "undefined") ? PAPI.cfg() : null;
   const box = document.getElementById("scanStatsBox");
@@ -4291,7 +4350,7 @@ function render() {
   countUps();
   renderConsent();
   if (S.route === "hem") setTimeout(() => { mountMap("lmap", { fit: true, pad: 40 }); autoLocateHem(); }, 40);
-  if (S.route === "installningar" && adminPa()) setTimeout(() => { if (typeof laddaSkanStatistik === "function") laddaSkanStatistik(); }, 60);
+  if (S.route === "installningar" && adminPa()) setTimeout(() => { if (typeof laddaSkanStatistik === "function") laddaSkanStatistik(); if (typeof laddaAnmalningar === "function") laddaAnmalningar(); }, 60);
   if (S.route === "sok") setTimeout(() => mountMap("lmap", { fit: S.view === "lista", pad: 30 }), 40);
   if (S.route === "start" || S.route === "valkommen") setTimeout(() => mountMap("hmap", { fit: true, pad: 46, onPick: openSpot }), 60);
   if (typeof Tour !== "undefined" && Tour.active()) setTimeout(Tour.place, 120);
