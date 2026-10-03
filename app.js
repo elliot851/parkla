@@ -118,7 +118,7 @@ function persist() {
 
 /* ---------------- Läge ---------------- */
 let S = {
-  route: (location.hash.replace("#", "").split("?")[0]) || "hem",
+  route: (location.hash.replace("#", "").split("?")[0]) || (/[?&]utm_source=(flyer|visitkort|tshirt|affisch|kort)\b/i.test(location.search) ? "valkommen" : "hem"),
   area: SET.city, mode: "timme", view: "karta",
   q: "", near: null, nearLabel: "", part: null, partZoom: null, maxPrice: 0,
   fNu: false, fCharge: false, fGarage: false, fSecure: false, fBig: false,
@@ -2256,7 +2256,7 @@ function saveListing() {
       AREAS.forEach(a => { const km = distKm(a.c, hit.ll); if (km < min) { min = km; bast = a; } });
       hit.area = bast.id;
       persist();
-      if (S.route === "sok" || S.route === "start") render();
+      if (S.route === "sok" || S.route === "start" || S.route === "valkommen") render();
     });
   }
   EARNED = Math.round(LISTINGS.reduce((a, l) => a + l.pris * (1 - FEES.hostPctMonthly), 0) * 3.4);
@@ -3375,6 +3375,54 @@ function openLeadHost() {
   </div>`);
 }
 
+/* ---------- Välkomstsida för QR-skanning: showreel överst, anmälan som värd, sedan resten av sidan ---------- */
+function viewValkommen() {
+  const done = LS.get("vard_anmald", false);
+  const card = done
+    ? `<div class="tick">${I("check", 32)}</div>
+       <h3 style="font-family:var(--display);font-size:1.5rem;margin:12px 0 0">Tack, du är med!</h3>
+       <p class="dim" style="margin:10px auto 0;max-width:40ch">Vi hör av oss via mejl och telefon när vi öppnar för förare. Vill du lägga upp din plats redan nu tar det någon minut.</p>
+       <button class="btn btn-p btn-lg" style="margin-top:20px" onclick="go('hyrut')">${I("wallet", 18)} Lägg upp min plats nu</button>`
+    : `<h2 style="font-family:var(--display);font-size:1.6rem;margin:0">Bli en av de första värdarna</h2>
+       <p class="dim" style="margin:10px 0 18px">Vi samlar värdar just nu inför en stor lansering till förare. Anmäl dig så hör vi av oss via mejl och telefon så fort vi öppnar. De som är med tidigt går först i kön.</p>
+       <div class="field"><label>Ditt namn</label><input class="inp" id="vk_namn" autocomplete="name" placeholder="Förnamn Efternamn"></div>
+       <div class="grid g2" style="gap:12px">
+         <div class="field"><label>E-post</label><input class="inp" type="email" id="vk_mail" autocomplete="email" placeholder="du@exempel.se"></div>
+         <div class="field"><label>Telefon</label><input class="inp" type="tel" id="vk_tel" autocomplete="tel" placeholder="070-123 45 67"></div>
+       </div>
+       <div class="field"><label>Adress till din plats (frivilligt)</label><input class="inp" id="vk_ad" autocomplete="street-address" placeholder="Ringvägen 41, Västerås"></div>
+       <div class="hint">${I("lock", 17)}<div>Vi använder uppgifterna bara för att kontakta dig om Parkla. Du kan när som helst be oss radera dem.</div></div>
+       <button class="btn btn-p btn-block btn-lg" style="margin-top:6px" onclick="saveHostSignup()">Anmäl mig som värd</button>
+       <button class="btn btn-block" style="margin-top:8px" onclick="go('hyrut')">Eller lägg upp min plats direkt</button>`;
+  return `<section class="wrap" style="padding-top:22px"><div style="max-width:980px;margin:0 auto">
+    <h1 style="font-size:clamp(1.8rem,4.6vw,3rem);margin:0 0 16px" data-reveal>Se hur Parkla funkar</h1>
+    <video id="showreel" src="showreel.mp4?v=1" poster="showreel-poster.jpg" controls playsinline muted autoplay preload="auto"
+      style="width:100%;aspect-ratio:16/9;display:block;border-radius:18px;background:#0b0f0e;border:1px solid var(--rule)"></video>
+    <p class="muted small" style="margin:8px 0 0">Ljudet är av. Tryck på högtalaren i videon för att slå på det.</p>
+    <div style="margin-top:22px;padding:24px;background:var(--card);border:1px solid var(--rule);border-radius:18px" id="vk_card">${card}</div>
+  </div></section>
+  ${viewStart()}`;
+}
+function saveHostSignup() {
+  const v = id => ((document.getElementById(id) || {}).value || "").trim();
+  const rec = { typ: "vard", namn: v("vk_namn"), mail: v("vk_mail"), tel: v("vk_tel"), ad: v("vk_ad"),
+    kalla: (new URLSearchParams(location.search).get("utm_source") || "").toLowerCase(), tid: new Date().toISOString() };
+  if (rec.namn.length < 2) { toast("Fyll i ditt namn", "info"); return; }
+  if (!rec.mail || rec.mail.indexOf("@") < 1) { toast("Fyll i din e-post", "info"); return; }
+  if (rec.tel.replace(/\D/g, "").length < 7) { toast("Fyll i ditt telefonnummer", "info"); return; }
+  LEADS.unshift(rec); LS.set("leads", LEADS);
+  pixelLead("vard");
+  skickaLead("vard", rec).then(ok => {
+    if (!ok) { toast("Kunde inte skicka just nu, försök igen", "info"); LEADS.shift(); LS.set("leads", LEADS); return; }
+    LS.set("vard_anmald", true);
+    const c = document.getElementById("vk_card");
+    if (c) c.innerHTML = `<div class="tick">${I("check", 32)}</div>
+      <h3 style="font-family:var(--display);font-size:1.5rem;margin:12px 0 0">Tack, du är med!</h3>
+      <p class="dim" style="margin:10px auto 0;max-width:40ch">Vi hör av oss via mejl och telefon när vi öppnar för förare. Vill du lägga upp din plats redan nu tar det någon minut.</p>
+      <button class="btn btn-p btn-lg" style="margin-top:20px" onclick="go('hyrut')">${I("wallet", 18)} Lägg upp min plats nu</button>`;
+  });
+}
+
 /* ---------- anmälan: jag söker parkering ---------- */
 /* ---------- valkomstruta: engangs, forsta besoket, mejl-signup ----------
    Visas EN gang per enhet (LS-flagga), nagra sekunder efter forsta sidladdning,
@@ -4175,7 +4223,7 @@ function viewVillkor() { return legalPage("Användarvillkor", `${skarptPa() ? ""
 function viewIntegritet() { return legalPage("Integritetspolicy", `${skarptPa() ? "" : `<div class="callout brass"><b>UTKAST — måste granskas av jurist/dataskyddsexpert innan publicering.</b></div><div class="callout" style="margin-top:10px">Arbetsutkast enligt EU:s dataskyddsförordning (GDPR). Anpassat efter hur Parkla är byggt, men ska granskas och kompletteras – särskilt med personuppgiftsbiträdesavtal och en slutlig lista över mottagare – innan tjänsten släpps skarpt.</div>`}<h2 style="font-size:1.15rem;margin:26px 0 8px">1. Personuppgiftsansvarig</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">EEFS AB, org.nr 559585-9694, Slakterigatan 10, 721 32 Västerås, ansvarar för behandlingen av dina personuppgifter i Parkla. Kontakt i dataskyddsfrågor: info@parkla.se.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">2. Vilka uppgifter vi behandlar</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Beroende på hur du använder Parkla behandlar vi:</p><ul class="numlist2" style="margin:0 0 10px"><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Kontouppgifter</b> – namn, e-postadress, lösenord (krypterat) och, vid skarp lansering, legitimering via BankID.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Kontaktuppgifter</b> – telefonnummer om du anger det.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Uppgifter om en Plats</b> (Värd) – adress och läge, beskrivning, pris och öppettider. Exakt adress visas för en Förare först vid en aktiv bokning.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Bokningsuppgifter</b> – vilka platser, tider och belopp, samt fordonets registreringsnummer.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Betaluppgifter</b> – hanteras av vår betalningspartner Stripe. Parkla lagrar aldrig dina fullständiga kortuppgifter, endast referens och status.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Platsdata</b> – ungefärlig eller exakt position om du väljer att aktivera platstjänster i din enhet. Detta är frivilligt.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Kommunikation</b> – meddelanden mellan användare och med vår kundtjänst.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Teknisk data</b> – enhet, webbläsare, IP-adress och loggar, för säkerhet och drift.</li></ul><h2 style="font-size:1.15rem;margin:26px 0 8px">3. Varför vi behandlar uppgifterna och med vilken laglig grund</h2><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Ändamål</span><b style="text-align:right;max-width:24ch">Laglig grund</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Skapa och hantera ditt konto, genomföra bokningar och betalningar</span><b style="text-align:right;max-width:24ch">Fullgörande av avtal</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Ta ut avgifter och betala ut till Värd</span><b style="text-align:right;max-width:24ch">Fullgörande av avtal</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Förebygga bedrägeri och missbruk, hålla tjänsten säker</span><b style="text-align:right;max-width:24ch">Berättigat intresse</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Kundtjänst och support</span><b style="text-align:right;max-width:24ch">Fullgörande av avtal / berättigat intresse</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Bokföring</span><b style="text-align:right;max-width:24ch">Rättslig förpliktelse (bokföringslagen)</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Rapportering av Värdars ersättning till Skatteverket</span><b style="text-align:right;max-width:24ch">Rättslig förpliktelse (DAC7)</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Platstjänster i appen</span><b style="text-align:right;max-width:24ch">Samtycke (kan återkallas när som helst)</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Utskick om nyheter, om du valt det</span><b style="text-align:right;max-width:24ch">Samtycke</b></div><h2 style="font-size:1.15rem;margin:26px 0 8px">4. Vilka som får del av uppgifterna</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Vi säljer aldrig dina uppgifter. Vi delar dem endast med:</p><ul class="numlist2" style="margin:0 0 10px"><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Andra användare i den utsträckning en bokning kräver</b> – en Värd ser Förarens namn och registreringsnummer för en bokning; en Förare ser Platsens uppgifter och, vid aktiv bokning, exakt adress och eventuell portkod. Ditt telefonnummer lämnas inte ut.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Personuppgiftsbiträden</b> som behandlar uppgifter för vår räkning, bland annat:</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Stripe</b> – betalningar och utbetalningar.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Supabase</b> – databas och drift (servrar inom EU, Stockholm).</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">E-postleverantör för aviseringar och inloggningsmejl.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Myndigheter</b> när lag kräver det, t.ex. Skatteverket enligt DAC7.</li></ul><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Med varje biträde finns eller ska finnas ett personuppgiftsbiträdesavtal.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">5. Överföring utanför EU/EES</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Vi strävar efter att behandla uppgifter inom EU/EES. Databasen ligger i EU (Stockholm). Vissa leverantörer, t.ex. Stripe, kan behandla uppgifter i tredje land; det sker i så fall med lagens skyddsåtgärder, som EU-kommissionens standardavtalsklausuler.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">6. Hur länge vi sparar uppgifterna</h2><ul class="numlist2" style="margin:0 0 10px"><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Kontouppgifter</b> – så länge du har ett konto. Avslutar du kontot raderar eller anonymiserar vi uppgifterna.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Boknings- och betalningsunderlag</b> – sparas så länge det krävs enligt bokföringslagen (sju år).</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">När vi anonymiserar behåller vi ekonomiska poster utan koppling till dig som person.</li></ul><h2 style="font-size:1.15rem;margin:26px 0 8px">7. Dina rättigheter</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Du har rätt att:</p><ul class="numlist2" style="margin:0 0 10px"><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">få veta vilka uppgifter vi behandlar om dig (registerutdrag),</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">få felaktiga uppgifter rättade,</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">få uppgifter raderade ("rätten att bli bortglömd"), i den mån vi inte måste behålla dem enligt lag,</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">begära begränsning av eller invända mot viss behandling,</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">få ut uppgifter du lämnat i ett maskinläsbart format (dataportabilitet),</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">återkalla ett samtycke när som helst.</li></ul><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Kontakta oss på info@parkla.se. Du har också rätt att klaga till <b>Integritetsskyddsmyndigheten (IMY)</b>, Box 8114, 104 20 Stockholm, imy.se.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">8. Cookies och lokal lagring</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Parkla sparar inställningar och sessionsdata lokalt i din webbläsare (localStorage) för att appen ska fungera – det är inte spårningscookies för marknadsföring. Om du samtycker kan vi använda en pixel från Meta (Facebook) för att mäta hur våra annonser fungerar; den är avstängd tills du aktivt tackat ja, och du kan alltid tacka nej. Kartan använder en kart­tjänst som kan hämta kartrutor från en extern leverantör. En fullständig cookie- och lagringsförteckning läggs till innan skarp lansering.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">9. Säkerhet</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Vi använder tekniska och organisatoriska åtgärder för att skydda dina uppgifter, bland annat krypterad överföring, åtkomstkontroll på databasnivå och att känsliga uppgifter som portkoder och exakt adress bara lämnas ut till den som har en aktiv bokning.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">10. Barn</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Parkla riktar sig inte till personer under 18 år och vi behandlar inte medvetet uppgifter om barn.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">11. Ändringar</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Vi kan uppdatera denna policy. Väsentliga ändringar meddelas i tjänsten eller via e-post.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">12. Kontakt</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">EEFS AB · org.nr 559585-9694 · Slakterigatan 10, 721 32 Västerås · info@parkla.se</p>`); }
 
 const VIEWS = {
-  hem: viewHem, start: viewStart, sok: viewSok, hyrut: viewHyrut, mina: viewMina, mer: viewMer,
+  hem: viewHem, start: viewStart, valkommen: viewValkommen, sok: viewSok, hyrut: viewHyrut, mina: viewMina, mer: viewMer,
   trygg: viewTrygg, priser: viewPriser, skatt: viewSkatt, brf: viewBrf, affar: viewAffar,
   villkor: viewVillkor, integritet: viewIntegritet,
   evenemang: viewEvenemang, meddelanden: viewMeddelanden, installningar: viewInstallningar, bjudin: viewBjudin,
@@ -4245,7 +4293,7 @@ function render() {
   if (S.route === "hem") setTimeout(() => { mountMap("lmap", { fit: true, pad: 40 }); autoLocateHem(); }, 40);
   if (S.route === "installningar" && adminPa()) setTimeout(() => { if (typeof laddaSkanStatistik === "function") laddaSkanStatistik(); }, 60);
   if (S.route === "sok") setTimeout(() => mountMap("lmap", { fit: S.view === "lista", pad: 30 }), 40);
-  if (S.route === "start") setTimeout(() => mountMap("hmap", { fit: true, pad: 46, onPick: openSpot }), 60);
+  if (S.route === "start" || S.route === "valkommen") setTimeout(() => mountMap("hmap", { fit: true, pad: 46, onPick: openSpot }), 60);
   if (typeof Tour !== "undefined" && Tour.active()) setTimeout(Tour.place, 120);
 }
 
@@ -4335,12 +4383,12 @@ loggaQrSkanning();
 kollaBankIDaterkomst();
 laddaProfil();
 setTimeout(function () {
-  if (!LS.get("valkomstruta_visad", false)) {
+  if (!LS.get("valkomstruta_visad", false) && S.route !== "valkommen") {
     LS.set("valkomstruta_visad", true);
     if (typeof openWelcomeCapture === "function") openWelcomeCapture();
   }
 }, 3500);
-if (!LS.get("seen", false)) {
+if (!LS.get("seen", false) && S.route !== "valkommen") {
   LS.set("seen", true);
   setTimeout(() => openSheet(`<div class="sheet-b center" style="padding-top:34px">
     ${logoSVG(52)}
