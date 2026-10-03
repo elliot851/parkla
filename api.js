@@ -184,6 +184,12 @@
     } });
   }
 
+  /* Admin: kräver inloggning + databasens policy ar_admin(). Anon får aldrig läsa leads. */
+  function anmalningar() {
+    if (!jag()) return Promise.reject(new Error("inte_inloggad"));
+    return rest("leads?select=id,typ,data,tid&order=tid.desc&limit=1000");
+  }
+
   function jag() {
     var s = sess();
     return s ? s.user : null;
@@ -560,7 +566,7 @@
     registrera: registrera, loggaIn: loggaIn, glomtLosen: glomtLosen,
     sattNyttLosen: sattNyttLosen, skickaBekraftelseIgen: skickaBekraftelseIgen,
     setSessRaw: setSess, hamtaMig: hamtaMig, token: token,
-    minaBlockeringar: minaBlockeringar, blockera: blockera, avblockera: avblockera, rapportera: rapportera,
+    anmalningar: anmalningar, minaBlockeringar: minaBlockeringar, blockera: blockera, avblockera: avblockera, rapportera: rapportera,
     platserIRutan: platserIRutan, minaPlatser: minaPlatser,
     sparaPlats: sparaPlats, taBortPlats: taBortPlats,
     blockeraDag: blockeraDag, sattDagspris: sattDagspris,
