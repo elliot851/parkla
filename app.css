@@ -638,3 +638,41 @@ footer a:hover{color:var(--green)}
   background:var(--card,#fff); border:1px solid var(--line,rgba(0,0,0,.08)); }
 .profilecard .pc-name{ flex:1; min-width:120px; }
 .profilecard .pc-btn{ cursor:pointer; }
+
+/* ---- Showreel-spelare (Parkla grön) ---- */
+.pkf{position:relative;aspect-ratio:16/9;width:100%;border-radius:clamp(16px,1.8vw,30px);overflow:hidden;background:var(--pine,#06231E);isolation:isolate;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 40px 90px -40px rgba(6,35,30,.55),0 12px 30px -18px rgba(6,35,30,.35)}
+.pkf__video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;background:var(--pine,#06231E)}
+.pkf__shade{position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:linear-gradient(to top,rgba(3,22,16,.45),rgba(3,22,16,0))}
+.pkf__bar{position:absolute;left:clamp(12px,2vw,28px);right:clamp(12px,2vw,28px);bottom:clamp(14px,1.8vw,26px);display:flex;align-items:center;gap:10px;z-index:3}
+.pkf__btn{appearance:none;border:1px solid rgba(255,255,255,.22);background:rgba(6,35,30,.55);backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);color:#fff;font:inherit;font-weight:600;font-size:clamp(13px,1vw,15px);line-height:1;height:clamp(38px,3.1vw,48px);border-radius:999px;display:inline-flex;align-items:center;gap:10px;padding:0 clamp(14px,1.3vw,20px);cursor:pointer;transition:background .25s,transform .25s,border-color .25s;position:relative}
+.pkf__btn:hover{background:rgba(6,35,30,.75);border-color:rgba(255,255,255,.4)}
+.pkf__btn:active{transform:scale(.97)}
+.pkf__btn:focus-visible,.pkf__big:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.pkf__btn svg{width:18px;height:18px;flex:0 0 auto}
+.pkf__round{width:clamp(38px,3.1vw,48px);padding:0;justify-content:center}
+.pkf__lbl-off,.pkf__lbl-on{display:inline-flex;align-items:center;gap:10px}
+.pkf__sound .pkf__lbl-on{display:none}
+.pkf.is-sound .pkf__sound .pkf__lbl-on{display:inline-flex}
+.pkf.is-sound .pkf__sound .pkf__lbl-off{display:none}
+.pkf__sound::after{content:"";position:absolute;inset:-6px;border-radius:999px;border:2px solid var(--green-lift,#10B981);opacity:0;pointer-events:none}
+.pkf.is-hint .pkf__sound::after{animation:pkf-ping 1.8s cubic-bezier(.2,.8,.2,1) 3}
+.pkf__eq{display:inline-flex;align-items:flex-end;gap:2px;height:14px;width:16px}
+.pkf__eq i{display:block;width:3px;border-radius:2px;background:var(--green-lift,#10B981);height:30%}
+.pkf.is-sound.is-playing .pkf__eq i{animation:pkf-eq .9s ease-in-out infinite}
+.pkf__eq i:nth-child(2){animation-delay:-.3s!important}
+.pkf__eq i:nth-child(3){animation-delay:-.6s!important}
+.pkf__eq i:nth-child(4){animation-delay:-.15s!important}
+.pkf__i-play,.pkf__i-pause{display:none}
+.pkf.is-playing .pkf__i-pause,.pkf.is-paused .pkf__i-play{display:block}
+.pkf__progress{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.18);z-index:2}
+.pkf__progress span{display:block;height:100%;width:100%;transform-origin:0 50%;transform:scaleX(0);background:var(--green-lift,#10B981)}
+.pkf__big{position:absolute;inset:0;margin:auto;width:clamp(72px,7vw,104px);height:clamp(72px,7vw,104px);border-radius:50%;border:0;cursor:pointer;z-index:4;background:var(--green);color:#fff;display:none;align-items:center;justify-content:center;box-shadow:0 18px 50px -12px rgba(0,0,0,.45);transition:transform .25s}
+.pkf__big:hover{transform:scale(1.06)}
+.pkf__big svg{width:38%;height:38%;margin-left:6%}
+.pkf.is-blocked .pkf__big{display:flex}
+.pkf.is-blocked .pkf__bar{display:none}
+.pkf__txt{white-space:nowrap}
+@keyframes pkf-eq{0%,100%{height:30%}50%{height:100%}}
+@keyframes pkf-ping{0%{transform:scale(.92);opacity:.9}100%{transform:scale(1.18);opacity:0}}
+@media (max-width:600px){.pkf__btn{height:36px;font-size:13px;padding:0 13px;gap:8px}.pkf__round{width:36px;padding:0}.pkf__btn svg{width:16px;height:16px}.pkf__bar{left:10px;right:10px;bottom:10px;gap:8px}}
+@media (prefers-reduced-motion:reduce){.pkf.is-hint .pkf__sound::after,.pkf.is-sound.is-playing .pkf__eq i{animation:none}}
