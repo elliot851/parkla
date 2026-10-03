@@ -3,7 +3,7 @@
    NÄTET FÖRST, cache bara som reserv. Då kan man aldrig fastna
    på en gammal version, men appen funkar ändå utan täckning.
    ============================================================ */
-const CACHE = "parkla-v91";
+const CACHE = "parkla-v92";
 const SHELL = [
   "./", "./index.html", "./app.css", "./map.css", "./tour.css", "./book.css", "./flows.css",
   "./icons.js", "./data.js", "./map.js", "./tour.js", "./api.js", "./app.js", "./flows.js", "./live.js",
@@ -52,6 +52,7 @@ self.addEventListener("fetch", e => {
 
   const url = new URL(req.url);
   const sameOrigin = url.origin === self.location.origin;
+  if (/showreel/.test(url.pathname)) return;
 
   /* Kartrutor och typsnitt: cache först, de ändras aldrig */
   if (/arcgisonline|cartocdn|fonts\.gstatic|fonts\.googleapis|unpkg/.test(url.hostname + url.pathname)) {
