@@ -118,7 +118,7 @@ function persist() {
 
 /* ---------------- Läge ---------------- */
 let S = {
-  route: (location.hash.replace("#", "").split("?")[0]) || (/[?&]utm_source=(flyer|visitkort|tshirt|affisch|kort)\b/i.test(location.search) ? "valkommen" : "hem"),
+  route: (location.hash.replace("#", "").split("?")[0]) || "valkommen",
   area: SET.city, mode: "timme", view: "karta",
   q: "", near: null, nearLabel: "", part: null, partZoom: null, maxPrice: 0,
   fNu: false, fCharge: false, fGarage: false, fSecure: false, fBig: false,
@@ -243,7 +243,7 @@ function navHTML() {
 }
 function tabbarHTML() {
   const unread = NOTIS.filter(n => n.unread).length;
-  const items = [["hem", "home", t("tab_start"), 0], ["sok", "search", t("tab_search"), 0],
+  const items = [["valkommen", "home", t("tab_start"), 0], ["sok", "search", t("tab_search"), 0],
                  ["hyrut", "wallet", t("tab_rent"), 0], ["mina", "receipt", t("tab_me"), BOOKINGS.length],
                  ["mer", "dots", t("tab_more"), unread]];
   return items.map(([r, ic, l, b]) => `<button data-go="${r}" class="${S.route === r ? "on" : ""}" aria-label="${esc(l)}">
@@ -3849,7 +3849,7 @@ function raderaKontoBekrafta() {
       method: "POST", headers: { "Authorization": "Bearer " + tok }
     });
   }).then(r => r.json()).then(j => {
-    if (j.ok) { PAPI.loggaUt(); closeSheet(); toast("Kontot är raderat", "check"); go("hem"); }
+    if (j.ok) { PAPI.loggaUt(); closeSheet(); toast("Kontot är raderat", "check"); go("valkommen"); }
     else toast(j.fel || "Kunde inte radera kontot, försök igen", "info");
   }).catch(() => toast("Kunde inte radera kontot, försök igen", "info"));
 }
