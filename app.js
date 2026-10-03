@@ -3397,13 +3397,71 @@ function viewValkommen() {
        <button class="btn btn-block" style="margin-top:8px" onclick="go('hyrut')">Eller lägg upp min plats direkt</button>`;
   return `<section class="wrap" style="padding-top:22px"><div style="max-width:980px;margin:0 auto">
     <h1 style="font-size:clamp(1.8rem,4.6vw,3rem);margin:0 0 16px" data-reveal>Se hur Parkla funkar</h1>
-    <video id="showreel" src="showreel.mp4?v=1" poster="showreel-poster.jpg" controls playsinline muted autoplay preload="auto"
-      style="width:100%;aspect-ratio:16/9;display:block;border-radius:18px;background:#0b0f0e;border:1px solid var(--rule)"></video>
-    <p class="muted small" style="margin:8px 0 0">Ljudet är av. Tryck på högtalaren i videon för att slå på det.</p>
+    <div class="pkf" id="pkf">
+      <video class="pkf__video" src="showreel.mp4?v=1" poster="showreel-poster.jpg" playsinline loop preload="auto"
+        aria-label="Parkla visar hur du tjänar pengar på din lediga uppfart"></video>
+      <div class="pkf__shade"></div>
+      <button class="pkf__big" type="button" aria-label="Spela filmen med ljud">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.52.85l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>
+      </button>
+      <div class="pkf__bar">
+        <button class="pkf__btn pkf__sound" type="button" aria-pressed="false">
+          <span class="pkf__lbl-off">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="m22 9-6 6M16 9l6 6"/></svg>
+            <span class="pkf__txt">Spela med ljud</span>
+          </span>
+          <span class="pkf__lbl-on">
+            <span class="pkf__eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span class="pkf__txt">Ljud på</span>
+          </span>
+        </button>
+        <button class="pkf__btn pkf__round pkf__play" type="button" aria-label="Pausa eller spela filmen">
+          <svg class="pkf__i-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>
+          <svg class="pkf__i-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
+        </button>
+      </div>
+      <div class="pkf__progress" aria-hidden="true"><span></span></div>
+    </div>
     <div style="margin-top:22px;padding:24px;background:var(--card);border:1px solid var(--rule);border-radius:18px" id="vk_card">${card}</div>
   </div></section>
   ${viewStart()}`;
 }
+/* Showreel-spelare: försöker starta MED ljud direkt. Webbläsare tillåter det ofta bara efter första interaktionen,
+   så faller den tillbaka på ljudlöst + pulserande "Spela med ljud", och slår på ljudet vid första tryck/tangent. */
+function initShowreel() {
+  const card = document.getElementById("pkf"); if (!card) return;
+  const v = card.querySelector("video"), sound = card.querySelector(".pkf__sound"), play = card.querySelector(".pkf__play"),
+    big = card.querySelector(".pkf__big"), bar = card.querySelector(".pkf__progress span");
+  let manuellMute = false;
+  const state = () => {
+    const ljud = !v.muted && v.volume > 0;
+    card.classList.toggle("is-sound", ljud);
+    card.classList.toggle("is-playing", !v.paused);
+    card.classList.toggle("is-paused", v.paused);
+    sound.setAttribute("aria-pressed", ljud ? "true" : "false");
+    if (ljud) card.classList.remove("is-hint");
+  };
+  ["play", "pause", "volumechange"].forEach(e => v.addEventListener(e, state));
+  v.addEventListener("timeupdate", () => { if (v.duration) bar.style.transform = "scaleX(" + (v.currentTime / v.duration) + ")"; });
+  sound.onclick = () => { manuellMute = !v.muted; v.muted = !v.muted; if (v.paused) v.play().catch(() => {}); state(); };
+  play.onclick = () => { if (v.paused) v.play().catch(() => {}); else v.pause(); };
+  big.onclick = () => { v.muted = false; card.classList.remove("is-blocked"); v.play().catch(() => { v.muted = true; v.play().catch(() => {}); }); state(); };
+  const prev = window.__pkfState; window.__pkfState = null;
+  if (prev && prev.t > 0.5) { try { v.currentTime = prev.t; } catch (e) {} }
+  v.muted = prev ? !!prev.muted : false;
+  v.play().then(state).catch(() => {
+    v.muted = true;
+    v.play().then(() => { card.classList.add("is-hint"); state(); }).catch(() => { card.classList.add("is-blocked"); state(); });
+  });
+  const lasUpp = ev => {
+    if (!document.body.contains(card)) return;
+    if (ev && ev.target && ev.target.closest && ev.target.closest(".pkf__bar,.pkf__big")) return;
+    if (v.muted && !manuellMute && !v.paused) { v.muted = false; state(); }
+  };
+  ["pointerdown", "touchend", "keydown", "wheel"].forEach(e => document.addEventListener(e, lasUpp, { once: true, passive: true }));
+  state();
+}
+
 function saveHostSignup() {
   const v = id => ((document.getElementById(id) || {}).value || "").trim();
   const rec = { typ: "vard", namn: v("vk_namn"), mail: v("vk_mail"), tel: v("vk_tel"), ad: v("vk_ad"),
@@ -4330,6 +4388,8 @@ function countUps() {
   });
 }
 function render() {
+  const _pv = S.route === "valkommen" && document.querySelector("#pkf video");
+  if (_pv) window.__pkfState = { t: _pv.currentTime, muted: _pv.muted };
   document.getElementById("app").innerHTML = (VIEWS[S.route] || viewStart)();
   document.getElementById("nav").innerHTML = navHTML();
   document.getElementById("tabbar").innerHTML = tabbarHTML();
@@ -4352,6 +4412,7 @@ function render() {
   if (S.route === "hem") setTimeout(() => { mountMap("lmap", { fit: true, pad: 40 }); autoLocateHem(); }, 40);
   if (S.route === "installningar" && adminPa()) setTimeout(() => { if (typeof laddaSkanStatistik === "function") laddaSkanStatistik(); if (typeof laddaAnmalningar === "function") laddaAnmalningar(); }, 60);
   if (S.route === "sok") setTimeout(() => mountMap("lmap", { fit: S.view === "lista", pad: 30 }), 40);
+  if (S.route === "valkommen") setTimeout(initShowreel, 30);
   if (S.route === "start" || S.route === "valkommen") setTimeout(() => mountMap("hmap", { fit: true, pad: 46, onPick: openSpot }), 60);
   if (typeof Tour !== "undefined" && Tour.active()) setTimeout(Tour.place, 120);
 }
