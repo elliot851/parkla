@@ -596,13 +596,16 @@ ul.numlist{padding:0;margin:0}
 footer{border-top:1px solid var(--rule);padding:64px 0 40px;margin-top:20px}
 .fgrid{display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr;gap:36px}
 @media(max-width:800px){.fgrid{grid-template-columns:1fr 1fr;gap:30px}}
-footer h5{font-size:.8rem;color:var(--ink-25);margin:0 0 14px;font-weight:600;letter-spacing:-.004em}
+footer h5{font-size:.8rem;color:var(--ink-45);margin:0 0 14px;font-weight:600;letter-spacing:-.004em}
 footer li{list-style:none;margin:0 0 10px}
 footer ul{padding:0;margin:0}
 footer a,footer li{font-size:.9rem;color:var(--ink-70);transition:color .2s}
+footer a{display:inline-block;padding:12px 0;min-height:44px;box-sizing:border-box}
+.skip{position:absolute;left:-9999px;top:8px;background:var(--green);color:#fff;padding:10px 16px;border-radius:8px;z-index:2000}
+.skip:focus{left:8px}
 footer a:hover{color:var(--green)}
 .fbot{margin-top:48px;padding-top:22px;border-top:1px solid var(--rule);display:flex;gap:16px;
-  justify-content:space-between;flex-wrap:wrap;font-size:.8rem;color:var(--ink-25)}
+  justify-content:space-between;flex-wrap:wrap;font-size:.8rem;color:var(--ink-45)}
 
 /* Knapp som ser ut som en länk — används i löpande text */
 .lnk{

@@ -3,10 +3,11 @@
    NÄTET FÖRST, cache bara som reserv. Då kan man aldrig fastna
    på en gammal version, men appen funkar ändå utan täckning.
    ============================================================ */
-const CACHE = "parkla-v97";
+const CACHE = "parkla-v98";
 const SHELL = [
   "./", "./index.html", "./app.css", "./map.css", "./tour.css", "./book.css", "./flows.css",
   "./icons.js", "./data.js", "./map.js", "./tour.js", "./api.js", "./app.js", "./flows.js", "./live.js",
+  "./vendor/leaflet/leaflet.js", "./vendor/leaflet/leaflet.css", "./vendor/leaflet/gesture.js", "./vendor/leaflet/gesture.css", "./vendor/fonts/fonts.css",
   "./version.json", "./icon.svg", "./icon-180.png", "./icon-512.png", "./manifest.webmanifest"
 ];
 

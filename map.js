@@ -51,7 +51,15 @@ const PMap = (function () {
     try { return (typeof SET !== "undefined" && SET.satProvider) ? SET.satProvider : "mapbox"; } catch (e) { return "mapbox"; }
   }
 
+  /* F4: har sajten en MapTiler-nyckel (CFG_DEFAULT.maptilerKey i api.js, last till kartdomanen parkla.se i MapTiler) anvands MapTiler for
+     rutor och adressforslag i stallet for Esri och Nominatim, som ar demo-tjanster utan kommersiell licens. Tom nyckel = som forr. */
+  const mtKey = () => (window.PARKLA_MAPTILER_KEY || "").trim();
+  const MT_ATTR = '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; OpenStreetMap-bidragsgivare';
   function baseFor(m) {
+    if (mtKey()) {
+      if (m === "satellit") return L.tileLayer("https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=" + mtKey(), { maxZoom: 20, maxNativeZoom: 20, attribution: MT_ATTR, tileSize: 512, zoomOffset: -1 });
+      return L.tileLayer("https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=" + mtKey(), { maxZoom: 21, maxNativeZoom: 20, attribution: MT_ATTR, tileSize: 512, zoomOffset: -1, detectRetina: false });
+    }
     if (m === "satellit") {
       const key = satKey();
       if (key && satProvider() === "mapbox") {
@@ -218,19 +226,47 @@ const PMap = (function () {
 
   /* Adressökning via Nominatim (OpenStreetMap) */
   let searchTimer = null;
-  function geocode(q, cb) {
+  /* F1: center = valt områdes mitt. Sökningen färgas mot området (viewbox, inte bounded) så att Vasagatan i Västerås ger Västerås först. */
+  function geocode(q, cb, center) {
     clearTimeout(searchTimer);
     if (!q || q.trim().length < 3) { cb([]); return; }
     searchTimer = setTimeout(() => {
+      if (mtKey()) {
+        const u = "https://api.maptiler.com/geocoding/" + encodeURIComponent(q) + ".json?key=" + mtKey() + "&country=se&language=sv&limit=5&autocomplete=true" + (center ? "&proximity=" + center[1] + "," + center[0] : "");
+        fetch(u).then(r => r.ok ? r.json() : { features: [] }).then(j => cb((j.features || []).map(f => ({
+          label: ((f.text || "") + (f.address ? " " + f.address : "") + (f.context && f.context[0] ? ", " + f.context[0].text : "")).trim(),
+          full: (f.place_name || "").split(",").slice(1, 3).join(",").trim(),
+          ll: [f.center[1], f.center[0]]
+        })))).catch(() => cb([]));
+        return;
+      }
       const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1"
-        + "&countrycodes=se&q=" + encodeURIComponent(q);
+        + "&countrycodes=se&q=" + encodeURIComponent(q)
+        + (center ? "&viewbox=" + [center[1] - 0.25, center[0] + 0.15, center[1] + 0.25, center[0] - 0.15].join(",") : "");
       fetch(url, { headers: { "Accept-Language": "sv" } })
         .then(r => r.ok ? r.json() : [])
-        .then(rows => cb(rows.map(r => ({
-          label: r.display_name.split(",").slice(0, 3).join(",").trim(),
-          full: r.display_name,
-          ll: [parseFloat(r.lat), parseFloat(r.lon)]
-        }))))
+        .then(rows => {
+          /* Kort form: "Vasagatan 4, Västerås" i stället för hela adressen med kommun, län och land. */
+          const kort = r => {
+            const a = r.address || {};
+            const gata = [a.road || a.pedestrian || a.neighbourhood || a.suburb, a.house_number].filter(Boolean).join(" ");
+            const stad = a.city || a.town || a.village || a.municipality || a.county || "";
+            const l = [gata || r.display_name.split(",")[0].trim(), stad].filter(Boolean).join(", ");
+            return l;
+          };
+          /* Träffar i vald stad först. */
+          const rank = rows.slice().sort((x, y) => {
+            if (!center) return 0;
+            const dx = Math.hypot(parseFloat(x.lat) - center[0], parseFloat(x.lon) - center[1]);
+            const dy = Math.hypot(parseFloat(y.lat) - center[0], parseFloat(y.lon) - center[1]);
+            return dx - dy;
+          });
+          cb(rank.map(r => ({
+            label: kort(r),
+            full: [(r.address && (r.address.suburb || r.address.neighbourhood)) || "", (r.address && (r.address.county || r.address.state)) || ""].filter(Boolean).join(" · ") || r.display_name.split(",").slice(1, 3).join(",").trim(),
+            ll: [parseFloat(r.lat), parseFloat(r.lon)]
+          })).filter((x, i, a) => a.findIndex(y => y.label === x.label && y.full === x.full) === i));
+        })
         .catch(() => cb([]));
     }, 380);
   }

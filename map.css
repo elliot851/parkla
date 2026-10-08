@@ -104,16 +104,17 @@
   border-radius:50%;display:none;place-items:center;color:var(--ink-45)}
 .msearch.filled .mx{display:grid}
 .msearch .mx:hover{background:var(--paper-2);color:var(--ink)}
-.mres{position:absolute;top:52px;left:0;right:0;background:var(--card);border:1px solid var(--rule);
-  border-radius:var(--r-md);box-shadow:var(--lift-2);overflow:hidden;max-height:270px;overflow-y:auto;
+.mres{position:absolute;top:52px;left:0;right:0;background:#10201c;color:#f2f7f4;border:1px solid #2c4a41;z-index:1000;
+  border-radius:var(--r-md);box-shadow:0 8px 24px rgba(0,0,0,.4);overflow:hidden;max-height:270px;overflow-y:auto;
   animation:fadeUp .3s var(--ease) both}
 .mres button{display:flex;gap:11px;align-items:center;width:100%;padding:12px 15px;text-align:left;
   border-bottom:1px solid var(--rule);transition:background .18s}
 .mres button:last-child{border-bottom:0}
-.mres button:hover{background:var(--paper-2)}
-.mres .ic{color:var(--ink-25);flex:0 0 auto}
+.mres button{color:#f2f7f4}
+.mres button:hover{background:#1b332d}
+.mres .ic{color:#9fc4b6;flex:0 0 auto}
 .mres b{display:block;font-size:.9rem;font-weight:600}
-.mres span{display:block;font-size:.82rem;color:var(--ink-45);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mres span{display:block;font-size:.82rem;color:#a9c7bc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .mbtn{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;
   background:color-mix(in srgb,var(--card) 96%,transparent);backdrop-filter:blur(12px);
@@ -155,3 +156,14 @@
 .mload{position:absolute;top:0;left:0;right:0;height:2px;z-index:700;overflow:hidden;background:transparent}
 .mload i{display:block;height:100%;width:36%;background:var(--green);animation:mload 1.1s var(--ease-2) infinite}
 @keyframes mload{0%{transform:translateX(-100%)}100%{transform:translateX(380%)}}
+
+/* F1: forslagslistan ar #mres (inte .mres). Egen bakgrund, kontrast och skugga sa den inte beror pa kartan under. */
+#mres{position:absolute;top:52px;left:0;right:0;z-index:1000;background:#10201c;color:#f2f7f4;border:1px solid #2c4a41;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.4);overflow:hidden;max-height:270px;overflow-y:auto}
+#mres:empty{display:none}
+#mres button{display:flex;gap:11px;align-items:center;width:100%;padding:12px 15px;text-align:left;color:#f2f7f4;background:transparent;border:0;border-bottom:1px solid #2c4a41}
+#mres button:last-child{border-bottom:0}
+#mres button:hover{background:#1b332d}
+#mres b{display:block;font-size:.9rem;font-weight:600;color:#f2f7f4}
+#mres span{color:#a9c7bc}
+#mres .ic{color:#9fc4b6;flex:0 0 auto}
+#mres .muted{color:#a9c7bc}

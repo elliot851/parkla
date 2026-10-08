@@ -30,9 +30,12 @@
        Tomma tills Elliot skapat ett Criipto-konto och gett oss domän + client-id (publika,
        inga hemligheter). Sa länge de är tomma visas ingen "Legitimera med BankID"-knapp —
        hellre ingen knapp alls än en trasig en för riktiga besökare. */
+    /* MapTiler-nyckel for kartor och adresssokning (publik, las den till parkla.se i MapTiler). Tom = Esri och Nominatim (endast demo). */
+    maptilerKey: "",
     bankidDomain: "",
     bankidClientId: ""
   };
+  window.PARKLA_MAPTILER_KEY = CFG_DEFAULT.maptilerKey;
   function cfg() {
     try { return Object.assign({}, CFG_DEFAULT, JSON.parse(localStorage.getItem(NYCKLAR)) || {}); }
     catch (e) { return Object.assign({}, CFG_DEFAULT); }

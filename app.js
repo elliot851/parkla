@@ -167,6 +167,8 @@ function feeSplit(base, m) {
   const trygg = monthly ? FEES.tryggMonthly : FEES.tryggShort;
   return { base, service, trygg, hostFee, hostNet: base - hostFee, driverTotal: base + service + trygg };
 }
+/* Slutpris for foraren: vardens pris + serviceavgift + trygghetsgaranti. Visas i listor, pa kartnalar och i filter. Specificeras i kassan. */
+const slutPris = (p, m) => (p > 0 ? feeSplit(p, m || S.mode).driverTotal : 0);
 /* Laddel: per timme × laddboxens effekt, tak = en full laddning per dygn.
    Går HELT till värden (elkostnads-ersättning, ingen Parkla-avgift, ingen rabatt). */
 function laddAvgift(effekt, minuter) {
@@ -289,8 +291,10 @@ function logoSVG(s) {
    VY: START
    ============================================================ */
 function viewStart() {
-  const sug = priceSuggest("Stockholm innerstad", "Uppfart", 5, false, false);
-  const ev = EVENTS[0];
+  const sug = priceSuggest("Västerås", "Uppfart", 5, false, false);
+  /* F8: forsta KOMMANDE evenemang, aldrig en passerad match. Finns inget visas inget block. */
+  const idagEv = new Date(); idagEv.setHours(0, 0, 0, 0);
+  const ev = EVENTS.filter(e => new Date(e.date) >= idagEv).sort((a, b) => a.date < b.date ? -1 : 1)[0] || null;
   const cities = AREAS.map(a => a.name.split(" ")[0]);
   return `
 ${liveBanner()}
@@ -309,8 +313,8 @@ ${liveBanner()}
         <b>när vi öppnar</b> ${I("chevron", 13)}</button>
     </div>
     <div class="figures" data-reveal style="--d:210ms">
-      <div><b><span class="countup" data-count="${Math.round(sug.month * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(sug.month)}</span><i class="u">${sym()}</i></b><span>i snitt per månad i Stockholm</span></div>
-      <div><b><span class="countup" data-count="${Math.round(FEES.schablon * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(FEES.schablon)}</span><i class="u">${sym()}</i></b><span>får du tjäna skattefritt varje år</span></div>
+      <div><b><span class="countup" data-count="${Math.round(sug.month * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(sug.month)}</span><i class="u">${sym()}</i></b><span>beräknad intäkt per månad för en uppfart i Västerås (uppskattning, inte utbetald hyra)</span></div>
+      <div><b><span class="countup" data-count="${Math.round(FEES.schablon * (CURRENCIES[SET.currency] || CURRENCIES.SEK).rate)}">${num(FEES.schablon)}</span><i class="u">${sym()}</i></b><span>får du ofta tjäna utan skatt varje år (schablonavdrag)</span></div>
       <div><b class="countup" data-count="${AREAS.length}">${AREAS.length}</b><span>områden redo för din plats</span></div>
     </div>
   </div>
@@ -337,7 +341,7 @@ ${liveBanner()}
     <button class="door" onclick="${'isLive() ? openLeadDriver() : document.getElementById(\'kartan\').scrollIntoView({behavior:\'smooth\',block:\'start\'})'}">
       <span class="ic">${I("search", 30)}</span>
       <b>Jag behöver parkera</b>
-      <span class="d">Hitta en plats nära dig. Från ${kr(12)} i timmen.</span>
+      <span class="d">Hitta en plats nära dig. Från ${kr(slutPris(12, "timme"))} för en timme, alla avgifter inkluderade.</span>
       <span class="go">Visa lediga platser ${I("arrow", 17, "arw")}</span>
     </button>
     <button class="door alt" onclick="go('hyrut')">
@@ -398,14 +402,14 @@ ${liveBanner()}
   <div class="callout brass" data-reveal style="display:flex;gap:13px;align-items:flex-start">
     ${I("info", 18)}<div><b>Så ser det ut idag.</b> Att parkera vid Arlanda kostar 1 495–1 995 kr i veckan. Boendeparkering i centrala Stockholm kostar 1 100 kr i månaden och kön till garage är flera år lång. Samtidigt står tusentals uppfarter tomma.</div>
   </div>
-  <div class="panel pad" data-reveal style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-top:18px">
+  ${ev ? `<div class="panel pad" data-reveal style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-top:18px">
     <span class="tag clay">Nästa stora match</span>
     <div style="flex:1;min-width:210px">
       <h3>${esc(ev.name)}</h3>
       <p class="muted small" style="margin-top:3px">${esc(ev.venue)} · ${esc(ev.date)} kl ${esc(ev.time)} · ${ev.crowd.toLocaleString("sv-SE")} personer kommer</p>
     </div>
     <button class="btn btn-g" onclick="S.area='${ev.area}';S.mode='evenemang';go('sok')">Hitta plats nära${I("arrow", 17, "arw")}</button>
-  </div>
+  </div>` : ""}
 </div></section>
 
 <section><div class="wrap">
@@ -420,7 +424,7 @@ ${liveBanner()}
       ${[["Lägg upp platsen", "Skriv adressen och välj vad det är för plats. Vi föreslår ett pris."],
          ["Välj när den är ledig", "Alltid, bara vardagar, eller bara när det är match. Du bestämmer."],
          ["Säg ja till föraren", "Du ser registreringsnumret innan du svarar. Vid lansering har alla dessutom legitimerat sig med BankID."],
-         ["Få pengarna", "De landar på ditt konto den 25:e varje månad. Vi sköter Skatteverket åt dig."]]
+         ["Få pengarna", "De landar på ditt konto den 25:e varje månad. Vi lämnar uppgifter till Skatteverket. Du deklarerar själv."]]
         .map(([a, b], k) => `<li style="--d:${k * 70}ms"><span class="n">0${k + 1}</span><div><b>${a}</b><p>${b}</p></div></li>`).join("")}
     </ul>
   </div>
@@ -621,7 +625,7 @@ function baseList() {
   if (S.fSecure) list = list.filter(s => s.feat.some(f => /Kamera|Låst|Grind|Portkod/.test(f)));
   if (S.fBig)    list = list.filter(s => /SUV|husbil|buss|husvagn|släp/i.test(s.size));
   if (S.fNu)     list = list.filter(nowFree);
-  if (S.maxPrice) list = list.filter(s => priceFor(s, S.mode) <= S.maxPrice);
+  if (S.maxPrice) list = list.filter(s => slutPris(priceFor(s, S.mode)) <= S.maxPrice);
   const ref = S.near || (AREAS.find(a => a.id === S.area) || AREAS[0]).c;
   list.forEach(s => s._km = distKm(ref, s.ll));
   const by = {
@@ -639,7 +643,7 @@ function makeStateOf(list) {
   const pool = free.length ? free : list;
   let best = null, min = Infinity;
   pool.forEach(x => { const p = priceFor(x, S.mode); if (p && p < min) { min = p; best = x.id; } });
-  return s => ({ label: num(priceFor(s, S.mode)) + " " + sym(), free: nowFree(s), best: s.id === best });
+  return s => ({ label: num(slutPris(priceFor(s, S.mode))) + " " + sym(), free: nowFree(s), best: s.id === best });
 }
 
 function activeFilterCount() { return [S.fNu, S.fCharge, S.fGarage, S.fSecure, S.fBig, !!S.maxPrice].filter(Boolean).length; }
@@ -837,7 +841,7 @@ function spotRow(s, mode) {
         ${ratingHTML(s)}
       </span>
     </span>
-    <span class="price">${hasVaryingPrice(s) ? '<i class="fran">från</i>' : ""}<b>${num(p)} ${sym()}</b><span>${esc(unitShort(S.mode))}</span></span>
+    <span class="price">${hasVaryingPrice(s) ? '<i class="fran">från</i>' : ""}<b>${num(slutPris(p))} ${sym()}</b><span>${esc(unitShort(S.mode))} · inkl. avgifter</span></span>
     <span class="fav ${fav ? "on" : ""}" onclick="event.stopPropagation();toggleFav(${idArg(s.id)},this)" role="button"
       aria-label="Spara">${fav ? IF("heart", 17) : I("heart", 17)}</span>
   </button>`;
@@ -917,9 +921,9 @@ function bevakaHar() {
    också stå här, ovanför listan – inte först inne på platsen. */
 function prisnotisHTML() {
   return `<p class="muted small" style="margin:2px 0 12px">
-    Priserna är värdens. Till kommer ${Math.round(FEES.driverPct * 100)} % serviceavgift
-    och ${kr(FEES.tryggShort)} trygghetsgaranti – vid månadshyra
-    ${Math.round(FEES.driverPctMonthly * 100)} % och ${kr(FEES.tryggMonthly)}.</p>`;
+    Priserna du ser är slutpriset: värdens pris plus ${Math.round(FEES.driverPct * 100)} % serviceavgift
+    och ${kr(FEES.tryggShort)} trygghetsgaranti per bokning – vid månadshyra
+    ${Math.round(FEES.driverPctMonthly * 100)} % och ${kr(FEES.tryggMonthly)}. Uppdelningen visas i kassan.</p>`;
 }
 function savingsHTML(list, area) {
   if (S.mode !== "manad" || !list.length) return "";
@@ -1002,11 +1006,11 @@ function openBrfBrev(franWizard) {
     ${franWizard ? `<button class="btn btn-sm" style="align-self:flex-start" onclick="closeSheet();renderWizard()">${I("arrow", 14)} Tillbaka till annonsen</button>` : ""}
     <p class="dim">Bor du i bostadsrätt behöver du styrelsens ja. Här är en färdig
       fråga – fyll i namn och adress, så skriver vi resten.</p>
-    <div class="field"><label>Ditt namn</label>
+    <div class="field"><label for="brf-namn">Ditt namn</label>
       <input class="inp" id="brf-namn" placeholder="Anna Andersson" oninput="brfUppdatera()"></div>
-    <div class="field"><label>Din adress</label>
+    <div class="field"><label for="brf-adr">Din adress</label>
       <input class="inp" id="brf-adr" placeholder="Storgatan 1, Stockholm" oninput="brfUppdatera()"></div>
-    <div class="field"><label>Brevet</label>
+    <div class="field"><label for="brf-text">Brevet</label>
       <textarea class="inp" id="brf-text" rows="12" oninput="this.dataset.rord='1'"
         style="line-height:1.55;resize:vertical">${esc(brfBrevText("", ""))}</textarea></div>
     <button class="btn btn-p btn-block btn-lg" onclick="brfKopiera()">${I("copy", 17)} Kopiera texten</button>
@@ -1184,7 +1188,7 @@ function pickSpot(id) {
       <div class="ad">${esc(s.ad)}</div>
       <div class="tags"><span class="tag">${esc(s.type)}</span>${s.charge ? `<span class="tag green">${I("bolt", 11)} Laddbox</span>` : ""}${ratingHTML(s)}</div>
     </div>
-    <div class="pr"><b>${num(priceFor(s, S.mode))} ${sym()}</b><span>${esc(unitShort(S.mode))}</span></div>
+    <div class="pr"><b>${num(slutPris(priceFor(s, S.mode)))} ${sym()}</b><span>${esc(unitShort(S.mode))} · inkl. avgifter</span></div>
   </div>`;
 }
 function onMapSearch(v) {
@@ -1195,6 +1199,7 @@ function onMapSearch(v) {
   if (!box) return;
   if (!v || v.length < 3) { box.innerHTML = ""; refreshResults(); return; }
   box.innerHTML = `<div style="padding:14px 15px" class="muted small">Söker …</div>`;
+  const _ar = AREAS.find(a => a.id === S.area);
   PMap.geocode(v, rows => {
     const inApp = allSpots().filter(s => (s.nm + " " + s.ad).toLowerCase().includes(v.toLowerCase())).slice(0, 3);
     if (!rows.length && !inApp.length) { box.innerHTML = `<div style="padding:14px 15px" class="muted small">Inga träffar. Prova ett gatunamn eller en stad.</div>`; return; }
@@ -1204,7 +1209,7 @@ function onMapSearch(v) {
       rows.map((r, k) => `<button onclick="jumpGeo(${k})"><span class="ic">${I("search", 17)}</span>
         <span style="min-width:0"><b>${esc(r.label)}</b><span>${esc(r.full)}</span></span></button>`).join("");
     window._geo = rows;
-  });
+  }, _ar && _ar.c);
 }
 function jumpGeo(k) {
   const r = (window._geo || [])[k]; if (!r) return;
@@ -1233,7 +1238,7 @@ function clearSearch() {
 /* ---- filter-sheet med laggfritt reglage ---- */
 function openFilters() {
   const all = allSpots().filter(s => s.area === S.area && priceFor(s, S.mode) > 0);
-  const prices = all.map(s => priceFor(s, S.mode));
+  const prices = all.map(s => slutPris(priceFor(s, S.mode)));
   const lo = prices.length ? Math.min.apply(null, prices) : 0;
   const hi = prices.length ? Math.max.apply(null, prices) : 100;
   const cur = S.maxPrice || hi;
@@ -1335,7 +1340,7 @@ function openSpot(id) {
     <div class="sticky-cta">
       ${nowFree(s) && !isLive() ? `
         <button class="btn btn-g btn-block btn-lg" onclick="startNow(${idArg(s.id)})">
-          ${I("car", 19)} Parkera här nu · ${kr(timPris(s))}/tim</button>
+          ${I("car", 19)} Parkera här nu · ${kr(slutPris(timPris(s), "timme"))}/tim inkl. avgifter</button>
         <p class="muted small center" style="margin-top:8px">Ingen bokning, ingen väntan. Vi håller platsen i ${HALL_MINUTER} minuter medan du kör dit.</p>
         <div class="rule" style="margin:16px 0"></div>` : ""}
       ${isLive() && !s.mine
@@ -1549,7 +1554,7 @@ function openDayPrice(listingId, iso) {
       <span>${esc(ev.venue)}, ${kmText(ev.km)} härifrån · ${ev.crowd.toLocaleString("sv-SE")} personer kl ${esc(ev.time)}</span></div>
       <button class="btn btn-sm btn-g" onclick="document.getElementById('dp').value=${evPris};dpHint(${bas})">${kr(evPris)}</button>
     </div>` : ""}
-    <div class="field"><label>Pris för den här dagen (kr)</label>
+    <div class="field"><label for="dp">Pris för den här dagen (kr)</label>
       <input class="inp mono" id="dp" value="${nu}" inputmode="numeric" style="font-size:1.5rem;text-align:center"
         oninput="dpHint(${bas})"></div>
     <p class="muted small center" id="dphint">${nu === bas ? "Samma som ditt ordinarie pris" : nu > bas ? `${Math.round((nu / bas - 1) * 100)} % över ordinarie ${kr(bas)}` : `${Math.round((1 - nu / bas) * 100)} % under ordinarie ${kr(bas)}`}</p>
@@ -1604,7 +1609,7 @@ function setMonthPrice(listingId, vad) {
     persist(); openBlockCal(listingId); toast(n + " helgdagar höjda 25 %", "spark"); return;
   }
   openSheet(sheetHead("Pris för hela månaden") + `<div class="sheet-b stack">
-    <div class="field"><label>Pris per dygn (kr)</label>
+    <div class="field"><label for="mp">Pris per dygn (kr)</label>
       <input class="inp mono" id="mp" value="${bas}" inputmode="numeric" style="font-size:1.5rem;text-align:center"></div>
     <p class="muted small center">Gäller alla dagar i ${new Date(y, m, 1).toLocaleDateString("sv-SE", { month: "long", year: "numeric" })}.</p>
     <button class="btn btn-p btn-block btn-lg" onclick="applyMonthPrice(${listingId})">Sätt priset</button>
@@ -1689,7 +1694,7 @@ function renderBooking() {
         </div>
 
       ${S.mode === "timme" ? `
-      <div class="field"><label>Från vilken tid?</label>
+      <div class="field"><label for="bktime">Från vilken tid?</label>
         <select class="inp" id="bktime" onchange="S.bk.start=this.value;patchBkSum()">
           ${timeOptions(b.start)}
         </select></div>
@@ -1758,7 +1763,7 @@ function renderBooking() {
       <button class="btn btn-sm" onclick="bkStep(1)">\u00c4ndra</button>
     </div>
 
-    <div class="field"><label>Bilens registreringsnummer</label>
+    <div class="field"><label for="regnr">Bilens registreringsnummer</label>
       <input class="inp plate" id="regnr" placeholder="ABC 123" maxlength="8"
         value="${esc(b.reg)}" oninput="S.bk.reg=this.value" autocomplete="off"></div>
 
@@ -2043,7 +2048,7 @@ function priceBoxHTML(N) {
       <span id="pbGross">${num(N.gross)}</span> ${sym()}<span style="font-size:1.05rem;opacity:.66"> /mån</span></div>
     <p style="margin-top:12px;opacity:.82;font-size:.92rem">Du får <b id="pbNet">${kr(N.net)}</b> efter vår avgift.</p>
     ${N.dyn ? `<div style="margin-top:14px;background:rgba(244,241,233,.11);border-radius:var(--r-sm);padding:11px 13px;font-size:.85rem">
-      ${I("chart", 15)} Vid matcher och högsäsong höjs priset automatiskt: <b>+<span id="pbDyn">${num(N.dyn)}</span> ${sym()}/mån</b> i snitt.</div>` : ""}
+      ${I("chart", 15)} Vid matcher och högsäsong höjs priset automatiskt: <b>+<span id="pbDyn">${num(N.dyn)}</span> ${sym()}/mån</b> enligt prismodellen (uppskattning).</div>` : ""}
     <div class="grid g2 keep" style="margin-top:20px;gap:1px;background:rgba(244,241,233,.16)">
       ${[["Per timme", N.sug.hour ? num(N.sug.hour) + " " + sym() : "–", "pbH"],
          ["Per dygn", num(N.sug.day) + " " + sym(), "pbD"],
@@ -2065,7 +2070,7 @@ function taxBoxHTML(N) {
       <div class="kv"><span>Du betalar skatt på</span><b id="txAble">${kr(N.taxable)}</b></div>
       <div class="tot"><span>Kvar i handen</span><span id="txNet">${kr(N.year - N.tax)}</span></div>
     </div>
-    <p class="muted small" style="margin-top:12px">Vi rapporterar till Skatteverket åt dig och skickar ett färdigt underlag i januari.</p>
+    <p class="muted small" style="margin-top:12px">Vi lämnar uppgifter till Skatteverket och skickar ett färdigt underlag i januari.</p>
     <button class="btn btn-sm" style="margin-top:12px" data-go="skatt">Läs mer om skatten${I("arrow", 15, "arw")}</button>`;
 }
 /* patchar bara siffrorna → inget hack när man drar */
@@ -2113,40 +2118,40 @@ function renderWizard() {
   const w = S.wizard;
   const titles = ["Var ligger platsen?", "Vad för slags plats?", "När är den ledig?", "Vad ska den kosta?"];
   const bodies = [
-    `<div class="field"><label>Adress</label><input class="inp" id="w_ad" value="${esc(w.ad)}" placeholder="Ringvägen 41, Stockholm"></div>
+    `<div class="field"><label for="w_ad">Adress</label><input class="inp" id="w_ad" value="${esc(w.ad)}" placeholder="Ringvägen 41, Stockholm"></div>
      <div class="hint">${I("lock", 17)}<div>Exakt adress visas först efter bokning. I listan syns bara gatan och stadsdelen.</div></div>`,
     `<div class="field"><label>Foto på platsen</label>
        <div id="w_photofield">${photoFieldHTML(w)}</div>
        <p class="muted small" style="margin-top:6px">Förare väljer oftare en plats de kan se. Ett foto på uppfarten räcker.</p></div>
-     <div class="field"><label>Typ av plats</label><select class="inp" id="w_type">
+     <div class="field"><label for="w_type">Typ av plats</label><select class="inp" id="w_type">
        ${Object.keys(TYPE_MULT).map(k => `<option ${k === w.type ? "selected" : ""}>${k}</option>`).join("")}</select></div>
-     <div class="field"><label>Vad får plats?</label><select class="inp" id="w_size">
+     <div class="field"><label for="w_size">Vad får plats?</label><select class="inp" id="w_size">
        ${["Personbil", "Personbil + SUV", "Personbil, husbil", "Personbil, släp", "Buss eller lastbil"].map(k => `<option ${k === w.size ? "selected" : ""}>${k}</option>`).join("")}</select></div>
      ${[["charger", "bolt", "Laddbox", "Man kan ladda elbil"], ["gated", "lock", "Låst eller grind", "Port, bom eller grind"], ["cam", "camera", "Kamera", "Platsen är bevakad"], ["vinter", "moon", "Erbjud vinterförvar", "Kräver garage, carport, inhägnad tomt eller låst innergård"]]
        .map(([k, ic, tt, ss]) => `<div class="setrow"><span style="color:var(--ink-45)">${I(ic, 20)}</span>
          <div class="t"><b>${tt}</b><span>${ss}</span></div>
          <div class="switch ${w[k] ? "on" : ""}" role="switch" onclick="wizTog('${k}')"></div></div>`).join("")}
-     ${w.charger ? `<div class="field"><label>Laddboxens effekt</label>
+     ${w.charger ? `<div class="field"><label for="w_laddeffekt">Laddboxens effekt</label>
        <select class="inp" id="w_laddeffekt">${LADD_EFFEKTER.map(e => `<option value="${e}" ${(+w.laddeffekt || 11) === e ? "selected" : ""}>${e} kW${e <= 3.7 ? " · vanligt uttag" : e >= 22 ? " · snabb" : ""}</option>`).join("")}</select>
        <p class="muted small" style="margin-top:6px">Föraren betalar elen efter effekt (~${kr(laddPerTimme(+w.laddeffekt || 11))}/tim) och den går <b>helt till dig</b>.</p></div>` : ""}`,
-    `<div class="field"><label>När får folk parkera?</label><select class="inp" id="w_tid">
+    `<div class="field"><label for="w_tid">När får folk parkera?</label><select class="inp" id="w_tid">
        ${["Alltid", "Vardagar 08–17", "Kvällar och helger", "Bara vid matcher", "Bara långtid (månad)"].map(k => `<option ${k === w.tid ? "selected" : ""}>${k}</option>`).join("")}</select></div>
      <div class="setrow"><span style="color:var(--green)">${I("bolt", 20)}</span>
        <div class="t"><b>Låt folk boka direkt</b><span>Utan att du godkänner varje gång. Krävs för att korttidsbokningar ska funka – annars hinner de tröttna.</span></div>
        <div class="switch ${w.instant !== false ? "on" : ""}" role="switch" onclick="S.wizard.instant=!(S.wizard.instant!==false);this.classList.toggle('on')"></div></div>
      <div class="hint" style="margin-top:12px">${I("info", 17)}<div>Månadsuthyrning och vinterförvar går alltid via ditt godkännande, oavsett den här inställningen.</div></div>
-     <div class="field" style="margin-top:14px"><label>Vad behöver föraren veta?</label>
+     <div class="field" style="margin-top:14px"><label for="w_info">Vad behöver föraren veta?</label>
        <textarea class="inp" id="w_info" rows="3" placeholder="Kör in från gatan, plats närmast garaget. Vänd bilen så nosen pekar ut.">${esc(w.info)}</textarea></div>`,
-    `<div class="field"><label>Pris per månad (kr)</label>
-       <input class="inp mono" id="w_pris" value="${w.pris}" inputmode="numeric" style="font-size:1.4rem" oninput="wizPrice(this)"></div>
+    `<div class="field"><label for="w_pris">Pris per månad (kr)</label>
+       <input class="inp mono" id="w_pris" type="text" value="${w.pris}" inputmode="decimal" autocomplete="off" aria-describedby="wizCalc" style="font-size:1.4rem" oninput="wizPrice(this)"></div>
      <div class="setrow"><span style="color:var(--green)">${I("wallet", 20)}</span>
        <div class="t"><b>Sätt egna priser</b><span>Bestäm timme, dygn, vecka och match själv. Annars räknar vi ut dem åt dig.</span></div>
        <div class="switch ${w.egnaPriser ? "on" : ""}" role="switch" onclick="wizEgnaPriser()"></div></div>
      ${w.egnaPriser ? `<div class="grid g2" style="gap:12px">
-       <div class="field"><label>Per timme (kr)</label><input class="inp mono" id="w_pt" value="${w.prisTimme || harledPriser(w.pris).timme}" inputmode="numeric" oninput="wizPrisMode('Timme',this)"></div>
-       <div class="field"><label>Per dygn (kr)</label><input class="inp mono" id="w_pd" value="${w.prisDygn || harledPriser(w.pris).dygn}" inputmode="numeric" oninput="wizPrisMode('Dygn',this)"></div>
-       <div class="field"><label>Per vecka (kr)</label><input class="inp mono" id="w_pv" value="${w.prisVecka || harledPriser(w.pris).vecka}" inputmode="numeric" oninput="wizPrisMode('Vecka',this)"></div>
-       <div class="field"><label>Per match (kr)</label><input class="inp mono" id="w_pm" value="${w.prisMatch || harledPriser(w.pris).match}" inputmode="numeric" oninput="wizPrisMode('Match',this)"></div>
+       <div class="field"><label for="w_pt">Per timme (kr)</label><input class="inp mono" id="w_pt" value="${w.prisTimme || harledPriser(w.pris).timme}" inputmode="numeric" oninput="wizPrisMode('Timme',this)"></div>
+       <div class="field"><label for="w_pd">Per dygn (kr)</label><input class="inp mono" id="w_pd" value="${w.prisDygn || harledPriser(w.pris).dygn}" inputmode="numeric" oninput="wizPrisMode('Dygn',this)"></div>
+       <div class="field"><label for="w_pv">Per vecka (kr)</label><input class="inp mono" id="w_pv" value="${w.prisVecka || harledPriser(w.pris).vecka}" inputmode="numeric" oninput="wizPrisMode('Vecka',this)"></div>
+       <div class="field"><label for="w_pm">Per match (kr)</label><input class="inp mono" id="w_pm" value="${w.prisMatch || harledPriser(w.pris).match}" inputmode="numeric" oninput="wizPrisMode('Match',this)"></div>
      </div>` : ""}
      <div class="setrow"><span style="color:var(--green)">${I("chart", 20)}</span>
        <div class="t"><b>Höj priset automatiskt</b><span>Vid matcher och högsäsong. Aldrig under ditt pris.</span></div>
@@ -2191,10 +2196,20 @@ function wizPhoto(input) {
   reader.readAsDataURL(file);
 }
 function wizPhotoDel() { S.wizard.photo = null; renderWizard(); }
+/* F7: accepterar "125", "125,5" och "1 250". Stoppar "1e5", "-500" och tomt. Utanför [min, max] blir NaN. */
+function parsePris(s, min, max) {
+  s = String(s == null ? "" : s).trim().replace(/\s/g, "").replace(",", ".");
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return NaN;
+  const v = parseFloat(s);
+  return (v >= (min == null ? 100 : min) && v <= (max == null ? 20000 : max)) ? v : NaN;
+}
+const PRIS_MIN = 100, PRIS_MAX = 20000;
 function wizPrice(inp) {
-  const v = +inp.value || 0;
+  const raw = parsePris(inp.value, PRIS_MIN, PRIS_MAX);
+  const v = isNaN(raw) ? 0 : raw;
   S.wizard.pris = v;
   const box = document.getElementById("wizCalc");
+  if (box && !v) { box.innerHTML = `Skriv ett pris mellan ${num(PRIS_MIN)} och ${num(PRIS_MAX)} ${sym()} i månaden. Bara siffror, komma går bra.`; return; }
   if (box) box.innerHTML = `Du får <b>${kr(Math.round(v * (1 - FEES.hostPctMonthly)))}</b> i månaden, alltså <b>${kr(Math.round(v * (1 - FEES.hostPctMonthly) * 12))}</b> på ett år.`;
 }
 function wizEgnaPriser() {
@@ -2204,7 +2219,7 @@ function wizEgnaPriser() {
   if (!w.egnaPriser) { w.prisTimme = 0; w.prisDygn = 0; w.prisVecka = 0; w.prisMatch = 0; }
   renderWizard();
 }
-function wizPrisMode(field, inp) { S.wizard["pris" + field] = +inp.value || 0; }
+function wizPrisMode(field, inp) { const v = parsePris(inp.value, 1, PRIS_MAX); S.wizard["pris" + field] = isNaN(v) ? 0 : v; }
 /* Togglar en switch i wizarden och renderar om (så laddbox-effektväljaren dyker upp/försvinner). */
 function wizTog(k) { grabWizard(); S.wizard[k] = !S.wizard[k]; renderWizard(); }
 function grabWizard() {
@@ -2214,12 +2229,13 @@ function grabWizard() {
     if (g("w_laddeffekt")) w.laddeffekt = +g("w_laddeffekt"); }
   if (w.step === 2) { w.tid = g("w_tid") || w.tid; w.info = g("w_info") || w.info; }
   if (w.step === 3) {
-    w.pris = +g("w_pris") || w.pris;
+    { const pp = parsePris(g("w_pris"), PRIS_MIN, PRIS_MAX); w.pris = isNaN(pp) ? 0 : pp; }
     if (w.egnaPriser) {
-      if (g("w_pt") != null) w.prisTimme = +g("w_pt") || 0;
-      if (g("w_pd") != null) w.prisDygn = +g("w_pd") || 0;
-      if (g("w_pv") != null) w.prisVecka = +g("w_pv") || 0;
-      if (g("w_pm") != null) w.prisMatch = +g("w_pm") || 0;
+      const _p = x => { const v = parsePris(x, 1, PRIS_MAX); return isNaN(v) ? 0 : v; };
+      if (g("w_pt") != null) w.prisTimme = _p(g("w_pt"));
+      if (g("w_pd") != null) w.prisDygn = _p(g("w_pd"));
+      if (g("w_pv") != null) w.prisVecka = _p(g("w_pv"));
+      if (g("w_pm") != null) w.prisMatch = _p(g("w_pm"));
     }
   }
 }
@@ -2227,7 +2243,7 @@ function wizBack() { grabWizard(); S.wizard.step--; renderWizard(); }
 function wizNext() {
   grabWizard(); const w = S.wizard;
   if (w.step === 0 && w.ad.trim().length < 4) { toast("Skriv adressen först", "info"); return; }
-  if (w.step === 3 && (!w.pris || w.pris < 50)) { toast("Sätt ett rimligt pris", "info"); return; }
+  if (w.step === 3 && (!w.pris || w.pris < PRIS_MIN || w.pris > PRIS_MAX)) { toast(`Sätt ett pris mellan ${num(PRIS_MIN)} och ${num(PRIS_MAX)} ${sym()} i månaden`, "info"); return; }
   if (w.step < 3) { w.step++; renderWizard(); return; }
   saveListing();
 }
@@ -2323,9 +2339,9 @@ function viewMina() {
     <div class="panel pad-lg">
       <div class="spread"><span class="kicker plain muted">Skattefritt kvar</span><span class="tag ${pct > 90 ? "clay" : "green"}">${Math.round(100 - pct)} % kvar</span></div>
       <div class="figure" style="margin-top:14px">${kr(EARNED)}</div>
-      <p class="muted small" style="margin-top:6px">av ${kr(FEES.schablon)} du får tjäna skattefritt</p>
+      <p class="muted small" style="margin-top:6px">av ${kr(FEES.schablon)} du ofta får tjäna utan skatt (schablonavdrag)</p>
       <div class="meter ${pct > 90 ? "warn" : ""}" style="margin-top:18px"><i style="width:${pct}%"></i></div>
-      <p class="dim small" style="margin-top:16px">Vi skickar ett färdigt underlag i januari och rapporterar till Skatteverket åt dig.</p>
+      <p class="dim small" style="margin-top:16px">Vi skickar ett färdigt underlag i januari och lämnar uppgifter till Skatteverket. Du deklarerar själv.</p>
       <button class="btn btn-sm" style="margin-top:12px" onclick="toast('Underlaget är skickat till din e-post','download')">${I("download", 15)} Hämta underlag</button>
     </div>
   </div>
@@ -2463,7 +2479,7 @@ function extendBooking(id) {
   const unit = spot ? (priceFor(spot, b.mode) || spot.d) : Math.round(b.total / b.qty);
   openSheet(sheetHead("Förläng bokningen") + `<div class="sheet-b stack">
     <p class="dim">${esc(b.spot)} · ${esc(b.reg)}</p>
-    <div class="field"><label>Lägg till</label><select class="inp" id="ext">
+    <div class="field"><label for="ext">Lägg till</label><select class="inp" id="ext">
       ${[1, 2, 3, 6, 12].map(n => `<option value="${n}">${n} ${b.mode === "manad" ? "månad(er)" : b.mode === "timme" ? "timme/timmar" : "dygn"}</option>`).join("")}
     </select></div>
     <div class="callout">Priset är ${kr(unit)} per gång. Värden svarar inom 30 minuter.</div>
@@ -2584,7 +2600,8 @@ function viewEvenemang() {
   const area = AREAS.find(a => a.id === S.area) || AREAS[0];
   /* I skarpt läge visar vi bara evenemang på den valda orten – annars skulle en Västerås-användare
      mötas av Stockholmsmatcher. Finns inga än, visar vi ett ärligt "kommer snart"-läge. */
-  const evs = skarptPa() ? EVENTS.filter(e => e.area === S.area) : EVENTS;
+  const idagE = new Date(); idagE.setHours(0, 0, 0, 0);
+  const evs = (skarptPa() ? EVENTS.filter(e => e.area === S.area) : EVENTS).filter(e => new Date(e.date) >= idagE);
   return `
 <section class="tight"><div class="wrap">
   <span class="kicker" data-reveal>Evenemang</span>
@@ -2620,7 +2637,7 @@ function viewEvenemang() {
 
   <div class="panel pad-lg" style="margin-top:26px;background:var(--green-wash);border-color:transparent" data-reveal>
     <h3>Bor du nära en arena?</h3>
-    <p class="dim" style="margin-top:8px;max-width:56ch">Sex hemmamatcher och fyra konserter på ett år är ungefär ${kr(2500)} extra – för en uppfart som ändå står tom. Slår du på automatisk prishöjning sköter appen det åt dig.</p>
+    <p class="dim" style="margin-top:8px;max-width:56ch">Sex hemmamatcher och fyra konserter på ett år kan enligt vår prismodell ge ungefär ${kr(2500)} extra (uppskattning) – för en uppfart som ändå står tom. Slår du på automatisk prishöjning sköter appen det åt dig.</p>
     <button class="btn btn-p" style="margin-top:18px" data-go="hyrut">Räkna på min plats${I("arrow", 16, "arw")}</button>
   </div>
 </div></section>
@@ -2918,7 +2935,7 @@ function viewSkatt() {
   <div class="callout brass" style="margin-top:22px;display:flex;gap:12px" data-reveal>${I("info", 18)}
     <div>Det här är en sammanfattning, inte skatterådgivning. Kolla alltid mot Skatteverket och din kommun.</div></div>
   <div style="margin-top:26px">${entriesHTML([
-    ["receipt", "1 · Du får tjäna 40 000 kr skattefritt", "Hyr du ut en plats som hör till din bostad beskattas det som kapitalinkomst, och du får ett schablonavdrag på 40 000 kr. Bor du i småhus får du dessutom dra av 20 % av hyran. I praktiken blir de flesta uppfartsuthyrningar helt skattefria.",
+    ["receipt", "1 · Du får ofta tjäna upp till 40 000 kr utan skatt (schablonavdrag)", "Hyr du ut en plats som hör till din bostad beskattas det som kapitalinkomst, och du får ett schablonavdrag på 40 000 kr. Bor du i småhus får du dessutom dra av 20 % av hyran. I många fall blir uthyrningen skattefri, beroende på din situation. Schablonavdraget gäller ett per bostad och år och delas med annan uthyrning. Du deklarerar själv.",
      "Viktigt: du får <b>ett</b> schablonavdrag per bostad och år – även om du både hyr ut rum, säljer solel och hyr ut p-platsen."],
     ["roof", "2 · Bygglov behövs oftast inte", "Du behöver inget bygglov för en p-plats som är till för fastighetens eget behov, på mark där det redan står ett en- eller tvåbostadshus. Bygglov krävs om ytan tillsammans med andra p-platser blir större än 50 m² inom detaljplan (100 m² utanför). Börjar det likna kommersiell parkeringsverksamhet kan kommunen se det som ändrad användning – håll dig till din befintliga uppfart."],
     ["building", "3 · Bor du i bostadsrätt eller hyresrätt? Fråga först.", "En p-plats utomhus är juridiskt ett lägenhetsarrende. Du får inte hyra ut den i andra hand utan föreningens tillstånd, och styrelsen får säga nej. Samma sak gäller hyresrätt. <button class=\"lnk\" onclick=\"openBrfBrev()\">Hämta en färdig fråga till styrelsen</button>."],
@@ -2934,12 +2951,12 @@ function viewBrf() {
 <section class="tight"><div class="wrap">
   <span class="kicker" data-reveal>För föreningar och fastighetsägare</span>
   <h1 style="margin:14px 0 0;font-size:clamp(2.1rem,5vw,3.6rem)" data-reveal>Ni har tomma platser.<br><em>Vi har kön.</em></h1>
-  <p class="lede" style="margin-top:18px" data-reveal>Av Svenska Bostäders 10 328 p-platser i Stockholm står nästan 1 500 tomma – samtidigt som garageköerna hos andra är flera år långa. Det är inte brist. Det är att utbud och efterfrågan inte hittar varandra.</p>
+  <p class="lede" style="margin-top:18px" data-reveal>Många parkeringsplatser står tomma samtidigt som garageköerna på andra håll är långa. Det är inte brist. Det är att utbud och efterfrågan inte hittar varandra.</p>
   <div class="grid g2" style="margin-top:34px">
     ${[["Fyll de tomma platserna", "Vi lägger ut era lediga platser mot vår efterfrågan – timme, dygn eller månad. Ni bestämmer vem som släpps in och till vilket pris."],
        ["Slipp allt pappersarbete", "Kontrakt, betalning, kö och avslut sköts i Parkla. Styrelsen behöver inte lägga en enda kväll på p-listan."],
        ["Medlemmarna får hyra ut lagligt", "Godkänn andrahandsuthyrning en gång. Föreningen kan välja att ta 10 % av medlemmarnas intäkter till kassan."],
-       ["Laddning blir en intäkt", "Har ni laddboxar sitter ni på en guldgruva. Elbilsägare utan hemmaladdning betalar 28 % mer."]]
+       ["Laddning blir en intäkt", "Har ni laddboxar sitter ni på en guldgruva. Elbilsägare utan hemmaladdning behöver en plats där de kan ladda."]]
       .map(([h, p], k) => `<div class="panel pad-lg" data-reveal style="--d:${k * 50}ms"><h3>${h}</h3><p class="dim" style="margin-top:10px">${p}</p></div>`).join("")}
   </div>
   <div class="panel pad-lg" style="margin-top:26px" data-reveal>
@@ -3086,14 +3103,14 @@ function viewInstallningar() {
     <div class="setrow" style="margin-top:8px"><span style="color:var(--green)">${I("spark", 20)}</span>
       <div class="t"><b>Lanseringsläge</b><span>Döljer bokning av exempelplatserna och visar intresseanmälan i stället – påverkar inte betalningar. Slå på innan du delar länken publikt.</span></div>
       <div class="switch ${SET.live ? "on" : ""}" role="switch" onclick="SET.live=!SET.live;saveSettings();render()"></div></div>
-    <div class="field" style="margin-top:14px"><label>Formulärlänk för anmälningar (frivilligt)</label>
+    <div class="field" style="margin-top:14px"><label for="formurl">Formulärlänk för anmälningar (frivilligt)</label>
       <input class="inp mono" id="formurl" placeholder="https://formspree.io/f/xxxx" value="${esc(SET.formUrl || "")}"></div>
     <p class="muted small" style="margin-top:8px">Skapa ett gratisformulär hos Formspree eller Tally, klistra in adressen här, så skickas varje anmälan dit automatiskt. Utan länk sparas de på den här enheten.</p>
     <div class="row wrap" style="margin-top:12px">
       <button class="btn btn-sm btn-p" onclick="SET.formUrl=(document.getElementById('formurl').value||'').trim();saveSettings();toast('Sparat','check')">Spara länken</button>
       <button class="btn btn-sm" onclick="copyLeads()">${I("copy", 15)} Kopiera anmälningar (${typeof LEADS !== "undefined" ? LEADS.length : 0})</button>
     </div>
-    <div class="field" style="margin-top:16px;border-top:1px solid var(--rule);padding-top:16px"><label>Meta Pixel-ID för Facebook-annonser (frivilligt)</label>
+    <div class="field" style="margin-top:16px;border-top:1px solid var(--rule);padding-top:16px"><label for="metapixel">Meta Pixel-ID för Facebook-annonser (frivilligt)</label>
       <input class="inp mono" id="metapixel" placeholder="t.ex. 123456789012345" value="${esc(SET.metaPixel || "")}"></div>
     <p class="muted small" style="margin-top:8px">Skapa en pixel i Meta Events Manager, klistra in ID:t här, så mäts besök och anmälningar (Lead) för dina annonser. <b>Obs:</b> pixeln är en marknadsföringscookie – uppdatera integritetspolicyn och lägg en samtyckesruta innan du kör skarpt.</p>
     <div class="row wrap" style="margin-top:12px">
@@ -3219,7 +3236,7 @@ function viewMer() {
     ["meddelanden", "message", "Meddelanden", "Skriv till värdar och förare"],
     ["trygg", "shield", t("nav_trust"), "BankID, skadegaranti, flytta bilen"],
     ["priser", "wallet", t("nav_price"), "Exakt vad vi tar, och varför"],
-    ["skatt", "receipt", "Skatt och regler", "40 000 kr skattefritt, bygglov, förening"],
+    ["skatt", "receipt", "Skatt och regler", "Schablonavdrag på 40 000 kr, bygglov, förening"],
     ["brf", "building", "För föreningar", "Fyll era tomma platser"],
     ["bjudin", "gift", "Bjud in en vän", `Ge ${num(FEES.refForare)} ${sym()}, få ${num(FEES.refVard)} ${sym()}`],
   ];
@@ -3227,8 +3244,8 @@ function viewMer() {
     ["Vad händer om någon inte flyttar bilen?", `Du trycker på ”Flytta bilen”. Vi kontaktar föraren, parkeringen avslutas på sekunden, och står bilen kvar efter fyrtiofem minuter kostar det ${kr(FEES.overtidPerTimme)} per påbörjad timme – hela beloppet till dig. Bärgning kan vi inte lova: att flytta ett fordon från tomtmark är kommunens eller Polisens sak, på markägarens begäran.`],
     ["Kan jag få p-bot på en Parkla-plats?", "Nej. Platsen är privat mark och du har ett giltigt avtal. Skulle du ändå få en kontrollavgift bestrider vi den åt dig och betalar om vi förlorar."],
     ["Måste jag vara hemma när någon parkerar?", "Nej. De flesta uthyrningar sker utan att ni ens träffas. Kod, karta och instruktioner finns i appen."],
-    ["Hur mycket kan jag tjäna?", "En uppfart i Stockholms innerstad: 1 800–2 500 kr i månaden. Märsta nära Arlanda: 1 200–1 700 kr. Förort: 400–900 kr. Med laddbox ungefär 28 % mer."],
-    ["Måste jag betala skatt?", "Oftast inte. Du får tjäna 40 000 kr per bostad och år skattefritt. Appen har en mätare, och vi skickar underlag i januari."],
+    ["Hur mycket kan jag tjäna?", "Det här är uppskattningar från vår prismodell, inte utbetald hyra. En uppfart i Västerås ger ungefär 800–1 200 kr i månaden. Stockholms innerstad: 1 800–2 500 kr. Märsta nära Arlanda: 1 200–1 700 kr. Förort: 400–900 kr. Med laddbox enligt modellen ungefär 28 % mer."],
+    ["Måste jag betala skatt?", "Oftast inte. Du får ofta tjäna upp till 40 000 kr per bostad och år utan skatt (schablonavdrag). Appen har en mätare, och vi skickar underlag i januari."],
     ["Jag bor i bostadsrätt – får jag hyra ut?", "Bara med styrelsens tillstånd. <button class=\"lnk\" onclick=\"openBrfBrev()\">Hämta en färdig fråga åt dig</button>."],
     ["Vad skiljer Parkla från de som redan finns?", "De är gratis och därför tomma – ingen har råd att lösa problemet. Vi tar betalt från dag ett, satsar allt på ett område i taget och är ensamma om en riktig skadegaranti."],
     ["Vad händer om min bil blir skadad där?", "Din egen bilförsäkring gäller som vanligt. Vår garanti täcker det omvända: skador som din bil orsakar på värdens uppfart eller garage."],
@@ -3361,16 +3378,16 @@ function demoBadge() {
 function openLeadHost() {
   openSheet(sheetHead("Anmäl din plats") + `<div class="sheet-b stack">
     <p class="dim">Vi öppnar område för område. Har du en plats hör vi av oss innan vi drar igång där du bor.</p>
-    <div class="field"><label>Adress</label><input class="inp" id="lh_ad" placeholder="Ringvägen 41, Stockholm"></div>
+    <div class="field"><label for="lh_ad">Adress</label><input class="inp" id="lh_ad" placeholder="Ringvägen 41, Stockholm"></div>
     <div class="grid g2" style="gap:12px">
-      <div class="field"><label>Typ av plats</label><select class="inp" id="lh_type">
+      <div class="field"><label for="lh_type">Typ av plats</label><select class="inp" id="lh_type">
         ${Object.keys(TYPE_MULT).map(k => `<option>${k}</option>`).join("")}</select></div>
-      <div class="field"><label>Önskat pris per månad (kr)</label>
+      <div class="field"><label for="lh_pris">Önskat pris per månad (kr)</label>
         <input class="inp mono" id="lh_pris" inputmode="numeric" placeholder="1500"></div>
     </div>
-    <div class="field"><label>Ditt namn</label><input class="inp" id="lh_namn" placeholder="Förnamn Efternamn"></div>
-    <div class="field"><label>E-post</label><input class="inp" type="email" id="lh_mail" placeholder="du@exempel.se"></div>
-    <div class="field"><label>Telefon (frivilligt)</label><input class="inp" type="tel" id="lh_tel" placeholder="070-123 45 67"></div>
+    <div class="field"><label for="lh_namn">Ditt namn</label><input class="inp" id="lh_namn" placeholder="Förnamn Efternamn"></div>
+    <div class="field"><label for="lh_mail">E-post</label><input class="inp" type="email" id="lh_mail" placeholder="du@exempel.se"></div>
+    <div class="field"><label for="lh_tel">Telefon (frivilligt)</label><input class="inp" type="tel" id="lh_tel" placeholder="070-123 45 67"></div>
     <div class="hint">${I("lock", 17)}<div>Vi använder uppgifterna bara för att kontakta dig om Parkla. Du kan när som helst be oss radera dem.</div></div>
     <button class="btn btn-p btn-block btn-lg" onclick="saveLead('vard')">Skicka anmälan</button>
   </div>`);
@@ -3386,12 +3403,12 @@ function viewValkommen() {
        <button class="btn btn-p btn-lg" style="margin-top:20px" onclick="go('hyrut')">${I("wallet", 18)} Lägg upp min plats nu</button>`
     : `<h2 style="font-family:var(--display);font-size:1.6rem;margin:0">Bli en av de första värdarna</h2>
        <p class="dim" style="margin:10px 0 18px">Vi samlar värdar just nu inför en stor lansering till förare. Anmäl dig så hör vi av oss via mejl och telefon så fort vi öppnar. De som är med tidigt går först i kön.</p>
-       <div class="field"><label>Ditt namn</label><input class="inp" id="vk_namn" autocomplete="name" placeholder="Förnamn Efternamn"></div>
+       <div class="field"><label for="vk_namn">Ditt namn</label><input class="inp" id="vk_namn" autocomplete="name" placeholder="Förnamn Efternamn"></div>
        <div class="grid g2" style="gap:12px">
-         <div class="field"><label>E-post</label><input class="inp" type="email" id="vk_mail" autocomplete="email" placeholder="du@exempel.se"></div>
-         <div class="field"><label>Telefon</label><input class="inp" type="tel" id="vk_tel" autocomplete="tel" placeholder="070-123 45 67"></div>
+         <div class="field"><label for="vk_mail">E-post</label><input class="inp" type="email" id="vk_mail" autocomplete="email" placeholder="du@exempel.se"></div>
+         <div class="field"><label for="vk_tel">Telefon</label><input class="inp" type="tel" id="vk_tel" autocomplete="tel" placeholder="070-123 45 67"></div>
        </div>
-       <div class="field"><label>Adress till din plats (frivilligt)</label><input class="inp" id="vk_ad" autocomplete="street-address" placeholder="Ringvägen 41, Västerås"></div>
+       <div class="field"><label for="vk_ad">Adress till din plats (frivilligt)</label><input class="inp" id="vk_ad" autocomplete="street-address" placeholder="Ringvägen 41, Västerås"></div>
        <div class="hint">${I("lock", 17)}<div>Vi använder uppgifterna bara för att kontakta dig om Parkla. Du kan när som helst be oss radera dem.</div></div>
        <button class="btn btn-p btn-block btn-lg" style="margin-top:6px" onclick="saveHostSignup()">Anmäl mig som värd</button>
        <button class="btn btn-block" style="margin-top:8px" onclick="go('hyrut')">Eller lägg upp min plats direkt</button>`;
@@ -3424,7 +3441,7 @@ function viewValkommen() {
     </div>
     <div style="margin-top:22px;padding:24px;background:var(--card);border:1px solid var(--rule);border-radius:18px" id="vk_card">${card}</div>
   </div></section>
-  ${viewStart()}`;
+  ${viewStart().replace("<h1 ", "<h2 ").replace("</h1>", "</h2>")}`;
 }
 /* Showreel-spelare: försöker starta MED ljud direkt. Webbläsare tillåter det ofta bara efter första interaktionen,
    så faller den tillbaka på ljudlöst + pulserande "Spela med ljud", och slår på ljudet vid första tryck/tangent. */
@@ -3467,7 +3484,7 @@ function saveHostSignup() {
   const rec = { typ: "vard", namn: v("vk_namn"), mail: v("vk_mail"), tel: v("vk_tel"), ad: v("vk_ad"),
     kalla: (new URLSearchParams(location.search).get("utm_source") || "").toLowerCase(), tid: new Date().toISOString() };
   if (rec.namn.length < 2) { toast("Fyll i ditt namn", "info"); return; }
-  if (!rec.mail || rec.mail.indexOf("@") < 1) { toast("Fyll i din e-post", "info"); return; }
+  if (!rec.mail || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(rec.mail.trim())) { toast("Fyll i din e-post", "info"); return; }
   if (rec.tel.replace(/\D/g, "").length < 7) { toast("Fyll i ditt telefonnummer", "info"); return; }
   LEADS.unshift(rec); LS.set("leads", LEADS);
   pixelLead("vard");
@@ -3493,7 +3510,7 @@ function openWelcomeCapture() {
     <p class="dim">Vi samlar värdar i ${esc(a.name)} just nu, inför en stor lansering till förare.
       Har du en egen uppfart? Lägg upp den idag. Söker du bara en plats? Lämna din mejl så hör vi
       av oss så fort det finns platser nära dig.</p>
-    <div class="field"><label>E-post</label><input class="inp" type="email" id="wv_mail" placeholder="du@exempel.se"></div>
+    <div class="field"><label for="wv_mail">E-post</label><input class="inp" type="email" id="wv_mail" placeholder="du@exempel.se"></div>
     <div class="hint">${I("lock", 17)}<div>Bara för att höra av oss om Parkla. Du kan när som helst be oss radera uppgifterna.</div></div>
     <button class="btn btn-p btn-block btn-lg" onclick="saveVisitorEmail()">Håll mig uppdaterad</button>
     <button class="btn btn-block" onclick="closeSheet();go('hyrut')">Jag har en plats – lägg upp den nu</button>
@@ -3502,7 +3519,7 @@ function openWelcomeCapture() {
 }
 function saveVisitorEmail() {
   const mail = ((document.getElementById("wv_mail") || {}).value || "").trim();
-  if (!mail || mail.indexOf("@") < 1) { toast("Fyll i din e-post", "info"); return; }
+  if (!mail || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(mail).trim())) { toast("Fyll i din e-post", "info"); return; }
   const a = AREAS.find(x => x.id === S.area) || AREAS[0];
   const rec = { mail: mail, omrade: a.id, tid: new Date().toISOString() };
   LEADS.unshift(Object.assign({ typ: "besokare" }, rec));
@@ -3534,13 +3551,13 @@ function loggaQrSkanning() {
 function openLeadDriver() {
   openSheet(sheetHead("Säg till när det finns platser") + `<div class="sheet-b stack">
     <p class="dim">Skriv var du behöver parkera så hör vi av oss när vi öppnar där.</p>
-    <div class="field"><label>Var behöver du parkera?</label>
+    <div class="field"><label for="ld_var">Var behöver du parkera?</label>
       <input class="inp" id="ld_var" placeholder="Märsta, eller Södermalm"></div>
-    <div class="field"><label>Hur ofta?</label><select class="inp" id="ld_hur">
+    <div class="field"><label for="ld_hur">Hur ofta?</label><select class="inp" id="ld_hur">
       <option>Varje dag</option><option>Några gånger i veckan</option>
       <option>Vid resor till Arlanda</option><option>Vid matcher och evenemang</option>
       <option>Vinterförvar</option></select></div>
-    <div class="field"><label>E-post</label><input class="inp" type="email" id="ld_mail" placeholder="du@exempel.se"></div>
+    <div class="field"><label for="ld_mail">E-post</label><input class="inp" type="email" id="ld_mail" placeholder="du@exempel.se"></div>
     <div class="hint">${I("lock", 17)}<div>Bara för att säga till när vi öppnar. Inget nyhetsbrev.</div></div>
     <button class="btn btn-p btn-block btn-lg" onclick="saveLead('forare')">Skicka</button>
   </div>`);
@@ -3567,7 +3584,7 @@ function saveLead(typ) {
   const rec = typ === "vard"
     ? { typ, ad: v("lh_ad"), plats: v("lh_type"), pris: v("lh_pris"), namn: v("lh_namn"), mail: v("lh_mail"), tel: v("lh_tel") }
     : { typ, omrade: v("ld_var"), hur: v("ld_hur"), mail: v("ld_mail") };
-  if (!rec.mail || rec.mail.indexOf("@") < 1) { toast("Fyll i din e-post", "info"); return; }
+  if (!rec.mail || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(rec.mail.trim())) { toast("Fyll i din e-post", "info"); return; }
   if (typ === "vard" && rec.ad.length < 4) { toast("Fyll i adressen", "info"); return; }
   if (typ === "forare" && rec.omrade.length < 2) { toast("Skriv var du behöver parkera", "info"); return; }
   rec.tid = new Date().toISOString();
@@ -3722,7 +3739,7 @@ function tourSteps() {
       sel: mob ? '#tabbar button[data-go="sok"]' : '.nav a[data-go="sok"]', route: null, radius: 999, place: mob ? "top" : "bottom" },
     { title: "Här räknar du ut vad din plats är värd", body: "Har du en uppfart, carport eller garageplats? Svara på tre frågor så säger vi vad du kan ta betalt.",
       sel: mob ? '#tabbar button[data-go="hyrut"]' : '.nav a[data-go="hyrut"]', radius: 999, place: mob ? "top" : "bottom" },
-    { title: "Här ligger dina pengar", body: "Dina bokningar, dina platser, dina utbetalningar och hur mycket du får tjäna skattefritt.",
+    { title: "Här ligger dina pengar", body: "Dina bokningar, dina platser, dina utbetalningar och hur mycket du ofta får tjäna utan skatt.",
       sel: mob ? '#tabbar button[data-go="mina"]' : '.nav a[data-go="mina"]', radius: 999, place: mob ? "top" : "bottom" },
     { title: "Och här är allt annat", body: "Inställningar, trygghet, priser, skatteregler och vanliga frågor. Du hittar alltid tillbaka hit.",
       sel: mob ? '#tabbar button[data-go="mer"]' : '.nav a[data-go="priser"]', radius: 999, place: mob ? "top" : "bottom" },
@@ -3997,7 +4014,7 @@ function skarptPanelHTML() {
       riktigt. <b>Klistra aldrig in en nyckel som börjar på <span class="mono">sk_</span></b> — den ska bara
       finnas på servern.</p>`}
 
-    <div class="field" style="margin-top:16px"><label>Supabase URL</label>
+    <div class="field" style="margin-top:16px"><label for="cfg-url">Supabase URL</label>
       <input class="inp mono" id="cfg-url" placeholder="https://xxxxxxxx.supabase.co" value="${esc(c.url || "")}"></div>
     <div class="field" style="margin-top:12px"><label>Supabase anon key</label>
       <div class="pwwrap"><input class="inp mono" id="cfg-anon" type="password" placeholder="eyJhbGciOi…" value="${esc(c.anon || "")}">
@@ -4101,7 +4118,7 @@ function openLogin(efterat) {
   LOGIN_EFTER = typeof efterat === "function" ? efterat : null;
   openSheet(sheetHead("Logga in") + `<div class="sheet-b stack">
     <p class="dim" style="margin-top:-6px">Logga in för att boka eller lägga upp din plats. <b>Nytt konto är gratis</b> – du betalar aldrig för att vara med.</p>
-    <div class="field"><label>E-post</label>
+    <div class="field"><label for="log-epost">E-post</label>
       <input class="inp" id="log-epost" type="email" inputmode="email" autocomplete="email"
         placeholder="du@exempel.se" value="${esc(LOGIN_EPOST)}"></div>
     ${losenFalt("log-losen", "Lösenord", "current-password")}
@@ -4161,9 +4178,9 @@ function openSkapaKonto(efterat) {
       ${I("check", 17)}<span><b>Gratis att gå med.</b> Du betalar aldrig för att skapa konto eller lägga upp din plats – vi tar bara en liten avgift när du faktiskt får en bokning.</span></div>
     <input id="reg-hp" name="webbplats" type="text" tabindex="-1" autocomplete="off" aria-hidden="true"
       style="position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none">
-    <div class="field"><label>Namn</label>
+    <div class="field"><label for="reg-namn">Namn</label>
       <input class="inp" id="reg-namn" autocomplete="name" placeholder="För- och efternamn"></div>
-    <div class="field"><label>E-post</label>
+    <div class="field"><label for="reg-epost">E-post</label>
       <input class="inp" id="reg-epost" type="email" inputmode="email" autocomplete="email"
         placeholder="du@exempel.se"></div>
     ${losenFalt("reg-losen", "Välj lösenord", "new-password")}
@@ -4214,7 +4231,7 @@ function skapaKontoNu(knapp) {
 function openGlomt() {
   openSheet(sheetHead("Glömt lösenordet") + `<div class="sheet-b stack">
     <p class="dim">Skriv din mejladress så skickar vi en länk där du väljer ett nytt.</p>
-    <div class="field"><label>E-post</label>
+    <div class="field"><label for="glm-epost">E-post</label>
       <input class="inp" id="glm-epost" type="email" inputmode="email" autocomplete="email"
         placeholder="du@exempel.se" value="${esc(LOGIN_EPOST)}"></div>
     <div class="paysheet-fel" id="log-fel" hidden></div>
@@ -4336,7 +4353,7 @@ function legalPage(title, body) {
 </div></section>
 ${footerHTML()}`;
 }
-function viewVillkor() { return legalPage("Användarvillkor", `${skarptPa() ? "" : `<div class="callout brass"><b>UTKAST — måste granskas av jurist innan publicering.</b></div><div class="callout" style="margin-top:10px">Det här är ett arbetsutkast, inte färdiga villkor. Det är anpassat efter hur Parkla fungerar men ersätter inte juridisk rådgivning. Låt en jurist granska och komplettera innan tjänsten släpps skarpt — särskilt kapitlen om betalning, ansvar, Parkla Trygg och konsumenträtt.</div>`}<h2 style="font-size:1.15rem;margin:26px 0 8px">1. Om Parkla och dessa villkor</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">1.1 Parkla ("<b>Parkla</b>", "<b>vi</b>", "<b>oss</b>") drivs av EEFS AB, org.nr 559585-9694, med adress Slakterigatan 10, 721 32 Västerås och e-post info@parkla.se.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">1.2 Parkla är en <b>förmedlingstjänst</b>. Vi tillhandahåller en digital marknadsplats där en privatperson som förfogar över en parkeringsyta ("<b>Värd</b>") kan erbjuda den till en annan användare som behöver parkera ("<b>Förare</b>"). Vi tillhandahåller även betalningshantering och kringtjänster.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">1.3 <b>Parkla är inte part i avtalet mellan Värd och Förare.</b> Själva upplåtelsen av parkeringsytan är ett avtal som ingås direkt mellan Värd och Förare. Parkla förmedlar kontakten och hanterar betalningen, men äger, hyr, kontrollerar eller ansvarar inte för själva parkeringsplatserna.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">1.4 Genom att skapa ett konto eller använda Parkla godkänner du dessa villkor. Godkänner du dem inte ska du inte använda tjänsten.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">2. Definitioner</h2><ul class="numlist2" style="margin:0 0 10px"><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Plats</b> – den parkeringsyta en Värd lägger upp (uppfart, carport, garage, innergård eller tomt).</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Bokning</b> – en Förares reservation av en Plats för en bestämd tid.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Kör-in</b> – att en Förare ställer sig på en Plats som är öppen just nu, utan bokning i förväg, och betalar för den tid hen faktiskt står.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Parkla Trygg</b> – Parklas egen trygghetsgaranti enligt kapitel 9. Det är en garanti från Parkla, <b>inte en försäkring</b>.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Avgifter</b> – de belopp Parkla tar ut enligt kapitel 6 och den vid var tid gällande prislistan i tjänsten.</li></ul><h2 style="font-size:1.15rem;margin:26px 0 8px">3. Vem får använda Parkla</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">3.1 Du måste vara <b>minst 18 år</b> och ha rättslig handlingsförmåga.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">3.2 Du ansvarar för att uppgifterna du lämnar är korrekta och hålls uppdaterade, och för all aktivitet som sker via ditt konto. Du ska skydda ditt lösenord och genast meddela oss vid misstänkt obehörig användning.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">3.3 Vid skarp lansering kan Parkla kräva legitimering med BankID innan du kan boka eller lägga upp en Plats. Parkla får neka eller stänga av en användare som lämnar felaktiga uppgifter, missbrukar tjänsten eller bryter mot dessa villkor.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">4. Att lägga upp en Plats (Värd)</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">4.1 Du får bara lägga upp en Plats som du <b>själv förfogar över</b>. Bor du i bostadsrätt eller hyresrätt, eller ingår Platsen i en samfällighet, krävs tillstånd från föreningen, hyresvärden eller samfälligheten innan du hyr ut. Du ansvarar för att sådant tillstånd finns.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">4.2 Du ansvarar för att din information om Platsen är korrekt – läge, mått, tillgänglighet, pris och instruktioner – och för att Platsen är användbar och säker att köra in på under bokad tid.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">4.3 <b>Upplåtelsen avser en yta, inte förvaring av fordon.</b> Värden tar aldrig emot fordonet, har inte hand om nyckeln och åtar sig ingen tillsyn eller vård av fordonet. Därmed uppstår ingen vårdplikt för Värden. Föraren parkerar på egen risk, precis som på gatan.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">4.4 Du ansvarar själv för att uthyrningen är tillåten enligt lag och regler som gäller för din fastighet, till exempel plan- och bygglagen och detaljplanebestämmelser. Se informationen under <i>Skatt och regler</i> i tjänsten.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">5. Att boka och parkera (Förare)</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">5.1 När du bokar en Plats, eller kör in på en Plats som är öppen, ingår du ett avtal med Värden om att få nyttja ytan under angiven tid mot betalning.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">5.2 Du ska lämna Platsen senast vid bokningens sluttid, följa Värdens instruktioner och inte använda Platsen till annat än att parkera det fordon du angett. Du får inte överlåta din bokning till någon annan.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">5.3 <b>Ditt fordon är ditt ansvar.</b> Skador på, stöld av eller ur ditt eget fordon täcks av din egen fordons- eller vagnskadeförsäkring, inte av Värden eller Parkla.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">5.4 Står du kvar efter sluttiden tillkommer en övertidsersättning enligt den prislista som visas innan du bokar (se kapitel 6). Övertidsersättning är en i förväg avtalad ersättning för fortsatt nyttjande – <b>inte</b> en kontrollavgift enligt lagen om kontrollavgift vid olovlig parkering.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">6. Priser, avgifter och betalning</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">6.1 Värden bestämmer sitt pris. Ovanpå Värdens pris tar Parkla ut de avgifter som framgår av prislistan i tjänsten – i dagsläget en serviceavgift från Föraren, en andel av Värdens hyra samt en avgift för Parkla Trygg. Samtliga belopp visas för Föraren innan bokningen bekräftas.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">6.2 Betalning sker via vår betalningspartner <b>Stripe</b>. Genom att betala godkänner du även Stripes villkor. Parkla lagrar aldrig dina fullständiga kortuppgifter.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">6.3 <b>Utbetalning till Värd.</b> Värdens andel betalas ut via Stripe till det konto Värden kopplat. För att kunna ta emot betalning måste Värden slutföra Stripes identitets- och kontokontroll. Parkla håller inte Värdens pengar och gör inga manuella utbetalningar.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">6.4 <b>Kör-in och reservation.</b> Vid kör-in reserveras ett takbelopp på Förarens kort när parkeringen påbörjas. När Föraren avslutar dras endast beloppet för den tid som faktiskt stått, och resten av reservationen släpps.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">6.5 <b>Avbokning och återbetalning.</b> En bokning kan avbokas enligt de villkor som visas vid bokningstillfället. I dagsläget: avbokning tidigare än 24 timmar före start ger hela beloppet åter, senare än så halva beloppet. En bokning som kräver Värdens godkännande debiteras inte förrän Värden tackat ja.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">7. Ångerrätt (konsument)</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">7.1 Vid distansavtal har en konsument som huvudregel 14 dagars ångerrätt enligt lagen om distansavtal och avtal utanför affärslokaler.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">7.2 Ångerrätten gäller <b>inte</b> för en tjänst som ska utföras en bestämd dag eller under en bestämd tidsperiod (t.ex. en parkering en viss dag eller en säsong), när du uttryckligen begärt att tjänsten ska påbörjas. Du bekräftar detta i samband med bokningen.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">8. Uppförande och otillåten användning</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Du får inte: lägga upp en Plats du inte förfogar över; lämna vilseledande uppgifter; kringgå Parkla för att undvika avgifter; använda tjänsten för något olagligt; trakassera andra användare; eller försöka störa eller kringgå tjänstens säkerhet. Brott mot detta kan leda till avstängning och, i allvarliga fall, polisanmälan.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">9. Parkla Trygg (trygghetsgaranti)</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">9.1 Parkla Trygg är en <b>frivillig garanti från Parkla</b>, inte en försäkring. Parkla ersätter ur egen ficka enligt dessa villkor och tar därefter över kravet mot den som orsakat skadan. Ordet "försäkring" används inte, eftersom försäkringsverksamhet kräver tillstånd från Finansinspektionen.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">9.2 När garantin är i drift ersätter den en Värd för skada som en Förare orsakat på Värdens egendom under en bokning – upp till det belopp och enligt de villkor som anges i tjänsten (bl.a. anmälan inom viss tid samt foto före och efter).</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">9.3 Garantin omfattar <b>inte</b>: Förarens eget fordon; stöld ur eller av fordon; bärgning eller flyttning av fordon; skador av snö, halka eller väder; skador som fanns före bokningen; eller skada som Värden själv orsakat.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">9.4 Garantins tak och exakta villkor framgår av tjänsten och kan komma att ändras. Tills garantin backas av en försäkringspartner bär Parkla risken själv med ett lägre tak per händelse.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">10. Bärgning och fordon som lämnas kvar</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Parkla bärgar eller flyttar inte fordon. Flyttning av fordon från tomtmark är enligt lagen om flyttning av fordon en fråga för kommunen eller Polismyndigheten på markägarens begäran. Vid fara för liv eller egendom ska 112 kontaktas.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">11. Skatt</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Värden ansvarar själv för att redovisa och betala eventuell skatt på sina intäkter. Parkla är en rapporteringsskyldig plattform enligt EU:s DAC7-regler och rapporterar Värdens ersättning till Skatteverket samt lämnar Värden motsvarande underlag. Informationen under <i>Skatt och regler</i> är en sammanfattning, inte skatterådgivning.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">12. Parklas ansvar</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">12.1 Parkla tillhandahåller en förmedlings- och betaltjänst. Vi ansvarar inte för Värdars eller Förares agerande, för Platsers skick eller tillgänglighet, eller för avtalet dem emellan.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">12.2 Parkla ansvarar inte för indirekta skador eller följdskador. Parklas sammanlagda ansvar gentemot en användare för en enskild bokning är, i den mån lag tillåter, begränsat till de avgifter Parkla tagit ut för just den bokningen. Inget i dessa villkor begränsar ansvar som enligt tvingande lag inte får begränsas, t.ex. vid uppsåt eller grov vårdslöshet, eller en konsuments tvingande rättigheter.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">12.3 Parkla ansvarar inte för avbrott eller fel som beror på omständigheter utanför vår rimliga kontroll (force majeure).</p><h2 style="font-size:1.15rem;margin:26px 0 8px">13. Ändringar, uppsägning och giltighet</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">13.1 Vi kan uppdatera dessa villkor. Väsentliga ändringar meddelas i tjänsten eller via e-post i skälig tid innan de träder i kraft.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">13.2 Du kan när som helst avsluta ditt konto. Vi kan säga upp eller stänga av ett konto vid brott mot villkoren eller om det krävs enligt lag. Bokningar och betalningar som redan genomförts påverkas inte.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">14. Tillämplig lag och tvist</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">14.1 Svensk lag gäller.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">14.2 Är du konsument kan du vända dig till Allmänna reklamationsnämnden (ARN), Box 174, 101 23 Stockholm, arn.se, eller till EU:s plattform för tvistlösning online. Tvist kan även prövas av allmän domstol.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">15. Kontakt</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">EEFS AB · org.nr 559585-9694 · Slakterigatan 10, 721 32 Västerås · info@parkla.se</p>`); }
+function viewVillkor() { return legalPage("Användarvillkor", `${skarptPa() ? "" : `<div class="callout brass"><b>UTKAST — måste granskas av jurist innan publicering.</b></div><div class="callout" style="margin-top:10px">Det här är ett arbetsutkast, inte färdiga villkor. Det är anpassat efter hur Parkla fungerar men ersätter inte juridisk rådgivning. Låt en jurist granska och komplettera innan tjänsten släpps skarpt — särskilt kapitlen om betalning, ansvar, Parkla Trygg och konsumenträtt.</div>`}<h2 style="font-size:1.15rem;margin:26px 0 8px">1. Om Parkla och dessa villkor</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">1.1 Parkla ("<b>Parkla</b>", "<b>vi</b>", "<b>oss</b>") drivs av EEFS AB, org.nr 559585-9694, med adress Slakterigatan 10, 721 32 Västerås och e-post info@parkla.se.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">1.2 Parkla är en <b>förmedlingstjänst</b>. Vi tillhandahåller en digital marknadsplats där en privatperson som förfogar över en parkeringsyta ("<b>Värd</b>") kan erbjuda den till en annan användare som behöver parkera ("<b>Förare</b>"). Vi tillhandahåller även betalningshantering och kringtjänster.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">1.3 <b>Parkla är inte part i avtalet mellan Värd och Förare.</b> Själva upplåtelsen av parkeringsytan är ett avtal som ingås direkt mellan Värd och Förare. Parkla förmedlar kontakten och hanterar betalningen, men äger, hyr, kontrollerar eller ansvarar inte för själva parkeringsplatserna.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">1.4 Genom att skapa ett konto eller använda Parkla godkänner du dessa villkor. Godkänner du dem inte ska du inte använda tjänsten.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">2. Definitioner</h2><ul class="numlist2" style="margin:0 0 10px"><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Plats</b> – den parkeringsyta en Värd lägger upp (uppfart, carport, garage, innergård eller tomt).</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Bokning</b> – en Förares reservation av en Plats för en bestämd tid.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Kör-in</b> – att en Förare ställer sig på en Plats som är öppen just nu, utan bokning i förväg, och betalar för den tid hen faktiskt står.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Parkla Trygg</b> – Parklas egen trygghetsgaranti enligt kapitel 9. Det är en garanti från Parkla, <b>inte en försäkring</b>.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Avgifter</b> – de belopp Parkla tar ut enligt kapitel 6 och den vid var tid gällande prislistan i tjänsten.</li></ul><h2 style="font-size:1.15rem;margin:26px 0 8px">3. Vem får använda Parkla</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">3.1 Du måste vara <b>minst 18 år</b> och ha rättslig handlingsförmåga.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">3.2 Du ansvarar för att uppgifterna du lämnar är korrekta och hålls uppdaterade, och för all aktivitet som sker via ditt konto. Du ska skydda ditt lösenord och genast meddela oss vid misstänkt obehörig användning.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">3.3 Vid skarp lansering kan Parkla kräva legitimering med BankID innan du kan boka eller lägga upp en Plats. Parkla får neka eller stänga av en användare som lämnar felaktiga uppgifter, missbrukar tjänsten eller bryter mot dessa villkor.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">4. Att lägga upp en Plats (Värd)</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">4.1 Du får bara lägga upp en Plats som du <b>själv förfogar över</b>. Bor du i bostadsrätt eller hyresrätt, eller ingår Platsen i en samfällighet, krävs tillstånd från föreningen, hyresvärden eller samfälligheten innan du hyr ut. Du ansvarar för att sådant tillstånd finns.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">4.2 Du ansvarar för att din information om Platsen är korrekt – läge, mått, tillgänglighet, pris och instruktioner – och för att Platsen är användbar och säker att köra in på under bokad tid.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">4.3 <b>Upplåtelsen avser en yta, inte förvaring av fordon.</b> Värden tar aldrig emot fordonet, har inte hand om nyckeln och åtar sig ingen tillsyn eller vård av fordonet. Därmed uppstår ingen vårdplikt för Värden. Föraren parkerar på egen risk, precis som på gatan.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">4.4 Du ansvarar själv för att uthyrningen är tillåten enligt lag och regler som gäller för din fastighet, till exempel plan- och bygglagen och detaljplanebestämmelser. Se informationen under <i>Skatt och regler</i> i tjänsten.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">5. Att boka och parkera (Förare)</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">5.1 När du bokar en Plats, eller kör in på en Plats som är öppen, ingår du ett avtal med Värden om att få nyttja ytan under angiven tid mot betalning.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">5.2 Du ska lämna Platsen senast vid bokningens sluttid, följa Värdens instruktioner och inte använda Platsen till annat än att parkera det fordon du angett. Du får inte överlåta din bokning till någon annan.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">5.3 <b>Ditt fordon är ditt ansvar.</b> Skador på, stöld av eller ur ditt eget fordon täcks av din egen fordons- eller vagnskadeförsäkring, inte av Värden eller Parkla.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">5.4 Står du kvar efter sluttiden tillkommer en övertidsersättning enligt den prislista som visas innan du bokar (se kapitel 6). Övertidsersättning är en i förväg avtalad ersättning för fortsatt nyttjande – <b>inte</b> en kontrollavgift enligt lagen om kontrollavgift vid olovlig parkering.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">6. Priser, avgifter och betalning</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">6.1 Värden bestämmer sitt pris. Ovanpå Värdens pris tar Parkla ut de avgifter som framgår av prislistan i tjänsten – i dagsläget en serviceavgift från Föraren, en andel av Värdens hyra samt en avgift för Parkla Trygg. Samtliga belopp visas för Föraren innan bokningen bekräftas.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">6.2 Betalning sker via vår betalningspartner <b>Stripe</b>. Genom att betala godkänner du även Stripes villkor. Parkla lagrar aldrig dina fullständiga kortuppgifter.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">6.3 <b>Utbetalning till Värd.</b> Värdens andel betalas ut via Stripe till det konto Värden kopplat. För att kunna ta emot betalning måste Värden slutföra Stripes identitets- och kontokontroll. Parkla håller inte Värdens pengar och gör inga manuella utbetalningar.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">6.4 <b>Kör-in och reservation.</b> Vid kör-in reserveras ett takbelopp på Förarens kort när parkeringen påbörjas. När Föraren avslutar dras endast beloppet för den tid som faktiskt stått, och resten av reservationen släpps.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">6.5 <b>Avbokning och återbetalning.</b> En bokning kan avbokas enligt de villkor som visas vid bokningstillfället. I dagsläget: avbokning tidigare än 24 timmar före start ger hela beloppet åter, senare än så halva beloppet. En bokning som kräver Värdens godkännande debiteras inte förrän Värden tackat ja.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">7. Ångerrätt (konsument)</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">7.1 Vid distansavtal har en konsument som huvudregel 14 dagars ångerrätt enligt lagen om distansavtal och avtal utanför affärslokaler.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">7.2 Ångerrätten gäller <b>inte</b> för en tjänst som ska utföras en bestämd dag eller under en bestämd tidsperiod (t.ex. en parkering en viss dag eller en säsong), när du uttryckligen begärt att tjänsten ska påbörjas. Du bekräftar detta i samband med bokningen.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">8. Uppförande och otillåten användning</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Du får inte: lägga upp en Plats du inte förfogar över; lämna vilseledande uppgifter; kringgå Parkla för att undvika avgifter; använda tjänsten för något olagligt; trakassera andra användare; eller försöka störa eller kringgå tjänstens säkerhet. Brott mot detta kan leda till avstängning och, i allvarliga fall, polisanmälan.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">9. Parkla Trygg (trygghetsgaranti)</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">9.1 Parkla Trygg är en <b>garanti som Parkla självmant lämnar</b> (ingen lagstadgad skyldighet) och <b>ingår i varje bokning och i priset du ser</b>. Den är inte en försäkring. Parkla ersätter ur egen ficka enligt dessa villkor och tar därefter över kravet mot den som orsakat skadan. Ordet "försäkring" används inte, eftersom försäkringsverksamhet kräver tillstånd från Finansinspektionen.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">9.2 När garantin är i drift ersätter den en Värd för skada som en Förare orsakat på Värdens egendom under en bokning – upp till det belopp och enligt de villkor som anges i tjänsten (bl.a. anmälan inom viss tid samt foto före och efter).</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">9.3 Garantin omfattar <b>inte</b>: Förarens eget fordon; stöld ur eller av fordon; bärgning eller flyttning av fordon; skador av snö, halka eller väder; skador som fanns före bokningen; eller skada som Värden själv orsakat.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">9.4 Garantins tak och exakta villkor framgår av tjänsten och kan komma att ändras. Tills garantin backas av en försäkringspartner bär Parkla risken själv med ett lägre tak per händelse.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">10. Bärgning och fordon som lämnas kvar</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Parkla bärgar eller flyttar inte fordon. Flyttning av fordon från tomtmark är enligt lagen om flyttning av fordon en fråga för kommunen eller Polismyndigheten på markägarens begäran. Vid fara för liv eller egendom ska 112 kontaktas.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">11. Skatt</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Värden ansvarar själv för att redovisa och betala eventuell skatt på sina intäkter. Parkla är en rapporteringsskyldig plattform enligt EU:s DAC7-regler och rapporterar Värdens ersättning till Skatteverket samt lämnar Värden motsvarande underlag. Informationen under <i>Skatt och regler</i> är en sammanfattning, inte skatterådgivning.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">12. Parklas ansvar</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">12.1 Parkla tillhandahåller en förmedlings- och betaltjänst. Vi ansvarar inte för Värdars eller Förares agerande, för Platsers skick eller tillgänglighet, eller för avtalet dem emellan.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">12.2 Parkla ansvarar inte för indirekta skador eller följdskador. Parklas sammanlagda ansvar gentemot en användare för en enskild bokning är, i den mån lag tillåter, begränsat till de avgifter Parkla tagit ut för just den bokningen. Inget i dessa villkor begränsar ansvar som enligt tvingande lag inte får begränsas, t.ex. vid uppsåt eller grov vårdslöshet, eller en konsuments tvingande rättigheter.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">12.3 Parkla ansvarar inte för avbrott eller fel som beror på omständigheter utanför vår rimliga kontroll (force majeure).</p><h2 style="font-size:1.15rem;margin:26px 0 8px">13. Ändringar, uppsägning och giltighet</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">13.1 Vi kan uppdatera dessa villkor. Väsentliga ändringar meddelas i tjänsten eller via e-post i skälig tid innan de träder i kraft.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">13.2 Du kan när som helst avsluta ditt konto. Vi kan säga upp eller stänga av ett konto vid brott mot villkoren eller om det krävs enligt lag. Bokningar och betalningar som redan genomförts påverkas inte.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">14. Tillämplig lag och tvist</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">14.1 Svensk lag gäller.</p><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">14.2 Är du konsument kan du vända dig till Allmänna reklamationsnämnden (ARN), Box 174, 101 23 Stockholm, arn.se, eller till EU:s plattform för tvistlösning online. Tvist kan även prövas av allmän domstol.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">15. Kontakt</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">EEFS AB · org.nr 559585-9694 · Slakterigatan 10, 721 32 Västerås · info@parkla.se</p>`); }
 function viewIntegritet() { return legalPage("Integritetspolicy", `${skarptPa() ? "" : `<div class="callout brass"><b>UTKAST — måste granskas av jurist/dataskyddsexpert innan publicering.</b></div><div class="callout" style="margin-top:10px">Arbetsutkast enligt EU:s dataskyddsförordning (GDPR). Anpassat efter hur Parkla är byggt, men ska granskas och kompletteras – särskilt med personuppgiftsbiträdesavtal och en slutlig lista över mottagare – innan tjänsten släpps skarpt.</div>`}<h2 style="font-size:1.15rem;margin:26px 0 8px">1. Personuppgiftsansvarig</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">EEFS AB, org.nr 559585-9694, Slakterigatan 10, 721 32 Västerås, ansvarar för behandlingen av dina personuppgifter i Parkla. Kontakt i dataskyddsfrågor: info@parkla.se.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">2. Vilka uppgifter vi behandlar</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Beroende på hur du använder Parkla behandlar vi:</p><ul class="numlist2" style="margin:0 0 10px"><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Kontouppgifter</b> – namn, e-postadress, lösenord (krypterat) och, vid skarp lansering, legitimering via BankID.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Kontaktuppgifter</b> – telefonnummer om du anger det.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Uppgifter om en Plats</b> (Värd) – adress och läge, beskrivning, pris och öppettider. Exakt adress visas för en Förare först vid en aktiv bokning.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Bokningsuppgifter</b> – vilka platser, tider och belopp, samt fordonets registreringsnummer.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Betaluppgifter</b> – hanteras av vår betalningspartner Stripe. Parkla lagrar aldrig dina fullständiga kortuppgifter, endast referens och status.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Platsdata</b> – ungefärlig eller exakt position om du väljer att aktivera platstjänster i din enhet. Detta är frivilligt.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Kommunikation</b> – meddelanden mellan användare och med vår kundtjänst.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Teknisk data</b> – enhet, webbläsare, IP-adress och loggar, för säkerhet och drift.</li></ul><h2 style="font-size:1.15rem;margin:26px 0 8px">3. Varför vi behandlar uppgifterna och med vilken laglig grund</h2><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Ändamål</span><b style="text-align:right;max-width:24ch">Laglig grund</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Skapa och hantera ditt konto, genomföra bokningar och betalningar</span><b style="text-align:right;max-width:24ch">Fullgörande av avtal</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Ta ut avgifter och betala ut till Värd</span><b style="text-align:right;max-width:24ch">Fullgörande av avtal</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Förebygga bedrägeri och missbruk, hålla tjänsten säker</span><b style="text-align:right;max-width:24ch">Berättigat intresse</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Kundtjänst och support</span><b style="text-align:right;max-width:24ch">Fullgörande av avtal / berättigat intresse</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Bokföring</span><b style="text-align:right;max-width:24ch">Rättslig förpliktelse (bokföringslagen)</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Rapportering av Värdars ersättning till Skatteverket</span><b style="text-align:right;max-width:24ch">Rättslig förpliktelse (DAC7)</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Platstjänster i appen</span><b style="text-align:right;max-width:24ch">Samtycke (kan återkallas när som helst)</b></div><div class="kv" style="align-items:flex-start"><span style="max-width:52ch">Utskick om nyheter, om du valt det</span><b style="text-align:right;max-width:24ch">Samtycke</b></div><h2 style="font-size:1.15rem;margin:26px 0 8px">4. Vilka som får del av uppgifterna</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Vi säljer aldrig dina uppgifter. Vi delar dem endast med:</p><ul class="numlist2" style="margin:0 0 10px"><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Andra användare i den utsträckning en bokning kräver</b> – en Värd ser Förarens namn och registreringsnummer för en bokning; en Förare ser Platsens uppgifter och, vid aktiv bokning, exakt adress och eventuell portkod. Ditt telefonnummer lämnas inte ut.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Personuppgiftsbiträden</b> som behandlar uppgifter för vår räkning, bland annat:</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Stripe</b> – betalningar och utbetalningar.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Supabase</b> – databas och drift (servrar inom EU, Stockholm).</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">E-postleverantör för aviseringar och inloggningsmejl.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Myndigheter</b> när lag kräver det, t.ex. Skatteverket enligt DAC7.</li></ul><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Med varje biträde finns eller ska finnas ett personuppgiftsbiträdesavtal.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">5. Överföring utanför EU/EES</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Vi strävar efter att behandla uppgifter inom EU/EES. Databasen ligger i EU (Stockholm). Vissa leverantörer, t.ex. Stripe, kan behandla uppgifter i tredje land; det sker i så fall med lagens skyddsåtgärder, som EU-kommissionens standardavtalsklausuler.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">6. Hur länge vi sparar uppgifterna</h2><ul class="numlist2" style="margin:0 0 10px"><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Kontouppgifter</b> – så länge du har ett konto. Avslutar du kontot raderar eller anonymiserar vi uppgifterna.</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch"><b>Boknings- och betalningsunderlag</b> – sparas så länge det krävs enligt bokföringslagen (sju år).</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">När vi anonymiserar behåller vi ekonomiska poster utan koppling till dig som person.</li></ul><h2 style="font-size:1.15rem;margin:26px 0 8px">7. Dina rättigheter</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Du har rätt att:</p><ul class="numlist2" style="margin:0 0 10px"><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">få veta vilka uppgifter vi behandlar om dig (registerutdrag),</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">få felaktiga uppgifter rättade,</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">få uppgifter raderade ("rätten att bli bortglömd"), i den mån vi inte måste behålla dem enligt lag,</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">begära begränsning av eller invända mot viss behandling,</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">få ut uppgifter du lämnat i ett maskinläsbart format (dataportabilitet),</li><li style="margin:0 0 6px;line-height:1.55;max-width:68ch">återkalla ett samtycke när som helst.</li></ul><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Kontakta oss på info@parkla.se. Du har också rätt att klaga till <b>Integritetsskyddsmyndigheten (IMY)</b>, Box 8114, 104 20 Stockholm, imy.se.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">8. Cookies och lokal lagring</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Parkla sparar inställningar och sessionsdata lokalt i din webbläsare (localStorage) för att appen ska fungera – det är inte spårningscookies för marknadsföring. Om du samtycker kan vi använda en pixel från Meta (Facebook) för att mäta hur våra annonser fungerar; den är avstängd tills du aktivt tackat ja, och du kan alltid tacka nej. Kartan använder en kart­tjänst som kan hämta kartrutor från en extern leverantör. En fullständig cookie- och lagringsförteckning läggs till innan skarp lansering.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">9. Säkerhet</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Vi använder tekniska och organisatoriska åtgärder för att skydda dina uppgifter, bland annat krypterad överföring, åtkomstkontroll på databasnivå och att känsliga uppgifter som portkoder och exakt adress bara lämnas ut till den som har en aktiv bokning.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">10. Barn</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Parkla riktar sig inte till personer under 18 år och vi behandlar inte medvetet uppgifter om barn.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">11. Ändringar</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">Vi kan uppdatera denna policy. Väsentliga ändringar meddelas i tjänsten eller via e-post.</p><h2 style="font-size:1.15rem;margin:26px 0 8px">12. Kontakt</h2><p class="dim" style="margin:0 0 10px;line-height:1.6;max-width:70ch">EEFS AB · org.nr 559585-9694 · Slakterigatan 10, 721 32 Västerås · info@parkla.se</p>`); }
 
 const VIEWS = {
@@ -4391,6 +4408,7 @@ function render() {
   const _pv = S.route === "valkommen" && document.querySelector("#pkf video");
   if (_pv) window.__pkfState = { t: _pv.currentTime, muted: _pv.muted };
   document.getElementById("app").innerHTML = (VIEWS[S.route] || viewStart)();
+  { const T = { valkommen: "Parkla – hyr ut din uppfart", start: "Parkla – hyr ut din uppfart", hem: "Parkla", sok: "Hitta parkering | Parkla", hyrut: "Hyr ut din plats | Parkla", mina: "Min sida | Parkla", mer: "Mer | Parkla", trygg: "Trygghet | Parkla", priser: "Priser och avgifter | Parkla", skatt: "Skatt för värdar | Parkla", brf: "För bostadsrättsföreningar | Parkla", affar: "För företag | Parkla", villkor: "Användarvillkor | Parkla", integritet: "Integritetspolicy | Parkla", evenemang: "Evenemang | Parkla", meddelanden: "Meddelanden | Parkla", installningar: "Inställningar | Parkla", bjudin: "Bjud in | Parkla", vinterforvar: "Vinterförvar | Parkla" }; document.title = T[S.route] || "Parkla"; }
   document.getElementById("nav").innerHTML = navHTML();
   document.getElementById("tabbar").innerHTML = tabbarHTML();
   let sb = document.getElementById("sessbox");
@@ -4507,7 +4525,7 @@ setTimeout(function () {
     LS.set("valkomstruta_visad", true);
     if (typeof openWelcomeCapture === "function") openWelcomeCapture();
   }
-}, 3500);
+}, 20000);
 if (!LS.get("seen", false) && S.route !== "valkommen") {
   LS.set("seen", true);
   setTimeout(() => openSheet(`<div class="sheet-b center" style="padding-top:34px">
