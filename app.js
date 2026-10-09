@@ -4417,7 +4417,12 @@ function render() {
   const _pv = S.route === "valkommen" && document.querySelector("#pkf video");
   if (_pv) window.__pkfState = { t: _pv.currentTime, muted: _pv.muted };
   document.getElementById("app").innerHTML = (VIEWS[S.route] || viewStart)();
-  { const T = { valkommen: "Parkla – hyr ut din uppfart", start: "Parkla – hyr ut din uppfart", hem: "Parkla", sok: "Hitta parkering | Parkla", hyrut: "Hyr ut din plats | Parkla", mina: "Min sida | Parkla", mer: "Mer | Parkla", trygg: "Trygghet | Parkla", priser: "Priser och avgifter | Parkla", skatt: "Skatt för värdar | Parkla", brf: "För bostadsrättsföreningar | Parkla", affar: "För företag | Parkla", villkor: "Användarvillkor | Parkla", integritet: "Integritetspolicy | Parkla", evenemang: "Evenemang | Parkla", meddelanden: "Meddelanden | Parkla", installningar: "Inställningar | Parkla", bjudin: "Bjud in | Parkla", vinterforvar: "Vinterförvar | Parkla" }; document.title = T[S.route] || "Parkla"; }
+  { const T = { valkommen: "Parkla – hyr ut din uppfart", start: "Parkla – hyr ut din uppfart", hem: "Parkla", sok: "Hitta parkering | Parkla", hyrut: "Hyr ut din plats | Parkla", mina: "Min sida | Parkla", mer: "Mer | Parkla", trygg: "Trygghet | Parkla", priser: "Priser och avgifter | Parkla", skatt: "Skatt för värdar | Parkla", brf: "För bostadsrättsföreningar | Parkla", affar: "För företag | Parkla", villkor: "Användarvillkor | Parkla", integritet: "Integritetspolicy | Parkla", evenemang: "Evenemang | Parkla", meddelanden: "Meddelanden | Parkla", installningar: "Inställningar | Parkla", bjudin: "Bjud in | Parkla", vinterforvar: "Vinterförvar | Parkla" }; document.title = T[S.route] || "Parkla"; } 
+  { /* K2: varje vy har en H1 (dold om vyn saknar egen) och en canonical per rutt */
+    const app = document.getElementById("app");
+    if (app && !app.querySelector("h1")) { const h = document.createElement("h1"); h.className = "sr-only"; h.style.cssText = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"; h.textContent = (document.title || "Parkla").replace(/ \| Parkla$/, ""); app.prepend(h); }
+    const cn = document.querySelector('link[rel="canonical"]'); if (cn) cn.href = "https://parkla.se/" + (S.route && !["start","valkommen","hem"].includes(S.route) ? "#" + S.route : "");
+  }
   document.getElementById("nav").innerHTML = navHTML();
   document.getElementById("tabbar").innerHTML = tabbarHTML();
   let sb = document.getElementById("sessbox");
