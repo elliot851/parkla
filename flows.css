@@ -510,3 +510,6 @@ body.harsession{padding-bottom:calc(128px + env(safe-area-inset-bottom))}
 
 /* Granskning 2026-10-07 (F13): mer botten under innehallet sa hjalpknappen inte skymmer falt, 16 px i falt sa iOS inte zoomar, stora tryckytor i sidfoten */
 @media(max-width:700px){main#app{padding-bottom:140px}input,select,textarea{font-size:16px !important}}
+
+/* Granskning v3 K4: på mobil ligger Hjälp som en liten ikon uppe till höger, så den aldrig täcker 'Anmäl mig som värd' eller fält. */
+@media(max-width:700px){.helpfab{top:calc(10px + env(safe-area-inset-top));bottom:auto !important;right:10px;padding:9px 10px}.helpfab span{display:none}}
