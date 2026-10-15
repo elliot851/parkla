@@ -683,3 +683,12 @@ footer a:hover{color:var(--green)}
 /* Botskydd: osynligt fält för robotar (granskning v4 F10) */
 .hpf{position:absolute!important;left:-10000px!important;width:1px;height:1px;overflow:hidden}
 
+
+/* Villkor och integritetspolicy hämtas från de fristående sidorna (2026-10-15): samma rytm som de gamla inbyggda kopiorna */
+.legalbody h2{font-size:1.15rem;margin:26px 0 8px;line-height:1.3}
+.legalbody h3{font-size:1rem;margin:18px 0 6px}
+.legalbody p,.legalbody li{line-height:1.6;max-width:70ch}
+.legalbody p.cl{margin:6px 0}
+.legalbody .upd{color:var(--ink-45);font-size:.9rem}
+.legalbody table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.92rem}.legalbody th,.legalbody td{border:1px solid var(--rule);padding:8px 10px;text-align:left;vertical-align:top}
+
