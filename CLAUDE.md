@@ -81,8 +81,12 @@ Hosting = GitHub Pages, repo `elliot851/parkla`, branch `main`, custom domain
 `parkla.se` (CNAME-filen). Bygger om ~30–90 s efter varje ändring på `main`.
 
 1. Ändra filerna.
-2. Bumpa version i SAMMA commit: `data.js` (`VERSION`), `sw.js` (`CACHE`),
-   `version.json`, och ALLA `?v=`-querystrings i `index.html`.
+2. Bumpa version i SAMMA commit: `node bump.mjs` (sätter `data.js` `VERSION`,
+   `version.json`, `sw.js` `CACHE` och ALLA `?v=` i `index.html` på en gång),
+   sedan `node bump.mjs --check`. ⛔ version.json och data.js får ALDRIG skilja
+   sig: 2026-10-11 publicerades version.json utan data.js och sajten laddade om
+   sig själv i en loop för varje besökare (granskning v4 A1). flows.js laddar
+   sedan 2026-10-15 bara om en gång per version och behåller #-delen.
 3. Syntaxkolla `app.js` om ändrad (se avsnitt 2).
 4. `git push origin main`, ELLER `../deploy-files.sh <fil1> <fil2> …` (PUT:ar
    namngivna filer via GitHub Contents API, skapar en commit per fil, kräver
