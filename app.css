@@ -679,3 +679,7 @@ footer a:hover{color:var(--green)}
 @keyframes pkf-ping{0%{transform:scale(.92);opacity:.9}100%{transform:scale(1.18);opacity:0}}
 @media (max-width:600px){.pkf__btn{height:36px;font-size:13px;padding:0 13px;gap:8px}.pkf__round{width:36px;padding:0}.pkf__btn svg{width:16px;height:16px}.pkf__bar{left:10px;right:10px;bottom:10px;gap:8px}}
 @media (prefers-reduced-motion:reduce){.pkf.is-hint .pkf__sound::after,.pkf.is-sound.is-playing .pkf__eq i{animation:none}}
+
+/* Botskydd: osynligt fält för robotar (granskning v4 F10) */
+.hpf{position:absolute!important;left:-10000px!important;width:1px;height:1px;overflow:hidden}
+

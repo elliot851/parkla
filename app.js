@@ -237,8 +237,10 @@ function go(r) {
 }
 
 /* ---------------- Meny ---------------- */
+/* Evenemang visas bara när det finns kommande evenemang (granskning v4 A4: inga löften om matchpriser utan matcher). */
+const harEvenemang = () => EVENTS.some(e => new Date(e.date + "T23:59") >= new Date());
 function navHTML() {
-  const items = [["hyrut", t("nav_rent")], ["evenemang", t("nav_events")],
+  const items = [["hyrut", t("nav_rent")], ...(harEvenemang() ? [["evenemang", t("nav_events")]] : []),
                  ["trygg", t("nav_trust")], ["priser", t("nav_price")], ["mina", t("nav_me")]];
   return items.map(([r, l]) => `<a href="#${r}" data-go="${r}" class="${S.route === r ? "on" : ""}">${esc(l)}</a>`).join("")
     + `<a href="#sok" data-go="sok" class="cta">${esc(t("nav_cta"))}</a>`;
@@ -261,7 +263,7 @@ function footerHTML() {
     </div>
     <div><h5>För förare</h5><ul>
       <li><a href="#sok" data-go="sok">Hitta parkering</a></li>
-      <li><a href="#evenemang" data-go="evenemang">Evenemang</a></li>
+      ${harEvenemang() ? `<li><a href="#evenemang" data-go="evenemang">Evenemang</a></li>` : ""}
       <li><a href="#vinterforvar" data-go="vinterforvar">Vinterförvar</a></li>
       <li><a href="#trygg" data-go="trygg">Så fungerar det</a></li>
       <li><a href="#priser" data-go="priser">Priser</a></li></ul></div>
@@ -738,7 +740,7 @@ function viewSok() {
   <div class="askrow"><b>Hur länge behöver du plats?</b>
     <button class="helplink" onclick="startTour()">${I("info", 15)} Visa hur appen funkar</button></div>
   <div class="modegrid" id="modeSeg">
-    ${[["timme", t("hour")], ["dygn", t("day")], ["vecka", t("week")], ["manad", t("month")], ["evenemang", t("event")], ["sasong", "Vinterförvar"]]
+    ${[["timme", t("hour")], ["dygn", t("day")], ["vecka", t("week")], ["manad", t("month")], ...(harEvenemang() ? [["evenemang", t("event")]] : []), ["sasong", "Vinterförvar"]]
       .map(([k, l]) => `<button data-mode="${k}" class="${S.mode === k ? "on" : ""}" onclick="setMode('${k}')">${esc(l)}</button>`).join("")}
   </div>
 
@@ -2873,7 +2875,7 @@ function viewTrygg() {
     </div>
     <div style="margin-top:18px;border-top:1px solid var(--rule);padding-top:16px">
       <b>Vad händer om någon kör in i min garageport?</b>
-      <p class="dim small" style="margin-top:8px;max-width:64ch">Föraren är skadeståndsskyldig enligt lag. Du anmäler skadan i appen med foton, och när garantin är i drift betalar Parkla dig upp till ${CAP} per skadehändelse och kräver sedan föraren. Foton före och efter sparas hos oss med tidsstämpel, så det går att se vad som var skadat redan innan.</p>
+      <p class="dim small" style="margin-top:8px;max-width:64ch">Det är föraren som ansvarar för skadan, och skada som ett fordon orsakar på annans egendom täcks i regel av fordonets trafikförsäkring. Du anmäler skadan i appen med foton. Parkla ersätter inte skadan själv, men ger dig förarens identitet (BankID), registreringsnumret, bokningens tider och foton före och efter, och hjälper dig att driva ärendet mot föraren eller försäkringsbolaget. Fotona sparas hos oss med tidsstämpel, så det går att se vad som var skadat redan innan.</p>
       <b style="display:block;margin-top:12px">Räcker min hemförsäkring?</b>
       <p class="dim small" style="margin-top:8px;max-width:64ch">Det beror på ditt försäkringsbolag och dina villkor. Fråga bolaget innan du hyr ut en uppfart eller ett garage, så att du vet om uthyrning till främmande påverkar din hemförsäkring. Parkla Trygg ersätter inte din hemförsäkring och är ingen försäkring.</p>
       <b style="display:block;margin-top:12px">Och kontrollavgifter?</b>
@@ -2983,45 +2985,7 @@ function viewBrf() {
 </div></section>
 ${footerHTML()}`;
 }
-function viewAffar() {
-  return `
-<section class="tight"><div class="wrap">
-  <span class="kicker" data-reveal>Affärsmodell</span>
-  <h1 style="margin:14px 0 0;font-size:clamp(2.1rem,5vw,3.6rem)" data-reveal>Fyra intäktslager<br><em>– inte ett.</em></h1>
-  <p class="lede" style="margin-top:18px" data-reveal>De svenska försöken hittills säger alla samma sak: ”helt gratis”. Därför har ingen råd att lösa problemet, och därför är de tomma. Vi tar betalt från dag ett – men bara när någon tjänar pengar.</p>
-  <div style="margin-top:34px">${entriesHTML([
-    ["chart", "1 · Transaktionen", `${Math.round(FEES.driverPct * 100)} % från föraren plus ${Math.round(FEES.hostPct * 100)} % från värden = ${Math.round((FEES.driverPct + FEES.hostPct) * 100)} % på korttid, ${Math.round((FEES.driverPctMonthly + FEES.hostPctMonthly) * 100)} % på månadshyra. Jämför: Airbnb tar ungefär 15–17 %, Getaround 25–40 %, JustPark 3 % av värden plus bokningsavgift av föraren.`],
-    ["shield", "2 · Trygghetsgarantin", `${kr(FEES.tryggShort)} per bokning eller ${kr(FEES.tryggMonthly)} i månaden för trygghetsgarantin (skadehjälp, betalnings- och platsgaranti). Hög marginal – men framför allt: <b>det är detta som får folk att våga.</b> Ingen svensk konkurrent har det.`],
-    ["building", "3 · Föreningar och fastighetsägare", "990–4 900 kr i månaden. Löser samtidigt utbudsproblemet: en enda förening kan ge 40 platser på en dag. Det är här de riktiga pengarna finns – och här konkurrenterna inte ens försöker."],
-    ["bolt", "4 · Laddning", `${FEES.laddOrePerKwh} öre per kWh ovanpå när platsen har laddbox, plus provision på laddboxförsäljning. Sverige har extremt många elbilar och hundratusentals lägenhetsboende som inte kan ladda hemma.`]
-  ])}</div>
-
-  <h2 style="margin:48px 0 18px" data-reveal>Vad vi valt bort</h2>
-  <div class="grid g3">
-    ${[["Månadsavgift för privatpersoner", "Dödar tjänsten innan den kommit igång."],
-       ["Reklam i appen", "Kräver 100 000 användare för att ge något – och förstör förtroendet."],
-       ["Hela Sverige på en gång", "Så dog alla föregångare: tomma överallt i stället för fulla någonstans."]]
-      .map(([h, p], k) => `<div class="panel pad" data-reveal style="--d:${k * 50}ms"><b>${h}</b><p class="dim small" style="margin-top:6px">${p}</p></div>`).join("")}
-  </div>
-
-  <h2 style="margin:48px 0 18px" data-reveal>I vilken ordning vi lanserar</h2>
-  <ul class="numlist" data-reveal>
-    ${[["Arlanda-korridoren", "Märsta, Sigtuna, Rosersberg och Upplands Väsby. Officiell parkering kostar 1 495–1 995 kr i veckan. En uppfart för 399 kr är självklart bättre för båda. Bokningarna planeras i förväg och varar länge."],
-       ["Månadshyra i Stockholms innerstad", "Boendeparkering 1 100 kr i månaden och fleråriga garageköer. Få byter, mycket värde per kund."],
-       ["Evenemang", "Friends, Tele2, Avicii, Ullevi, Malmö Arena. Extrem topplast och gratis uppmärksamhet varje matchdag."],
-       ["Göteborg, Malmö, Uppsala, Lund", "Samma recept. Först när Stockholm är fullt."],
-       ["Norden och sedan Europa", "Oslo, Köpenhamn, Helsingfors. Samma juridik, samma betalvanor."]]
-      .map(([a, b], k) => `<li><span class="n">0${k + 1}</span><div><b>${a}</b><p>${b}</p></div></li>`).join("")}
-  </ul>
-
-  <div class="panel pad-lg" style="margin-top:34px" data-reveal>
-    <h3>Konkurrenterna</h3>
-    <p class="dim" style="margin-top:10px">Idén finns redan i Sverige – men ingen har vunnit. Hyruto (fortfarande i beta), Park Direkt (Stockholm, ”helt gratis”), Wace, ApParkingSpot (från 2021, partner till APCOA och Telia), GaragePlatsen och Parko. Alla har samma tre problem: gratis affärsmodell, ingen hjälp när något går sönder och för brett geografiskt fokus.</p>
-    <div class="callout" style="margin-top:16px">Det är goda nyheter. Efterfrågan är bevisad – marknaden är bara olöst. Den som först gör den <b>trygg</b> och <b>tät på ett ställe</b> tar hela kategorin.</div>
-  </div>
-</div></section>
-${footerHTML()}`;
-}
+/* viewAffar (intern affärsmodell med marginaler och konkurrentjämförelse) borttagen helt 2026-10-15, granskning v4 A5. */
 function viewBjudin() {
   const code = "PARKLA-" + (LS.get("refcode", null) || (() => { const c = Math.random().toString(36).slice(2, 7).toUpperCase(); LS.set("refcode", c); return c; })());
   return `
@@ -3156,7 +3120,7 @@ function viewInstallningar() {
       ${[["bokning", "receipt", "Bokningar", "Bekräftelser och påminnelser"],
          ["betalning", "wallet", "Pengar", "Utbetalningar och kvitton"],
          ["pris", "chart", "Prisförslag", "När du kan ta mer betalt"],
-         ["evenemang", "ticket", "Matcher nära dig", "Tillfällen som ger extra pengar"],
+         ...(harEvenemang() ? [["evenemang", "ticket", "Matcher nära dig", "Tillfällen som ger extra pengar"]] : []),
          ["nyheter", "message", "Nyheter från Parkla", "Högst ett mejl i månaden"]]
         .map(([k, ic, tt, ss]) => `<div class="setrow"><span style="color:var(--ink-45)">${I(ic, 20)}</span>
           <div class="t"><b>${tt}</b><span>${ss}</span></div>
@@ -3240,7 +3204,7 @@ function viewMer() {
   const unread = NOTIS.filter(n => n.unread).length;
   const links = [
     ["installningar", "sliders", t("settings"), "Utseende, språk, valuta, aviseringar"],
-    ["evenemang", "ticket", "Evenemang", "Matcher och konserter nära dig", true],
+    ...(harEvenemang() ? [["evenemang", "ticket", "Evenemang", "Matcher och konserter nära dig", true]] : []),
     ["vinterforvar", "moon", "Vinterförvar", "Ställ undan bilen över vintern", true],
     ["meddelanden", "message", "Meddelanden", "Skriv till värdar och förare"],
     ["trygg", "shield", t("nav_trust"), "BankID, skadehjälp, flytta bilen"],
@@ -3397,7 +3361,7 @@ function openLeadHost() {
     <div class="field"><label for="lh_namn">Ditt namn</label><input class="inp" id="lh_namn" placeholder="Förnamn Efternamn"></div>
     <div class="field"><label for="lh_mail">E-post</label><input class="inp" type="email" id="lh_mail" placeholder="du@exempel.se"></div>
     <div class="field"><label for="lh_tel">Telefon (frivilligt)</label><input class="inp" type="tel" id="lh_tel" placeholder="070-123 45 67"></div>
-    <div class="hint">${I("lock", 17)}<div>Vi använder uppgifterna bara för att kontakta dig om Parkla. Du kan när som helst be oss radera dem.</div></div>
+    ${HP}<div class="hint">${I("lock", 17)}<div>Vi använder uppgifterna bara för att kontakta dig om Parkla. Du kan när som helst be oss radera dem.</div></div>
     <button class="btn btn-p btn-block btn-lg" onclick="saveLead('vard')">Skicka anmälan</button>
   </div>`);
 }
@@ -3418,7 +3382,7 @@ function viewValkommen() {
          <div class="field"><label for="vk_tel">Telefon</label><input class="inp" type="tel" id="vk_tel" autocomplete="tel" placeholder="070-123 45 67"></div>
        </div>
        <div class="field"><label for="vk_ad">Adress till din plats (frivilligt)</label><input class="inp" id="vk_ad" autocomplete="street-address" placeholder="Ringvägen 41, Västerås"></div>
-       <div class="hint">${I("lock", 17)}<div>Vi använder uppgifterna bara för att kontakta dig om Parkla. Du kan när som helst be oss radera dem.</div></div>
+       ${HP}<div class="hint">${I("lock", 17)}<div>Vi använder uppgifterna bara för att kontakta dig om Parkla. Du kan när som helst be oss radera dem.</div></div>
        <button class="btn btn-p btn-block btn-lg" style="margin-top:6px" onclick="saveHostSignup()">Anmäl mig som värd</button>
        <button class="btn btn-block" style="margin-top:8px" onclick="go('hyrut')">Eller lägg upp min plats direkt</button>`;
   return `<section class="wrap" style="padding-top:22px"><div style="max-width:980px;margin:0 auto">
@@ -3520,7 +3484,7 @@ function openWelcomeCapture() {
       Har du en egen uppfart? Lägg upp den idag. Söker du bara en plats? Lämna din mejl så hör vi
       av oss så fort det finns platser nära dig.</p>
     <div class="field"><label for="wv_mail">E-post</label><input class="inp" type="email" id="wv_mail" placeholder="du@exempel.se"></div>
-    <div class="hint">${I("lock", 17)}<div>Bara för att höra av oss om Parkla. Du kan när som helst be oss radera uppgifterna.</div></div>
+    ${HP}<div class="hint">${I("lock", 17)}<div>Bara för att höra av oss om Parkla. Du kan när som helst be oss radera uppgifterna.</div></div>
     <button class="btn btn-p btn-block btn-lg" onclick="saveVisitorEmail()">Håll mig uppdaterad</button>
     <button class="btn btn-block" onclick="closeSheet();go('hyrut')">Jag har en plats – lägg upp den nu</button>
     <button class="btn btn-block" onclick="closeSheet()">Inte nu, tack</button>
@@ -3567,7 +3531,7 @@ function openLeadDriver() {
       <option>Vid resor till Arlanda</option><option>Vid matcher och evenemang</option>
       <option>Vinterförvar</option></select></div>
     <div class="field"><label for="ld_mail">E-post</label><input class="inp" type="email" id="ld_mail" placeholder="du@exempel.se"></div>
-    <div class="hint">${I("lock", 17)}<div>Bara för att säga till när vi öppnar. Inget nyhetsbrev.</div></div>
+    ${HP}<div class="hint">${I("lock", 17)}<div>Bara för att säga till när vi öppnar. Inget nyhetsbrev.</div></div>
     <button class="btn btn-p btn-block btn-lg" onclick="saveLead('forare')">Skicka</button>
   </div>`);
 }
@@ -3575,7 +3539,23 @@ function openLeadDriver() {
 /* Postar en lead direkt till Supabase-tabellen "leads" (anon-insert, se SQL i
    CLAUDE.md/chatten). Fire-and-forget, fel stoppar aldrig anvandarens flode -
    raden ligger kvar lokalt (LEADS/LS) som backup oavsett. */
+/* Botskydd på anmälan (granskning v4 F10, 2026-10-15). Tre spärrar i klienten: ett osynligt fält som bara robotar fyller i,
+   minst 3 sekunder från sidladdning till skick, och högst 5 anmälningar per enhet och timme. En stoppad anmälan "lyckas" för
+   avsändaren men skickas aldrig, så roboten inte lär sig spärren. Databasen bör också begränsa anon-insert (se CLAUDE.md). */
+const HP = `<div class="hpf" aria-hidden="true"><label>Lämna tomt<input class="hp" name="website" tabindex="-1" autocomplete="off"></label></div>`;
+const SIDSTART = Date.now();
+function arRobot() {
+  try {
+    if ([...document.querySelectorAll("input.hp")].some(i => i.value)) return true;
+    if (Date.now() - SIDSTART < 3000) return true;
+    const nu = Date.now(), logg = (LS.get("lead_tider", []) || []).filter(x => nu - x < 3600000);
+    if (logg.length >= 5) return true;
+    logg.push(nu); LS.set("lead_tider", logg);
+  } catch (e) {}
+  return false;
+}
 function skickaLead(typ, data) {
+  if (arRobot()) return Promise.resolve(true);
   try {
     const c = (typeof PAPI !== "undefined") ? PAPI.cfg() : null;
     if (!c || !c.url || !c.anon) return Promise.resolve(false);
@@ -4441,7 +4421,7 @@ function render() {
   const _pv = S.route === "valkommen" && document.querySelector("#pkf video");
   if (_pv) window.__pkfState = { t: _pv.currentTime, muted: _pv.muted };
   document.getElementById("app").innerHTML = (VIEWS[S.route] || viewStart)();
-  { const T = { valkommen: "Parkla – hyr ut din uppfart", start: "Parkla – hyr ut din uppfart", hem: "Parkla", sok: "Hitta parkering | Parkla", hyrut: "Hyr ut din plats | Parkla", mina: "Min sida | Parkla", mer: "Mer | Parkla", trygg: "Trygghet | Parkla", priser: "Priser och avgifter | Parkla", skatt: "Skatt för värdar | Parkla", brf: "För bostadsrättsföreningar | Parkla", affar: "För företag | Parkla", villkor: "Användarvillkor | Parkla", integritet: "Integritetspolicy | Parkla", evenemang: "Evenemang | Parkla", meddelanden: "Meddelanden | Parkla", installningar: "Inställningar | Parkla", bjudin: "Bjud in | Parkla", vinterforvar: "Vinterförvar | Parkla" }; document.title = T[S.route] || "Parkla"; } 
+  { const T = { valkommen: "Parkla – hyr ut din uppfart", start: "Parkla – hyr ut din uppfart", hem: "Parkla", sok: "Hitta parkering | Parkla", hyrut: "Hyr ut din plats | Parkla", mina: "Min sida | Parkla", mer: "Mer | Parkla", trygg: "Trygghet | Parkla", priser: "Priser och avgifter | Parkla", skatt: "Skatt för värdar | Parkla", brf: "För bostadsrättsföreningar | Parkla", villkor: "Användarvillkor | Parkla", integritet: "Integritetspolicy | Parkla", evenemang: "Evenemang | Parkla", meddelanden: "Meddelanden | Parkla", installningar: "Inställningar | Parkla", bjudin: "Bjud in | Parkla", vinterforvar: "Vinterförvar | Parkla" }; document.title = T[S.route] || "Parkla"; } 
   { /* K2: varje vy har en H1 (dold om vyn saknar egen) och en canonical per rutt */
     const app = document.getElementById("app");
     if (app && !app.querySelector("h1")) { const h = document.createElement("h1"); h.className = "sr-only"; h.style.cssText = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"; h.textContent = (document.title || "Parkla").replace(/ \| Parkla$/, ""); app.prepend(h); }

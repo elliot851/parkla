@@ -234,19 +234,26 @@ window.addEventListener("hashchange", () => { openDeepLink(); });
     banner = document.createElement("button");
     banner.className = "updbar";
     banner.innerHTML = I("refresh", 17) + "<span>Ny version finns</span><b>Uppdatera</b>";
-    banner.onclick = reloadNow;
+    banner.onclick = () => { try { sessionStorage.removeItem("parkla-reloaded"); } catch (e) {} reloadNow(); };
     document.body.appendChild(banner);
     requestAnimationFrame(() => banner.classList.add("on"));
   }
-  function reloadNow() {
+  function reloadNow(ny) {
     if ("caches" in window) {
-      caches.keys().then(ks => Promise.all(ks.map(k => caches.delete(k)))).finally(hardReload);
-    } else hardReload();
+      caches.keys().then(ks => Promise.all(ks.map(k => caches.delete(k)))).finally(() => hardReload(ny));
+    } else hardReload(ny);
   }
-  function hardReload() {
+  function hardReload(ny) {
     /* Pages cachar HTML i tio minuter. Utan en ny adress serverar webbläsaren
-       samma gamla sida igen och uppdateringen fastnar. */
-    location.replace(location.pathname + "?u=" + Date.now());
+       samma gamla sida igen och uppdateringen fastnar.
+       Granskning v4 A1 (2026-10-15): högst EN omladdning per version och flik
+       (annars loopar sidan om version.json och data.js någonsin skiljer sig),
+       och #-delen behålls så djuplänkar (#priser, #trygg) inte tappas. */
+    try {
+      if (ny && sessionStorage.getItem("parkla-reloaded") === ny) return;
+      if (ny) sessionStorage.setItem("parkla-reloaded", ny);
+    } catch (e) {}
+    location.replace(location.pathname + "?u=" + Date.now() + location.hash);
   }
 
   function busy() {
@@ -265,9 +272,12 @@ window.addEventListener("hashchange", () => { openDeepLink(); });
       if (!r.ok) return;
       const j = await r.json();
       if (!j.v || j.v === VERSION) return;
+      /* Redan omladdad för den här versionen men koden är fortfarande äldre: ladda inte om igen (loop), visa bara knappen. */
+      let redan = false;
+      try { redan = sessionStorage.getItem("parkla-reloaded") === j.v; } catch (e) {}
       /* Är användaren mitt i något visar vi bara en knapp. Annars byter vi direkt. */
-      if (busy()) showBanner(j.v);
-      else reloadNow();
+      if (busy() || redan) showBanner(j.v);
+      else reloadNow(j.v);
     } catch (e) {}
   }
 
