@@ -1011,8 +1011,9 @@ function brfBrevText(namn, adress) {
     "• En parkeringsplats utomhus är juridiskt ett lägenhetsarrende. Uthyrning i andra " +
     "hand kräver därför föreningens tillstånd, och det är därför jag frågar.\n" +
     "• När tjänsten öppnar måste alla förare legitimera sig med BankID innan de kan boka.\n" +
-    "• Bokningar omfattas av Parklas trygghetsgaranti för skador på egendom, enligt " +
-    "Parklas villkor (parkla.se/villkor).\n" +
+    "• Orsakar en förare skada under en bokning är det föraren som ansvarar. Parkla lämnar ut " +
+    "förarens identitet (BankID), registreringsnummer och foton före och efter, så att skadan kan krävas " +
+    "av föraren eller dennes trafikförsäkring (parkla.se/villkor, kapitel 9).\n" +
     "• Jag använder bara min egen plats, aldrig gemensamma ytor.\n" +
     "• Säger styrelsen ja kan beslutet gälla alla i föreningen, och föreningen kan " +
     "välja att ta en andel av intäkterna till kassan.\n\n" +
@@ -3232,13 +3233,13 @@ function viewMer() {
   ];
   const faq = [
     ["Vad händer om någon inte flyttar bilen?", `Du trycker på ”Flytta bilen”. Vi kontaktar föraren, parkeringen avslutas på sekunden, och står bilen kvar efter fyrtiofem minuter kostar det ${kr(FEES.overtidPerTimme)} per påbörjad timme – hela beloppet till dig. Bärgning kan vi inte lova: att flytta ett fordon från tomtmark är kommunens eller Polisens sak, på markägarens begäran.`],
-    ["Kan jag få p-bot på en Parkla-plats?", "Det ska inte kunna hända: platsen är privat mark och du har ett giltigt avtal. Skulle du ändå få en kontrollavgift hjälper vi dig att överklaga den. Parkla betalar inte kontrollavgifter, och garantin täcker skador på värdens egendom, inte avgifter."],
+    ["Kan jag få p-bot på en Parkla-plats?", "Det ska inte kunna hända: platsen är privat mark och du har ett giltigt avtal. Skulle du ändå få en kontrollavgift hjälper vi dig att överklaga den. Parkla betalar inte kontrollavgifter."],
     ["Måste jag vara hemma när någon parkerar?", "Nej. De flesta uthyrningar sker utan att ni ens träffas. Kod, karta och instruktioner finns i appen."],
     ["Hur mycket kan jag tjäna?", "Det här är uppskattningar från vår prismodell, inte utbetald hyra. En uppfart i Västerås ger ungefär 800–1 200 kr i månaden. Stockholms innerstad: 1 800–2 500 kr. Märsta nära Arlanda: 1 200–1 700 kr. Förort: 400–900 kr. Med laddbox enligt modellen ungefär 28 % mer."],
     ["Måste jag betala skatt?", "Oftast inte. Du får ofta tjäna upp till 40 000 kr per bostad och år utan skatt (schablonavdrag). Appen har en mätare, och vi skickar underlag i januari."],
     ["Jag bor i bostadsrätt – får jag hyra ut?", "Bara med styrelsens tillstånd. <button class=\"lnk\" onclick=\"openBrfBrev()\">Hämta en färdig fråga åt dig</button>."],
     ["Vad skiljer Parkla från de som redan finns?", "De är gratis och därför tomma – ingen har råd att lösa problemet. Vi tar betalt från dag ett, satsar allt på ett område i taget och hjälper värden hela vägen om något går sönder."],
-    ["Vad händer om min bil blir skadad där?", "Din egen bilförsäkring gäller som vanligt. Vår garanti täcker det omvända: skador som din bil orsakar på värdens uppfart eller garage."],
+    ["Vad händer om min bil blir skadad där?", "Din egen bilförsäkring gäller som vanligt. Orsakar din bil skada på värdens uppfart eller garage är det du som ansvarar, och sådan skada täcks i regel av din trafikförsäkring. Parkla ersätter inga skador."],
     ["Kan jag hyra ut när jag är bortrest?", "Ja – det är själva poängen. Ställ in dina resdagar eller lägg upp platsen bara när du vet att du är borta."],
     ["När kommer appen till App Store?", "Webben först. Den fungerar redan på mobilen – lägg till den på hemskärmen. Appbutikerna när första området är fullt."]
   ];
